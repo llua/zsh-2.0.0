@@ -1,0 +1,1157 @@
+Path: funic!news.funet.fi!sunic!kth.se!eru!bloom-beacon!snorkelwacker.mit.edu!apple!mips!samsung!uunet!sparky!kent
+From: pf@learning.siemens.com (Paul Falstad)
+Newsgroups: comp.sources.misc
+Subject: v18i099:  zsh2.00 - The Z shell, Patch01a/2
+Message-ID: <1991Apr25.003819.25893@sparky.IMD.Sterling.COM>
+Date: 25 Apr 91 00:38:19 GMT
+Sender: kent@sparky.IMD.Sterling.COM (Kent Landfield)
+Reply-To: uunet!phoenix.princeton.edu!pfalstad
+Organization: League For Fighting Chartered Accountancy
+Lines: 1144
+Approved: kent@sparky.imd.sterling.com
+X-Checksum-Snefru: 914ca20b aaf210a8 b6188f52 98146215
+
+Submitted-by: Paul Falstad <pfalstad@phoenix.princeton.edu>
+Posting-number: Volume 18, Issue 99
+Archive-name: zsh2.00/patch01a
+Patch-To: zsh2.00: Volume 18, Issue 84-98
+
+
+This is the patchfile for zsh2.00.01.  Pipe through "patch -p0".
+
+Here is part of the README for .01:
+
+...
+
+zsh is free software.  See the file COPYING for copying permission.
+
+This is zsh 2.00.01.
+
+To get this shell running, cd into the src directory and type
+"buildzsh".  I tested it on the following machines, where it compiled
+just by running this script:
+
+Sun SPARCServer 4/490 running SunOS 4.1.1
+Sun 3/60C running SunOS 4.1.1
+NeXTstation running Mach 2.0
+SGI-4D/25 running IRIX 3.3.1
+hp9000 running BSD 4.3
+DECSystem-5000 running ULTRIX 4.0
+
+...
+
+Modification history:
+
+00-01:
+   - %M and %m now work as documented.
+   - bad things no longer happen if COLUMNS is set to 0
+   - SH_WORD_SPLIT and ${=foo} now work
+   - the default value of WORDCHARS includes more characters
+   - if the cursor is at the end of the line, vi-cmd-mode
+     moves it back one position.
+   - delete-char now acts more like x in vi.
+   - a "prompt" parameter has been added, which is equivalent to
+     PROMPT and PS1.
+   - zsh no longer expands symbolic links.  The CHASELINKS option
+     has been provided to get the old behavior.
+   - history searches ignore lines that are the same as the line
+     in the buffer.
+   - you can get a literal ! in your prompt now with \!.
+   - -z, -n, and != in [[ ... ]] expressions work.
+   - the shell no longer hangs when inputting "[[ ]\n"
+   - the "menu-complete" and "menu-expand-or-complete" bindings have
+     been added.
+   - menu-complete no longer beeps.
+   - reverse-menu-complete no longer dumps core if it gets called before
+     a normal completion.
+   - typeahead lines are no longer thrown away on machines with sgttyb.
+   - !foo no longer matches lines with 'foo' in them (not at the beginning)
+   - kill -9 % no longer kills the shell
+   - no longer sources .zshrc from shell scripts or with -c
+   - no longer needs limits.h, strtol
+   - exporting HOSTTYPE, etc. works
+   - fixed serious bugs related to . in path
+   - numbers in weird bases now work
+
+...
+
+--- zsh2.00/README	Wed Apr 24 17:49:08 1991
+***************
+*** 1,5 ****
+--- 1,7 ----
+  zsh is free software.  See the file COPYING for copying permission.
+  
++ This is zsh 2.00.01.
++ 
+  To get this shell running, cd into the src directory and type
+  "buildzsh".  I tested it on the following machines, where it compiled
+  just by running this script:
+***************
+*** 6,15 ****
+  
+  Sun SPARCServer 4/490 running SunOS 4.1.1
+  Sun 3/60C running SunOS 4.1.1
+- Sun 4-something running SunOS 4.0.3
+  NeXTstation running Mach 2.0
+  SGI-4D/25 running IRIX 3.3.1
+! hp9000 running a variant of BSD4.3
+  
+  If it doesn't work, either complain to me, or tweak config.h, Makefile, and
+  signals.h until it does.
+--- 8,17 ----
+  
+  Sun SPARCServer 4/490 running SunOS 4.1.1
+  Sun 3/60C running SunOS 4.1.1
+  NeXTstation running Mach 2.0
+  SGI-4D/25 running IRIX 3.3.1
+! hp9000 running BSD 4.3
+! DECSystem-5000 running ULTRIX 4.0
+  
+  If it doesn't work, either complain to me, or tweak config.h, Makefile, and
+  signals.h until it does.
+***************
+*** 27,36 ****
+   _
+  Goran Larsson
+  Byron Rakitzis
+  Greg A. Woods
+  Kartik Subbarao
+  Michael Marucheck
+  Kennedy Lemke
+! Paul E. Maisano
+  Kazuo Itoh
+  
+--- 29,79 ----
+   _
+  Goran Larsson
+  Byron Rakitzis
++ Paul E. Maisano
++ Xev Gittler
++ Gary D. Kline
+  Greg A. Woods
+  Kartik Subbarao
+  Michael Marucheck
+  Kennedy Lemke
+! Emin Gun Sirer
+  Kazuo Itoh
++ 
++ Modification history:
++ 
++ 00-01:
++ 	- %M and %m now work as documented.
++ 	- bad things no longer happen if COLUMNS is set to 0
++ 	- SH_WORD_SPLIT and ${=foo} now work
++ 	- the default value of WORDCHARS includes more characters
++ 	- if the cursor is at the end of the line, vi-cmd-mode
++ 	  moves it back one position.
++ 	- delete-char now acts more like x in vi.
++ 	- a "prompt" parameter has been added, which is equivalent to
++ 	  PROMPT and PS1.
++ 	- zsh no longer expands symbolic links.  The CHASELINKS option
++ 	  has been provided to get the old behavior.
++ 	- history searches ignore lines that are the same as the line
++ 	  in the buffer.
++ 	- you can get a literal ! in your prompt now with \!.
++ 	- -z, -n, and != in [[ ... ]] expressions work.
++ 	- the shell no longer hangs when inputting "[[ ]\n"
++ 	- the "menu-complete" and "menu-expand-or-complete" bindings have
++ 	  been added.
++ 	- menu-complete no longer beeps.
++ 	- reverse-menu-complete no longer dumps core if it gets called before
++ 	  a normal completion.
++ 	- typeahead lines are no longer thrown away on machines with sgttyb.
++ 	- !foo no longer matches lines with 'foo' in them (not at the beginning)
++ 	- kill -9 % no longer kills the shell
++ 	- no longer sources .zshrc from shell scripts or with -c
++ 	- no longer needs limits.h, strtol
++ 	- exporting HOSTTYPE, etc. works
++ 	- fixed serious bugs related to . in path
++ 	- numbers in weird bases now work
++ 
++ Stuff that needs to be done
++ 	- port zsh to more places
++ 	- rewrite lex.c
++ 	- improve vi emulation
+  
+*** ../zshdist/zsh2.00/man/man1/zsh.1	Tue Apr 16 00:49:04 1991
+--- zsh2.00/man/man1/zsh.1	Wed Apr 24 00:17:46 1991
+***************
+*** 1,5 ****
+  .\"
+! .TH ZSH 1 "1991 April 14"
+  .SH NAME
+  zsh \- the Z shell
+  .SH SYNOPSIS
+--- 1,5 ----
+  .\"
+! .TH ZSH 1 "1991 April 23"
+  .SH NAME
+  zsh \- the Z shell
+  .SH SYNOPSIS
+***************
+*** 42,51 ****
+  redirection operators.
+  .PP
+  A \fIsublist\fP is a sequence of one or more pipelines
+! separated by \fB&&\fP or \fB||\fP.  If two pipelines
+  are separated by \fB&&\fP, the second pipeline is executed
+  only if the first is successful (returns a zero value).
+! If two pipelines are separated by \fB||\fP, the second is executed
+  only if the first is unsuccessful (returns a nonzero value).
+  .PP
+  A \fIlist\fP is a sequence of one or more sublists
+--- 42,51 ----
+  redirection operators.
+  .PP
+  A \fIsublist\fP is a sequence of one or more pipelines
+! separated by \fB&&\fP or \fB|\||\fP.  If two pipelines
+  are separated by \fB&&\fP, the second pipeline is executed
+  only if the first is successful (returns a zero value).
+! If two pipelines are separated by \fB|\||\fP, the second is executed
+  only if the first is unsuccessful (returns a nonzero value).
+  .PP
+  A \fIlist\fP is a sequence of one or more sublists
+***************
+*** 1385,1390 ****
+--- 1385,1397 ----
+  Perform history expansion and insert a space into the
+  buffer.  This is intended to be bound to space.
+  .TP
++ \fBmenu-complete\fP
++ Like \fBcomplete-word\fP, except that menu completion is used.
++ See the \fBMENU_COMPLETE\fP option below.
++ .TP
++ \fBmenu-expand-or-complete\fP
++ Like \fBexpand-or-complete\fP, except that menu completion is used.
++ .TP
+  \fBreverse-menu-complete\fP
+  See the \fBMENU_COMPLETE\fP option below.
+  .SS Miscellaneous
+***************
+*** 1766,1772 ****
+  .B &&
+  boolean AND
+  .TP
+! .B || ^^
+  boolean OR, XOR
+  .TP
+  .B ? :
+--- 1773,1779 ----
+  .B &&
+  boolean AND
+  .TP
+! .B |\|| ^^
+  boolean OR, XOR
+  .TP
+  .B ? :
+***************
+*** 1773,1779 ****
+  ternary operator
+  .TP
+  .B
+! = += \-= *= /= %= &= ^= |= <<= >>= &&= ||= ^^=
+  assignment
+  .TP
+  .B ,
+--- 1780,1786 ----
+  ternary operator
+  .TP
+  .B
+! = += \-= *= /= %= &= ^= |= <<= >>= &&= |\||= ^^=
+  assignment
+  .TP
+  .B ,
+***************
+*** 1781,1787 ****
+  .PD
+  .RE
+  .PP
+! The operators &&, ||, &&=, and ||= are short-circuiting,
+  and only one of the latter two expressions in a ternary operator
+  is evaluated.  Note the precedence of the logical AND, OR,
+  and XOR operators.
+--- 1788,1794 ----
+  .PD
+  .RE
+  .PP
+! The operators &&, |\||, &&=, and |\||= are short-circuiting,
+  and only one of the latter two expressions in a ternary operator
+  is evaluated.  Note the precedence of the logical AND, OR,
+  and XOR operators.
+***************
+*** 2019,2025 ****
+  \fIexp1\fP \fB&&\fP \fIexp2\fP
+  true if \fIexp1\fP and \fIexp2\fP are both true.
+  .TP
+! \fIexp1\fP \fB||\fP \fIexp2\fP
+  true if either \fIexp1\fP or \fIexp2\fP is true.
+  .PD
+  .PP
+--- 2026,2032 ----
+  \fIexp1\fP \fB&&\fP \fIexp2\fP
+  true if \fIexp1\fP and \fIexp2\fP are both true.
+  .TP
+! \fIexp1\fP \fB|\||\fP \fIexp2\fP
+  true if either \fIexp1\fP or \fIexp2\fP is true.
+  .PD
+  .PP
+***************
+*** 2397,2402 ****
+--- 2404,2412 ----
+  Same as \fBPROMPT\fP, \fBPROMPT2\fP, \fBPROMPT3\fP, and \fBPROMPT4\fP,
+  respectively.
+  .TP
++ .B prompt
++ Same as \fBPROMPT\fP.
++ .TP
+  .B RPROMPT
+  .TP
+  .B RPS1
+***************
+*** 2550,2556 ****
+  .TP
+  .B WORDCHARS
+  A list of nonalphanumeric characters considered part of a word
+! by the line editor.  The default is "*?_\-.[]~=/".
+  .PD
+  .RE
+  .PP
+--- 2560,2566 ----
+  .TP
+  .B WORDCHARS
+  A list of nonalphanumeric characters considered part of a word
+! by the line editor.
+  .PD
+  .RE
+  .PP
+***************
+*** 2606,2611 ****
+--- 2616,2624 ----
+  \-\fBv\fP (\fBVERBOSE\fP)
+  Print shell input lines as they are read.
+  .TP
++ \-\fBw\fP (\fBCHASELINKS\fP)
++ Resolve symbolic links to their true values.
++ .TP
+  \-\fBx\fP (\fBXTRACE\fP)
+  Print commands and their arguments as they are executed.
+  .TP
+***************
+*** 2731,2736 ****
+--- 2744,2753 ----
+  Print a warning message if a mail file has been
+  accessed since the shell last checked.
+  .TP
++ \-\fBV\fP (\fBNO_PROMPT_CLOBBER\fP)
++ Don't print a carriage return just before printing
++ a prompt in the line editor.
++ .TP
+  \-\fBW\fP (\fBAUTO_RESUME\fP)
+  Treat single word simple commands without redirection
+  as candidates for resumption of an existing job.
+***************
+*** 3476,3482 ****
+  Same as \fBwhence\fP.
+  .RE
+  .SH INVOCATION
+! Unless the \fBNO_RCS\fP option is set, commands are read
+  from /etc/zshrc and ~/.zshrc, in that order, if either file
+  exists.
+  If the first character of argument zero passed to the shell
+--- 3493,3500 ----
+  Same as \fBwhence\fP.
+  .RE
+  .SH INVOCATION
+! If the shell is interactive and
+! the \fBNO_RCS\fP option is unset, commands are read
+  from /etc/zshrc and ~/.zshrc, in that order, if either file
+  exists.
+  If the first character of argument zero passed to the shell
+*** ../zshdist/zsh2.00/src/buildzsh	Tue Apr 16 20:28:15 1991
+--- zsh2.00/src/buildzsh	Wed Apr 24 18:10:03 1991
+***************
+*** 1,22 ****
+  #! /bin/sh
+! echo please wait
+  exec >config.h
+  cat <<'foo'
+  /* this file is created automatically by buildzsh */
+  
+  foo
+! echo '/* define this if you have struct termios */'
+! if test -f /usr/include/sys/termios.h
+  then echo '#define TERMIOS'
+! else echo '/* #define TERMIOS */'
+  fi
+  echo
+- echo '/* define this if you have struct termio */'
+- if test -f /usr/include/sys/termio.h
+- then echo '#define TERMIO'
+- else echo '/* #define TERMIO */'
+- fi
+- echo
+  echo '/* define this if you have a host field in utmp */'
+  if grep ut_host /usr/include/utmp.h >/dev/null
+  then echo '#define UTMP_HOST'
+--- 1,18 ----
+  #! /bin/sh
+! echo
+! echo 'Building config.h...' | tr -d '\012'
+  exec >config.h
+  cat <<'foo'
+  /* this file is created automatically by buildzsh */
+  
+  foo
+! if grep TCGETS /usr/include/sys/termios.h >/dev/null 2>&1
+  then echo '#define TERMIOS'
+! elif grep sgttyb /usr/include/sys/ioctl.h >/dev/null 2>&1
+! then echo '/* #define TERMIO */'
+! else echo '#define TERMIO'
+  fi
+  echo
+  echo '/* define this if you have a host field in utmp */'
+  if grep ut_host /usr/include/utmp.h >/dev/null
+  then echo '#define UTMP_HOST'
+***************
+*** 24,34 ****
+  fi
+  echo
+  echo '/* define this if you have WAITPID */'
+! if man 2 wait | sed 's/_//g' | grep waitpid >/dev/null
+  then echo '#define WAITPID'
+  else echo '/* #define WAITPID */'
+  fi
+  echo
+  echo '/* define this if your signal handlers return void */'
+  if grep SIG_DFL /usr/include/signal.h /usr/include/sys/signal.h |
+  	grep void >/dev/null
+--- 20,36 ----
+  fi
+  echo
+  echo '/* define this if you have WAITPID */'
+! if man 2 wait 2>/dev/null | sed 's/_//g' | grep waitpid >/dev/null
+  then echo '#define WAITPID'
+  else echo '/* #define WAITPID */'
+  fi
+  echo
++ echo '/* define this if you have SELECT */'
++ if grep FD_SET /usr/include/sys/types.h >/dev/null
++ then echo '#define HAS_SELECT'
++ else echo '/* #define HAS_SELECT */'
++ fi
++ echo
+  echo '/* define this if your signal handlers return void */'
+  if grep SIG_DFL /usr/include/signal.h /usr/include/sys/signal.h |
+  	grep void >/dev/null
+***************
+*** 113,118 ****
+--- 115,122 ----
+  #define _BSD_SIGNALS   /* this could be an iris, you never know */
+  foo
+  exec 1>&2
++ echo done
++ echo 'Building signals.h...' | tr -d '\012'
+  echo `csh -c 'kill -l'` | tr ' ' '\012' >signals.h
+  lct=`wc -l < signals.h`
+  cp signals.h signams.h
+***************
+*** 157,165 ****
+  	"done",
+  .
+  w
+! q' | ed signals.h
+  if grep SIGSTOP signals.h >/dev/null
+! then ed signals.h <<'foo'
+  /SIGSTOP/c
+  #ifdef USE_SUSPENDED
+  	"suspended (signal)",
+--- 161,169 ----
+  	"done",
+  .
+  w
+! q' | ed signals.h >/dev/null 2>&1
+  if grep SIGSTOP signals.h >/dev/null
+! then ed signals.h <<'foo' >/dev/null 2>&1
+  /SIGSTOP/c
+  #ifdef USE_SUSPENDED
+  	"suspended (signal)",
+***************
+*** 204,209 ****
+--- 208,215 ----
+  
+  #endif') >>signals.h
+  rm signams.h
++ echo done
++ echo 'Building Makefile...' | tr -d '\012'
+  exec >Makefile
+  cat <<'foo'
+  #! /bin/make -f
+***************
+*** 248,260 ****
+  #CC=gcc -traditional
+  #YFLAGS=-d -v
+  
+  foo
+- if test -f "`which gcc`" >/dev/null
+- then echo 'CC=gcc -traditional
+- CFLAGS= -O'
+- else echo 'CC=cc
+- CFLAGS= -O'
+- fi
+  if test -f /usr/lib/libbsd.a
+  then
+  if grep '+' /etc/passwd >/dev/null
+--- 254,262 ----
+  #CC=gcc -traditional
+  #YFLAGS=-d -v
+  
++ CC=cc
++ CFLAGS= -O
+  foo
+  if test -f /usr/lib/libbsd.a
+  then
+  if grep '+' /etc/passwd >/dev/null
+***************
+*** 292,305 ****
+  clean:
+  	rm -f *.o zsh core 
+  
+  install: zsh
+  	install -s -m 755 zsh $(BINDIR)
+! 	install -m 444 zsh.1 $(MANDIR)
+  
+  zsh.h: y.tab.h
+  foo
+  exec 1>&2
+  cat <<'foo'
+  
+  You may want to look at the files I just created (config.h, Makefile,
+  and signals.h) to make sure they are correct.  Or you may just want
+--- 294,311 ----
+  clean:
+  	rm -f *.o zsh core 
+  
++ cleanall:
++ 	rm -f *.o zsh core Makefile signals.h config.h
++ 
+  install: zsh
+  	install -s -m 755 zsh $(BINDIR)
+! 	install -m 444 ../man/man1/zsh.1 $(MANDIR)
+  
+  zsh.h: y.tab.h
+  foo
+  exec 1>&2
+  cat <<'foo'
++ done
+  
+  You may want to look at the files I just created (config.h, Makefile,
+  and signals.h) to make sure they are correct.  Or you may just want
+*** ../zshdist/zsh2.00/src/builtin.c	Tue Apr 16 19:43:41 1991
+--- zsh2.00/src/builtin.c	Tue Apr 23 11:45:00 1991
+***************
+*** 570,576 ****
+  		}
+  	if (idigit(*s))
+  		{
+! 		um = strtol(s,&s,8);
+  		if (*s)
+  			{
+  			zerrnam(nam,"bad umask",NULL,0);
+--- 570,576 ----
+  		}
+  	if (idigit(*s))
+  		{
+! 		um = zstrtol(s,&s,8);
+  		if (*s)
+  			{
+  			zerrnam(nam,"bad umask",NULL,0);
+***************
+*** 652,666 ****
+  				printf("%s is a global alias for %s\n",*argv,a->text);
+  			retval = 0;
+  			}
+! 		else if (!ops['p'] && (chn = gethnode(*argv,cmdnamtab)))
+  			{
+  			if (chn->type == SHFUNC)
+  				printf((v) ? "%s is a function\n" : "%s\n",*argv);
+- 			else if (chn->type != BUILTIN)
+- 				if (v)
+- 					printf("%s is hashed to %s\n",*argv,chn->u.nam);
+- 				else
+- 					puts(chn->u.nam);
+  			else
+  				printf((v) ? "%s is a shell builtin\n" : "%s\n",*argv);
+  			retval = 0;
+--- 652,662 ----
+  				printf("%s is a global alias for %s\n",*argv,a->text);
+  			retval = 0;
+  			}
+! 		else if (!ops['p'] && (chn = gethnode(*argv,cmdnamtab)) &&
+! 				(chn->type == SHFUNC || chn->type == BUILTIN))
+  			{
+  			if (chn->type == SHFUNC)
+  				printf((v) ? "%s is a function\n" : "%s\n",*argv);
+  			else
+  				printf((v) ? "%s is a shell builtin\n" : "%s\n",*argv);
+  			retval = 0;
+***************
+*** 738,744 ****
+  		char *u;
+  		int len1,len2,len3;
+  
+! 		if (!(u = strstr(cwd,argv[0])))
+  			{
+  			zerrnam(nam,"string not in pwd: %s",argv[1],0);
+  			return 1;
+--- 734,740 ----
+  		char *u;
+  		int len1,len2,len3;
+  
+! 		if (!(u = ztrstr(cwd,argv[0])))
+  			{
+  			zerrnam(nam,"string not in pwd: %s",argv[1],0);
+  			return 1;
+***************
+*** 799,805 ****
+  		List l;
+  
+  		oldpwd = cwd;
+! 		cwd = findcwd(new);
+  		free(dest);
+  		if (pnew)
+  			{
+--- 795,804 ----
+  		List l;
+  
+  		oldpwd = cwd;
+! 		if (isset(CHASELINKS))
+! 			cwd = findcwd(new);
+! 		else
+! 			cwd = fixcwd(new);
+  		free(dest);
+  		if (pnew)
+  			{
+***************
+*** 898,904 ****
+  		for (t0 = MAXJOB-1; t0 >= 0; t0--)
+  			if (jobtab[t0].stat && t0 != thisjob)
+  				for (pn = jobtab[t0].procs; pn; pn = pn->next)
+! 					if (strstr(pn->text,s+1))
+  						{ retval = t0; goto done; }
+  		zerrnam(prog,"job not found: %s",s,0);
+  		retval = -1; goto done;
+--- 897,903 ----
+  		for (t0 = MAXJOB-1; t0 >= 0; t0--)
+  			if (jobtab[t0].stat && t0 != thisjob)
+  				for (pn = jobtab[t0].procs; pn; pn = pn->next)
+! 					if (ztrstr(pn->text,s+1))
+  						{ retval = t0; goto done; }
+  		zerrnam(prog,"job not found: %s",s,0);
+  		retval = -1; goto done;
+***************
+*** 963,968 ****
+--- 962,969 ----
+  			{
+  			int p = getjob(*argv,"kill");
+  
++ 			if (p == -1)
++ 				return 1;
+  			if (killjb(jobtab+p,sig) == -1)
+  				{
+  				zerrnam("kill","kill failed: %e",NULL,errno);
+***************
+*** 1034,1040 ****
+  			}
+  		if (!lim)
+  			{
+! 			val = strtol(s,&s,10);
+  			if (*s)
+  				if ((*s == 'h' || *s == 'H') && !s[1])
+  					val *= 3600L;
+--- 1035,1041 ----
+  			}
+  		if (!lim)
+  			{
+! 			val = zstrtol(s,&s,10);
+  			if (*s)
+  				if ((*s == 'h' || *s == 'H') && !s[1])
+  					val *= 3600L;
+***************
+*** 1041,1047 ****
+  				else if ((*s == 'm' || *s == 'M') && !s[1])
+  					val *= 60L;
+  				else if (*s == ':')
+! 					val = val*60+strtol(s+1,&s,10);
+  				else
+  					{
+  					zerrnam("limit","unknown scaling factor: %s",s,0);
+--- 1042,1048 ----
+  				else if ((*s == 'm' || *s == 'M') && !s[1])
+  					val *= 60L;
+  				else if (*s == ':')
+! 					val = val*60+zstrtol(s+1,&s,10);
+  				else
+  					{
+  					zerrnam("limit","unknown scaling factor: %s",s,0);
+***************
+*** 1050,1060 ****
+  			}
+  #ifdef RLIMIT_NOFILE
+  		else if (lim == RLIMIT_NOFILE)
+! 			val = strtol(s,&s,10);
+  #endif
+  		else
+  			{
+! 			val = strtol(s,&s,10);
+  			if (!*s || ((*s == 'k' || *s == 'K') && !s[1]))
+  				val *= 1024L;
+  			else if ((*s == 'M' || *s == 'm') && !s[1])
+--- 1051,1061 ----
+  			}
+  #ifdef RLIMIT_NOFILE
+  		else if (lim == RLIMIT_NOFILE)
+! 			val = zstrtol(s,&s,10);
+  #endif
+  		else
+  			{
+! 			val = zstrtol(s,&s,10);
+  			if (!*s || ((*s == 'k' || *s == 'K') && !s[1]))
+  				val *= 1024L;
+  			else if ((*s == 'M' || *s == 'm') && !s[1])
+***************
+*** 1213,1225 ****
+  		}
+  	if (*s == '+')
+  		{
+! 		h = strtol(s+1,&s,10);
+  		if (*s != ':')
+  			{
+  			zerrnam("sched","bad time specifier",NULL,0);
+  			return 1;
+  			}
+! 		m = strtol(s+1,&s,10);
+  		if (*s)
+  			{
+  			zerrnam("sched","bad time specifier",NULL,0);
+--- 1214,1226 ----
+  		}
+  	if (*s == '+')
+  		{
+! 		h = zstrtol(s+1,&s,10);
+  		if (*s != ':')
+  			{
+  			zerrnam("sched","bad time specifier",NULL,0);
+  			return 1;
+  			}
+! 		m = zstrtol(s+1,&s,10);
+  		if (*s)
+  			{
+  			zerrnam("sched","bad time specifier",NULL,0);
+***************
+*** 1229,1241 ****
+  		}
+  	else
+  		{
+! 		h = strtol(s,&s,10);
+  		if (*s != ':')
+  			{
+  			zerrnam("sched","bad time specifier",NULL,0);
+  			return 1;
+  			}
+! 		m = strtol(s+1,&s,10);
+  		if (*s && *s != 'a' && *s != 'p')
+  			{
+  			zerrnam("sched","bad time specifier",NULL,0);
+--- 1230,1242 ----
+  		}
+  	else
+  		{
+! 		h = zstrtol(s,&s,10);
+  		if (*s != ':')
+  			{
+  			zerrnam("sched","bad time specifier",NULL,0);
+  			return 1;
+  			}
+! 		m = zstrtol(s+1,&s,10);
+  		if (*s && *s != 'a' && *s != 'p')
+  			{
+  			zerrnam("sched","bad time specifier",NULL,0);
+***************
+*** 1312,1318 ****
+  		s2 = sub->value;
+  		sub = sub->next;
+  		s5 = s;
+! 		while (s3 = (char *) strstr(s5,s1))
+  			{
+  			s4 = alloc(1+(s3-s)+strlen(s2)+strlen(s3+strlen(s1)));
+  			strncpy(s4,s,s3-s);
+--- 1313,1319 ----
+  		s2 = sub->value;
+  		sub = sub->next;
+  		s5 = s;
+! 		while (s3 = (char *) ztrstr(s5,s1))
+  			{
+  			s4 = alloc(1+(s3-s)+strlen(s2)+strlen(s3+strlen(s1)));
+  			strncpy(s4,s,s3-s);
+***************
+*** 1651,1680 ****
+  		pm = gethnode(asg->name,paramtab);
+  		if (pm)
+  			{
+! 			if (!(pm->flags & PMFLAG_r))
+  				{
+! 				if (!on && !roff && !asg->value)
+  					{
+! 					printparam(asg->name,pm);
+! 					continue;
+  					}
+! 				pm->flags = (pm->flags | on) & ~off;
+! 				if ((on & (PMFLAG_L | PMFLAG_R | PMFLAG_Z | PMFLAG_i)) 
+! 						&& (pmtype(pm) != PMFLAG_A))
+! 					pm->ct = auxlen;
+! 				if (pmtype(pm) != PMFLAG_A)
+! 					{
+! 					if (pm->flags & PMFLAG_x)
+! 						{
+! 						if (!pm->env)
+! 							pm->env = addenv(asg->name,
+! 								(asg->value) ? asg->value : getsparam(asg->name));
+! 						}
+! 					else if (pm->env)
+! 						delenv(pm->env);
+! 					if (asg->value)
+! 						setsparam(asg->name,ztrdup(asg->value));
+! 					}
+  				}
+  			}
+  		else
+--- 1652,1678 ----
+  		pm = gethnode(asg->name,paramtab);
+  		if (pm)
+  			{
+! 			if (!on && !roff && !asg->value)
+  				{
+! 				printparam(asg->name,pm);
+! 				continue;
+! 				}
+! 			pm->flags = (pm->flags | on) & ~off;
+! 			if ((on & (PMFLAG_L | PMFLAG_R | PMFLAG_Z | PMFLAG_i)) 
+! 					&& (pmtype(pm) != PMFLAG_A))
+! 				pm->ct = auxlen;
+! 			if (pmtype(pm) != PMFLAG_A)
+! 				{
+! 				if (pm->flags & PMFLAG_x)
+  					{
+! 					if (!pm->env)
+! 						pm->env = addenv(asg->name,
+! 							(asg->value) ? asg->value : getsparam(asg->name));
+  					}
+! 				else if (pm->env)
+! 					delenv(pm->env);
+! 				if (asg->value)
+! 					setsparam(asg->name,ztrdup(asg->value));
+  				}
+  			}
+  		else
+***************
+*** 1713,1719 ****
+  				case 't': putchar('\t'); break;
+  				case 'v': putchar('\v'); break;
+  				case '\\': putchar('\\'); break;
+! 				case '0': putchar(strtol(s,&s,8)); s--; break;
+  				default: putchar('\\'); putchar(*s); break;
+  				}
+  		else
+--- 1711,1717 ----
+  				case 't': putchar('\t'); break;
+  				case 'v': putchar('\v'); break;
+  				case '\\': putchar('\\'); break;
+! 				case '0': putchar(zstrtol(s,&s,8)); s--; break;
+  				default: putchar('\\'); putchar(*s); break;
+  				}
+  		else
+*** ../zshdist/zsh2.00/src/cond.c	Sat Apr 13 02:55:32 1991
+--- zsh2.00/src/cond.c	Tue Apr 23 11:34:17 1991
+***************
+*** 52,59 ****
+  		case COND_OR: return evalcond(c->left) || evalcond(c->right);
+  		}
+  	singsub((char **) &c->left);
+! 	if (c->right)
+! 		singsub((char **) &c->right);
+  	switch (c->type)
+  		{
+  		case COND_STREQ: return matchpat(c->left,c->right);
+--- 52,64 ----
+  		case COND_OR: return evalcond(c->left) || evalcond(c->right);
+  		}
+  	singsub((char **) &c->left);
+! 	untokenize(c->left);
+! 	if (c->type != COND_STREQ && c->type != COND_STRNEQ)
+! 		if (c->right)
+! 			{
+! 			singsub((char **) &c->right);
+! 			untokenize(c->right);
+! 			}
+  	switch (c->type)
+  		{
+  		case COND_STREQ: return matchpat(c->left,c->right);
+***************
+*** 67,73 ****
+  		case 'f': return(S_ISREG(dostat(c->left)));
+  		case 'g': return(!!(dostat(c->left) & S_ISGID));
+  		case 'k': return(!!(dostat(c->left) & S_ISVTX));
+! 		case 'n': return(!strlen(c->left));
+  		case 'o': return(optison(c->left));
+  		case 'p': return(S_ISFIFO(dostat(c->left)));
+  		case 'r': return(doaccess(c->left,R_OK));
+--- 72,78 ----
+  		case 'f': return(S_ISREG(dostat(c->left)));
+  		case 'g': return(!!(dostat(c->left) & S_ISGID));
+  		case 'k': return(!!(dostat(c->left) & S_ISVTX));
+! 		case 'n': return(!!strlen(c->left));
+  		case 'o': return(optison(c->left));
+  		case 'p': return(S_ISFIFO(dostat(c->left)));
+  		case 'r': return(doaccess(c->left,R_OK));
+***************
+*** 76,82 ****
+  		case 'u': return(!!(dostat(c->left) & S_ISUID));
+  		case 'w': return(doaccess(c->left,W_OK));
+  		case 'x': return(doaccess(c->left,X_OK));
+! 		case 'z': return(!!strlen(c->left));
+  		case 'L': return(S_ISLNK(dostat(c->left)));
+  		case 'O': return((st = getstat(c->left)) && st->st_uid == geteuid());
+  		case 'G': return((st = getstat(c->left)) && st->st_gid == getegid());
+--- 81,87 ----
+  		case 'u': return(!!(dostat(c->left) & S_ISUID));
+  		case 'w': return(doaccess(c->left,W_OK));
+  		case 'x': return(doaccess(c->left,X_OK));
+! 		case 'z': return(!strlen(c->left));
+  		case 'L': return(S_ISLNK(dostat(c->left)));
+  		case 'O': return((st = getstat(c->left)) && st->st_uid == geteuid());
+  		case 'G': return((st = getstat(c->left)) && st->st_gid == getegid());
+*** ../zshdist/zsh2.00/src/exec.c	Sun Apr 14 20:20:10 1991
+--- zsh2.00/src/exec.c	Tue Apr 23 11:53:10 1991
+***************
+*** 870,876 ****
+  	if (nullexec)
+  		return;
+  	if (unset(NOEXEC))
+! 		if (type >= CTIME)
+  			{
+  			static int (*func[]) DCLPROTO((Cmd)) = {
+  				exectime,execcursh,execfuncdef,execfor,execwhile,
+--- 870,876 ----
+  	if (nullexec)
+  		return;
+  	if (unset(NOEXEC))
+! 		if (type >= ZCTIME)
+  			{
+  			static int (*func[]) DCLPROTO((Cmd)) = {
+  				exectime,execcursh,execfuncdef,execfor,execwhile,
+***************
+*** 877,883 ****
+  				execrepeat,execif,execcase,execselect,execcond };
+  	
+  			fixcline(args);
+! 			lastval = (func[type-CTIME])(cmd);
+  			}
+  		else if (iscursh)		/* builtin or shell function */
+  			{
+--- 877,883 ----
+  				execrepeat,execif,execcase,execselect,execcond };
+  	
+  			fixcline(args);
+! 			lastval = (func[type-ZCTIME])(cmd);
+  			}
+  		else if (iscursh)		/* builtin or shell function */
+  			{
+***************
+*** 1148,1155 ****
+  {
+  int ret = 0;
+  
+! 	for (; *s >= '0' && *s < ('0'+base); s++)
+! 		ret = ret*base+*s-'0';
+  	if (t)
+  		*t = (char *) s;
+  	return ret;
+--- 1148,1160 ----
+  {
+  int ret = 0;
+  
+! 	if (base <= 10)
+! 		for (; *s >= '0' && *s < ('0'+base); s++)
+! 			ret = ret*base+*s-'0';
+! 	else
+! 		for (; idigit(*s) || (*s >= 'a' && *s < ('a'+base-10))
+! 								|| (*s >= 'A' && *s < ('A'+base-10)); s++)
+! 			ret = ret*base+(idigit(*s) ? (*s-'0') : (*s & 0x1f)+9);
+  	if (t)
+  		*t = (char *) s;
+  	return ret;
+*** ../zshdist/zsh2.00/src/glob.c	Sun Apr 14 15:20:32 1991
+--- zsh2.00/src/glob.c	Tue Apr 23 00:46:01 1991
+***************
+*** 32,40 ****
+  
+  #include "zsh.h"
+  #include "funcs.h"
+- #ifndef INT_MAX
+- #include <limits.h>
+- #endif
+  #include <sys/dir.h>
+  #include <sys/errno.h>
+  
+--- 32,37 ----
+***************
+*** 866,875 ****
+  					exit(31);
+  				t3 = zstrtol(ptr+1,&pat,10);
+  				if (!t3)
+! 					t3 = INT_MAX;
+  				if (*pat++ != Outang)
+  					exit(21);
+! 				if (t1 < t2 || t1 > t3)
+  					break;
+  				}
+  			continue;
+--- 863,872 ----
+  					exit(31);
+  				t3 = zstrtol(ptr+1,&pat,10);
+  				if (!t3)
+! 					t3 = -1;
+  				if (*pat++ != Outang)
+  					exit(21);
+! 				if (t1 < t2 || (t3 != -1 && t1 > t3))
+  					break;
+  				}
+  			continue;
+*** ../zshdist/zsh2.00/src/hist.c	Sun Apr 14 16:16:45 1991
+--- zsh2.00/src/hist.c	Tue Apr 23 00:30:05 1991
+***************
+*** 790,796 ****
+  		return -1;
+  	for (t0 = curhist-1,node = prevnode(lastnode(histlist));
+  			t0 >= firsthist; t0--,node = prevnode(node))
+! 		if (s = strstr(getdata(node),str))
+  			{
+  			while (s != (char *) getdata(node))
+  				if (*s-- == HISTSPACE)
+--- 790,796 ----
+  		return -1;
+  	for (t0 = curhist-1,node = prevnode(lastnode(histlist));
+  			t0 >= firsthist; t0--,node = prevnode(node))
+! 		if (s = ztrstr(getdata(node),str))
+  			{
+  			while (s != (char *) getdata(node))
+  				if (*s-- == HISTSPACE)
+***************
+*** 814,827 ****
+  		return -1;
+  	for (t0 = curhist-1,node = prevnode(lastnode(histlist)); t0 >= firsthist;
+  			t0--,node = prevnode(node))
+! 		{
+! 		for (s = getdata(node); *s; s++)
+! 			if (*s == HISTSPACE)
+! 				break;
+! 		t = strstr(getdata(node),str);
+! 		if (t && t < s)
+  			return t0;
+- 		}
+  	return -1;
+  }
+  
+--- 814,821 ----
+  		return -1;
+  	for (t0 = curhist-1,node = prevnode(lastnode(histlist)); t0 >= firsthist;
+  			t0--,node = prevnode(node))
+! 		if (!strncmp(getdata(node),str,strlen(str)))
+  			return t0;
+  	return -1;
+  }
+  
+***************
+*** 907,913 ****
+  int ret = 0,off;
+  
+  considered_harmful:
+! 	if (cut = (char *) strstr(str,in))
+  		{
+  		*cut = '\0';
+  		cut += strlen(in);
+--- 901,907 ----
+  int ret = 0,off;
+  
+  considered_harmful:
+! 	if (cut = (char *) ztrstr(str,in))
+  		{
+  		*cut = '\0';
+  		cut += strlen(in);
+***************
+*** 1159,1164 ****
+--- 1153,1160 ----
+  	/* kludge alert! */
+  	buf = (buf == buf1) ? buf2 : buf1;
+  	bp = bl0 = buf;
++ 	if (!columns)
++ 		columns = 80;
+  	clearerr(stdin);
+  	for(;*fm;fm++)
+  		{
+***************
+*** 1263,1274 ****
+  			bp += strlen(bp);
+  			}
+  		else
+  			if ((*bp++ = *fm) == '\n')
+  				bl0 = bp;
+  		}
+  	*lenp = (bp-bl0)-lensb;
+! 	if (columns)
+! 		*lenp %= columns;
+  	if (*lenp == columns-1)
+  		{
+  		*lenp = 0;
+--- 1259,1273 ----
+  			bp += strlen(bp);
+  			}
+  		else
++ 			{
++ 			if (fm[0] == '\\' && fm[1])
++ 				fm++;
+  			if ((*bp++ = *fm) == '\n')
+  				bl0 = bp;
++ 			}
+  		}
+  	*lenp = (bp-bl0)-lensb;
+! 	*lenp %= columns;
+  	if (*lenp == columns-1)
+  		{
+  		*lenp = 0;
+***************
+*** 1373,1380 ****
+--- 1372,1383 ----
+  {
+  int z;
+  
++ #ifdef TIOCSWINSZ
+  	z = shttyinfo.winsize.ws_col;
+  	return (z) ? z : 80;
++ #else
++ 	return 80;
++ #endif
+  }
+  
+  void unsetcbreak() /**/
+--
+Paul Falstad, pfalstad@phoenix.princeton.edu | 10 PRINT "PRINCETON CS"
+[Your blood pressure just went up.]          | 20 GOTO 10
+Princeton University would like to apologize to everyone for this article.
+
+exit 0 # Just in case...
+-- 
+Kent Landfield                   INTERNET: kent@sparky.IMD.Sterling.COM
+Sterling Software, IMD           UUCP:     uunet!sparky!kent
+Phone:    (402) 291-8300         FAX:      (402) 291-4362
+Please send comp.sources.misc-related mail to kent@uunet.uu.net.

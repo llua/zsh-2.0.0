@@ -1,0 +1,2179 @@
+Path: funic!news.funet.fi!sunic!mcsun!uunet!sparky!kent
+From: pfalstad@phoenix.princeton.edu (Paul Falstad)
+Newsgroups: comp.sources.misc
+Subject: v19i070:  zsh2.00 - The Z shell, Patch02d/6
+Message-ID: <1991May15.220259.7409@sparky.IMD.Sterling.COM>
+Date: 15 May 91 22:02:59 GMT
+Sender: kent@sparky.IMD.Sterling.COM (Kent Landfield)
+Organization: League For Fighting Chartered Accountancy
+Lines: 2167
+Approved: kent@sparky.imd.sterling.com
+X-Md4-Signature: d1c7c852ac487d0dbf2a39d81aab694b
+
+Submitted-by: Paul Falstad <pfalstad@phoenix.princeton.edu>
+Posting-number: Volume 19, Issue 70
+Archive-name: zsh2.00/patch02d
+Patch-To: zsh2.00: Volume 18, Issue 84-98
+
+#!/bin/sh
+# this is zpatch.04 (part 4 of a multipart archive)
+# do not concatenate these parts, unpack them in order with /bin/sh
+# file patches continued
+#
+if test ! -r _shar_seq_.tmp; then
+	echo 'Please unpack part 1 first!'
+	exit 1
+fi
+(read Scheck
+ if test "$Scheck" != 4; then
+	echo Please unpack part "$Scheck" next!
+	exit 1
+ else
+	exit 0
+ fi
+) < _shar_seq_.tmp || exit 1
+echo 'x - continuing file patches'
+sed 's/^X//' << 'SHAR_EOF' >> 'patches' &&
+--- 480,486 ----
+X  /* ^X */ z_expandorcomplete,
+X  /* ^Y */ z_undefinedkey,
+X  /* ^Z */ z_undefinedkey,
+! /* ^[ */ z_sequenceleadin,
+X  /* ^\ */ z_undefinedkey,
+X  /* ^] */ z_undefinedkey,
+X  /* ^^ */ z_undefinedkey,
+***************
+*** 523,530 ****
+X  /* G */ z_vifetchhistory,
+X  /* H */ z_vicapslockpanic,
+X  /* I */ z_viinsertbol,
+! /* J */ z_vijoin,
+! /* K */ z_vicapslockpanic,
+X  /* L */ z_undefinedkey,
+X  /* M */ z_undefinedkey,
+X  /* N */ z_virevrepeatsearch,
+--- 527,534 ----
+X  /* G */ z_vifetchhistory,
+X  /* H */ z_vicapslockpanic,
+X  /* I */ z_viinsertbol,
+! /* J */ z_historysearchforward,
+! /* K */ z_historysearchbackward,
+X  /* L */ z_undefinedkey,
+X  /* M */ z_undefinedkey,
+X  /* N */ z_virevrepeatsearch,
+*** src/zsh0/zsh2.00/src/zle_emacs.c	Tue Apr 23 00:30:05 1991
+--- zsh2.00/src/zle_emacs.c	Wed May  8 22:34:14 1991
+***************
+*** 32,38 ****
+X  
+X  #define ZLE
+X  #include "zsh.h"
+- #include "funcs.h"
+X  
+X  void beginningofline() /**/
+X  {
+--- 32,37 ----
+***************
+*** 51,58 ****
+X  {
+X  	while (mult--)
+X  		{
+! 		if (cs == ll)
+X  			return;
+X  		if (line[cs] == '\n')
+X  			if (++cs == ll)
+X  				return;
+--- 50,59 ----
+X  {
+X  	while (mult--)
+X  		{
+! 		if (cs >= ll) {
+! 			cs = ll;
+X  			return;
++ 		}
+X  		if (line[cs] == '\n')
+X  			if (++cs == ll)
+X  				return;
+***************
+*** 60,65 ****
+--- 61,103 ----
+X  		}
+X  }
+X  
++ void beginningoflinehist() /**/
++ {
++ 	while (mult)
++ 		{
++ 		if (cs == 0)
++ 			break;
++ 		if (line[cs-1] == '\n')
++ 			if (!--cs)
++ 				break;
++ 		while (cs && line[cs-1] != '\n') cs--;
++ 		mult--;
++ 		}
++ 	if (mult)
++ 		{
++ 		uphistory();
++ 		cs = 0;
++ 		}
++ }
++ 
++ void endoflinehist() /**/
++ {
++ 	while (mult)
++ 		{
++ 		if (cs >= ll) {
++ 			cs = ll;
++ 			break;
++ 		}
++ 		if (line[cs] == '\n')
++ 			if (++cs == ll)
++ 				break;
++ 		while (cs != ll && line[cs] != '\n') cs++;
++ 		mult--;
++ 		}
++ 	if (mult)
++ 		downhistory();
++ }
++ 
+X  void forwardchar() /**/
+X  {
+X  	if ((cs += mult) > ll) cs = ll;
+***************
+*** 100,107 ****
+X  		return;
+X  		}
+X  	if (!(cs+mult > ll || line[cs] == '\n'))
+X  		cs += mult;
+! 	backdel(mult);
+X  }
+X  
+X  void backwarddeletechar() /**/
+--- 138,149 ----
+X  		return;
+X  		}
+X  	if (!(cs+mult > ll || line[cs] == '\n'))
++ 		{
+X  		cs += mult;
+! 		backdel(mult);
+! 		}
+! 	else
+! 		feep();
+X  }
+X  
+X  void backwarddeletechar() /**/
+***************
+*** 271,277 ****
+X  		while (cs != ll && !iword(line[cs])) cs++;
+X  		while (cs != ll && iword(line[cs]))
+X  			{
+! 			line[cs] = toupper(line[cs]);
+X  			cs++;
+X  			}
+X  		}
+--- 313,319 ----
+X  		while (cs != ll && !iword(line[cs])) cs++;
+X  		while (cs != ll && iword(line[cs]))
+X  			{
+! 			line[cs] = tuupper(line[cs]);
+X  			cs++;
+X  			}
+X  		}
+***************
+*** 284,290 ****
+X  		while (cs != ll && !iword(line[cs])) cs++;
+X  		while (cs != ll && iword(line[cs]))
+X  			{
+! 			line[cs] = tolower(line[cs]);
+X  			cs++;
+X  			}
+X  		}
+--- 326,332 ----
+X  		while (cs != ll && !iword(line[cs])) cs++;
+X  		while (cs != ll && iword(line[cs]))
+X  			{
+! 			line[cs] = tulower(line[cs]);
+X  			cs++;
+X  			}
+X  		}
+***************
+*** 300,306 ****
+X  		while (cs != ll && !iword(line[cs])) cs++;
+X  		while (cs != ll && iword(line[cs]))
+X  			{
+! 			line[cs] = (first) ? toupper(line[cs]) : tolower(line[cs]);
+X  			first = 0;
+X  			cs++;
+X  			}
+--- 342,348 ----
+X  		while (cs != ll && !iword(line[cs])) cs++;
+X  		while (cs != ll && iword(line[cs]))
+X  			{
+! 			line[cs] = (first) ? tuupper(line[cs]) : tulower(line[cs]);
+X  			first = 0;
+X  			cs++;
+X  			}
+***************
+*** 386,397 ****
+X  			return;
+X  			}
+X  		for (p1 = p2; p1 && iword(line[p1-1]); p1--);
+! 		pp = temp = zalloc(p4-p1+1);
+X  		struncpy(&pp,line+p3,p4-p3);
+X  		struncpy(&pp,line+p2,p3-p2);
+X  		struncpy(&pp,line+p1,p2-p1);
+X  		strncpy(line+p1,temp,p4-p1);
+- 		free(temp);
+X  		cs = p4;
+X  		}
+X  }
+--- 428,438 ----
+X  			return;
+X  			}
+X  		for (p1 = p2; p1 && iword(line[p1-1]); p1--);
+! 		pp = temp = halloc(p4-p1+1);
+X  		struncpy(&pp,line+p3,p4-p3);
+X  		struncpy(&pp,line+p2,p3-p2);
+X  		struncpy(&pp,line+p1,p2-p1);
+X  		strncpy(line+p1,temp,p4-p1);
+X  		cs = p4;
+X  		}
+X  }
+***************
+*** 699,706 ****
+X  char *s,*t;
+X  int len,z = lithist;
+X  
+X  	lithist = 0;
+! 	if (!(s = qgetevent(curhist-1), lithist = z, s))
+X  		{
+X  		feep();
+X  		return;
+--- 740,765 ----
+X  char *s,*t;
+X  int len,z = lithist;
+X  
++ 	/* multiple calls will now search back through the history, pem */
++ 	static char	*lastinsert;
++ 	static int	lasthist, lastpos;
++ 	int		evhist = curhist - 1;
++ 
++ 	if (lastinsert) {
++ 	    int len = strlen(lastinsert);
++ 	    int pos = cs;
++ 	    if (	lastpos <= pos &&
++ 			len == pos - lastpos &&
++ 			strncmp(lastinsert, &line[lastpos], len) == 0) {
++ 		evhist = --lasthist;
++ 		cs = lastpos;
++ 		foredel(pos-cs);
++ 	    }
++ 	    free(lastinsert);
++ 	    lastinsert = NULL;
++ 	}
+X  	lithist = 0;
+! 	if (!(s = qgetevent(evhist), lithist = z, s))
+X  		{
+X  		feep();
+X  		return;
+***************
+*** 710,715 ****
+--- 769,777 ----
+X  			break;
+X  	if (t != s)
+X  		t++;
++ 	lasthist = evhist;
++ 	lastpos = cs;
++ 	lastinsert = ztrdup(t);
+X  	spaceinline(len = strlen(t));
+X  	strncpy(line+cs,t,len);
+X  	cs += len;
+***************
+*** 743,750 ****
+X  
+X  void pushline() /**/
+X  {
+! 	while (mult--)
+! 		pushnode(bufstack,ztrdup(line));
+X  	stackcs = cs;
+X  	*line = '\0';
+X  	ll = cs = 0;
+--- 805,813 ----
+X  
+X  void pushline() /**/
+X  {
+! 	pushnode(bufstack,ztrdup(line));
+! 	while (--mult)
+! 		pushnode(bufstack,ztrdup(""));
+X  	stackcs = cs;
+X  	*line = '\0';
+X  	ll = cs = 0;
+***************
+*** 790,796 ****
+X  	strncpy(line+ue->pref,ue->change,ue->len);
+X  	strcpy(line+ue->pref+ue->len,s);
+X  	free(s);
+- 	free(ue->change);
+X  	ue->change = NULL;
+X  	undoct = (undoct-1) & (UNDOCT-1);
+X  	cs = ue->cs;
+--- 853,858 ----
+***************
+*** 847,853 ****
+X  					if (!(chequiv && !hstrcmp(line,s)))
+X  						{
+X  						sethistline(s);
+! 						cs = t-s+sbptr;
+X  						break;
+X  						}
+X  				histline += dir;
+--- 909,915 ----
+X  					if (!(chequiv && !hstrcmp(line,s)))
+X  						{
+X  						sethistline(s);
+! 						cs = t-s+sbptr-(sbuf[0] == '^');
+X  						break;
+X  						}
+X  				histline += dir;
+***************
+*** 855,865 ****
+X  			chequiv = 0;
+X  			}
+X  		refresh();
+! 		if ((ch = getkey(0)) == -1)
+X  			break;
+X  		if (ch == 22 || ch == 17)
+X  			{
+! 			if ((ch = getkey(0)) == -1)
+X  				break;
+X  			}
+X  		else if (ch == 8 || ch == 127)
+--- 917,927 ----
+X  			chequiv = 0;
+X  			}
+X  		refresh();
+! 		if ((ch = getkey(1)) == -1)
+X  			break;
+X  		if (ch == 22 || ch == 17)
+X  			{
+! 			if ((ch = getkey(1)) == -1)
+X  				break;
+X  			}
+X  		else if (ch == 8 || ch == 127)
+***************
+*** 893,898 ****
+--- 955,965 ----
+X  			chequiv = 1;
+X  			continue;
+X  			}
++ 		else if (!(ch & 0x60))
++ 			{
++ 			ungetkey(ch);
++ 			break;
++ 			}
+X  		if (!nomatch && sbptr != 39 && !icntrl(ch))
+X  			{
+X  			sbuf[sbptr++] = ch;
+***************
+*** 916,922 ****
+X  		mark = cs;
+X  		cs = x;
+X  		}
+! 	s = zcalloc((y = mark-cs)+1);
+X  	strncpy(s,line+cs,y);
+X  	s[y] = '\0';
+X  	foredel(mark-cs);
+--- 983,989 ----
+X  		mark = cs;
+X  		cs = x;
+X  		}
+! 	s = hcalloc((y = mark-cs)+1);
+X  	strncpy(s,line+cs,y);
+X  	s[y] = '\0';
+X  	foredel(mark-cs);
+***************
+*** 923,930 ****
+X  	t = makequote(s);
+X  	spaceinline(x = strlen(t));
+X  	strncpy(line+cs,t,x);
+- 	free(t);
+- 	free(s);
+X  	mark = cs;
+X  	cs += x;
+X  }
+--- 990,995 ----
+***************
+*** 936,942 ****
+X  	line[ll] = '\0';
+X  	s = makequote(line);
+X  	setline(s);
+- 	free(s);
+X  }
+X  
+X  char *makequote(s) /**/
+--- 1001,1006 ----
+***************
+*** 948,954 ****
+X  	for (l = s; *l; l++)
+X  		if (*l == '\'')
+X  			qtct++;
+! 	l = ol = zalloc((qtct*3)+3+strlen(s));
+X  	*l++ = '\'';
+X  	for (; *s; s++)
+X  		if (*s == '\'')
+--- 1012,1018 ----
+X  	for (l = s; *l; l++)
+X  		if (*l == '\'')
+X  			qtct++;
+! 	l = ol = halloc((qtct*3)+3+strlen(s));
+X  	*l++ = '\'';
+X  	for (; *s; s++)
+X  		if (*s == '\'')
+***************
+*** 1012,1017 ****
+--- 1076,1172 ----
+X  		feep();
+X  		return;
+X  		}
++ 	histline = t0+1;
+X  	sethistline(s);
++ }
++ 
++ #define NAMLEN 70
++ 
++ int executenamedcommand() /**/
++ {
++ char buf[NAMLEN],*ptr;
++ int len,ch,t0;
++ 
++ 	strcpy(buf,"execute: ");
++ 	ptr = buf+9;
++ 	len = 0;
++ 	statusline = buf;
++ 	refresh();
++ 	for (;ch = getkey(1);refresh())
++ 		{
++ 		switch (ch)
++ 			{
++ 			case 8: case 127:
++ 				if (len)
++ 					{
++ 					len--;
++ 					*--ptr = '\0';
++ 					}
++ 				break;
++ 			case 23:
++ 				while (len && (len--, *--ptr != '-'))
++ 					*ptr = '\0';
++ 				break;
++ 			case 21:
++ 				len = 0;
++ 				ptr = buf+9;
++ 				*ptr = '\0';
++ 				break;
++ 			case 10: case 13: goto brk;
++ 			case 7: case -1: statusline = NULL; return;
++ 			case 9: case 32:
++ 				{
++ 				Lklist ll;
++ 				int ambig = 100;
++ 
++ 				heapalloc();
++ 				ll = newlist();
++ 				for (t0 = 0; t0 != ZLECMDCOUNT; t0++)
++ 					if (strpfx(buf+9,zlecmds[t0].name))
++ 						{
++ 						int xx;
++ 
++ 						addnode(ll,zlecmds[t0].name);
++ 						xx = pfxlen(peekfirst(ll),zlecmds[t0].name);
++ 						if (xx < ambig)
++ 							ambig = xx;
++ 						}
++ 				permalloc();
++ 				if (!full(ll))
++ 					feep();
++ 				else if (!nextnode(firstnode(ll)))
++ 					{
++ 					strcpy(buf+9,peekfirst(ll));
++ 					ptr = buf+(len = strlen(buf));
++ 					}
++ 				else
++ 					{
++ 					strcpy(buf+9,peekfirst(ll));
++ 					len = ambig;
++ 					ptr = buf+9+len;
++ 					*ptr = '\0';
++ 					feep();
++ 					listmatches(ll,NULL);
++ 					}
++ 				break;
++ 				}
++ 			default:
++ 				if (len == NAMLEN-10 || icntrl(ch))
++ 					feep();
++ 				else
++ 					*ptr++ = ch, *ptr = '\0', len++;
++ 				break;
++ 			}
++ 		}
++ brk:
++ 	statusline = NULL;
++ 	ptr = buf+9;
++ 	for (t0 = 0; t0 != ZLECMDCOUNT; t0++)
++ 		if (!strcmp(ptr,zlecmds[t0].name))
++ 			break;
++ 	if (t0 != ZLECMDCOUNT)
++ 		return lastnamed = t0;
++ 	else
++ 		return z_undefinedkey;
+X  }
+X  
+*** src/zsh0/zsh2.00/src/zle_emacs.pro	Tue Apr 23 00:30:03 1991
+--- zsh2.00/src/zle_emacs.pro	Tue May  7 22:53:30 1991
+***************
+*** 1,5 ****
+--- 1,7 ----
+X  void beginningofline DCLPROTO((void));
+X  void endofline DCLPROTO((void));
++ void beginningoflinehist DCLPROTO((void));
++ void endoflinehist DCLPROTO((void));
+X  void forwardchar DCLPROTO((void));
+X  void backwardchar DCLPROTO((void));
+X  void selfinsert DCLPROTO((void));
+***************
+*** 62,64 ****
+--- 64,67 ----
+X  char *makequote DCLPROTO((char *s));
+X  void acceptandinfernexthistory DCLPROTO((void));
+X  void infernexthistory DCLPROTO((void));
++ int executenamedcommand DCLPROTO((void));
+*** src/zsh0/zsh2.00/src/zle_main.c	Tue Apr 23 00:30:05 1991
+--- zsh2.00/src/zle_main.c	Wed May  8 22:34:14 1991
+***************
+*** 33,39 ****
+X  #define ZLEGLOBALS
+X  #define ZLE
+X  #include "zsh.h"
+- #include "funcs.h"
+X  #include <sys/types.h>
+X  #include <sys/errno.h>
+X  
+--- 33,38 ----
+***************
+*** 41,57 ****
+X  
+X  /* set up terminal */
+X  
+X  void setterm() /**/
+X  {
+X  struct ttyinfo ti;
+- int t0;
+X  
+X  	inittty();
+X  	ti = shttyinfo;
+X  #ifdef TERMIOS
+X  	ti.termios.c_lflag &= ~(ICANON|ECHO);
+! 	for (t0 = 0; t0 <= NCCS; t0++)
+! 		ti.termios.c_cc[t0] = 0;
+X  	ti.termios.c_cc[VMIN] = 1;
+X  	ti.termios.c_cc[VTIME] = 0;
+X  	ti.termios.c_iflag &= ~(IXON|IXOFF|INLCR|ICRNL|ISTRIP);
+--- 40,57 ----
+X  
+X  /* set up terminal */
+X  
++ 
+X  void setterm() /**/
+X  {
+X  struct ttyinfo ti;
+X  
+X  	inittty();
+X  	ti = shttyinfo;
+X  #ifdef TERMIOS
+X  	ti.termios.c_lflag &= ~(ICANON|ECHO);
+! 	ti.termios.c_cc[VQUIT] = ti.termios.c_cc[VDISCARD] = 
+! 		ti.termios.c_cc[VSUSP] = ti.termios.c_cc[VDSUSP] =
+! 		ti.termios.c_cc[VSTOP] = ti.termios.c_cc[VSTART] = 0;
+X  	ti.termios.c_cc[VMIN] = 1;
+X  	ti.termios.c_cc[VTIME] = 0;
+X  	ti.termios.c_iflag &= ~(IXON|IXOFF|INLCR|ICRNL|ISTRIP);
+***************
+*** 58,79 ****
+X  #else
+X  #ifdef TERMIO
+X  	ti.termio.c_lflag &= ~(ICANON|ECHO);
+! 	for (t0 = 0; t0 <= NCCS; t0++)
+! 		ti.termio.c_cc[t0] = 0;
+X  	ti.termio.c_cc[VMIN] = 1;
+X  	ti.termio.c_cc[VTIME] = 0;
+X  	ti.termio.c_iflag &= ~(IXON|IXOFF|INLCR|ICRNL|ISTRIP);
+X  #else
+X  	ti.sgttyb.sg_flags = (ti.sgttyb.sg_flags | CBREAK) & ~ECHO;
+! 	ti.tchars.t_intrc = ti.tchars.t_quitc = ti.tchars.t_startc =
+! 		ti.tchars.t_stopc = ti.tchars.t_eofc = ti.tchars.t_brkc =
+! 		ti.ltchars.t_suspc = ti.ltchars.t_dsuspc =
+! 		ti.ltchars.t_rprntc = ti.ltchars.t_flushc =
+! 		ti.ltchars.t_werasc = ti.ltchars.t_lnextc = 
+! 		ti.sgttyb.sg_erase = ti.sgttyb.sg_kill = -1;
+X  #endif
+X  #endif
+X  	settyinfo(&ti);
+X  }
+X  
+X  void unsetterm() /**/
+--- 58,84 ----
+X  #else
+X  #ifdef TERMIO
+X  	ti.termio.c_lflag &= ~(ICANON|ECHO);
+! 	ti.termio.c_cc[VQUIT] =
+! 		ti.termio.c_cc[VSTOP] = ti.termio.c_cc[VSTART] = 0;
+X  	ti.termio.c_cc[VMIN] = 1;
+X  	ti.termio.c_cc[VTIME] = 0;
+X  	ti.termio.c_iflag &= ~(IXON|IXOFF|INLCR|ICRNL|ISTRIP);
+X  #else
+X  	ti.sgttyb.sg_flags = (ti.sgttyb.sg_flags | CBREAK) & ~ECHO;
+! #ifdef LPASS8OUT
+! 	ti.lmodes |= LPASS8|LPASS8OUT;
+! #else
+! 	ti.lmodes |= LPASS8;
+X  #endif
++ 	ti.tchars.t_quitc = ti.tchars.t_startc =
++ 		ti.tchars.t_stopc = ti.ltchars.t_suspc =
++ 		ti.ltchars.t_dsuspc = ti.ltchars.t_lnextc = -1;
+X  #endif
++ #endif
+X  	settyinfo(&ti);
++ #ifdef TCXONC
++ 	ioctl(SHTTY,TCXONC,1);
++ #endif
+X  }
+X  
+X  void unsetterm() /**/
+***************
+*** 113,120 ****
+--- 118,129 ----
+X  			continue;
+X  		else if (errno == EINTR)
+X  			{
++ 			if (!errflag)
++ 				continue;
++ 			errflag = 0;
+X  			if (tmok)
+X  				return -1;
++ 			return 3;
+X  			}
+X  		else
+X  			{
+***************
+*** 175,181 ****
+X  		}
+X  	initundo();
+X  	setterm();
+! 	if (unset(SHUTUPKARTIK))
+X  		putchar('\r');
+X  	refresh();
+X  	if (tmout)
+--- 184,190 ----
+X  		}
+X  	initundo();
+X  	setterm();
+! 	if (unset(NOPROMPTCLOBBER))
+X  		putchar('\r');
+X  	refresh();
+X  	if (tmout)
+***************
+*** 207,214 ****
+X  			if (lastcmd & ZLE_MOD)
+X  				addundo();
+X  			}
+! 		else if (errflag)
+X  			break;
+X  		FD_SET(0,&foofd);
+X  		if ((tv.tv_usec = cost*costmult) > 500000)
+X  			tv.tv_usec = 500000;
+--- 216,226 ----
+X  			if (lastcmd & ZLE_MOD)
+X  				addundo();
+X  			}
+! 		else
+! 			{
+! 			errflag = 1;
+X  			break;
++ 			}
+X  		FD_SET(0,&foofd);
+X  		if ((tv.tv_usec = cost*costmult) > 500000)
+X  			tv.tv_usec = 500000;
+***************
+*** 247,253 ****
+X  int t0,ret;
+X  Key ky;
+X  
+- kludge:
+X  	t0 = 1;
+X  	cky = NULL;
+X  	if ((c = getkey(1)) == -1)
+--- 259,264 ----
+***************
+*** 261,270 ****
+X  			buf[t0++] = (c) ? c : 0x80;
+X  			buf[t0] = '\0';
+X  			if (!(ky = (Key) gethnode(buf,xbindtab)))
+! 				{
+! 				feep();
+! 				return -1;
+! 				}
+X  			if (ky->func != z_sequenceleadin)
+X  				{
+X  				cky = ky;
+--- 272,278 ----
+X  			buf[t0++] = (c) ? c : 0x80;
+X  			buf[t0] = '\0';
+X  			if (!(ky = (Key) gethnode(buf,xbindtab)))
+! 				return z_undefinedkey;
+X  			if (ky->func != z_sequenceleadin)
+X  				{
+X  				cky = ky;
+***************
+*** 273,293 ****
+X  				}
+X  			}
+X  		}
+- 	if (ret == z_metafynext)
+- 		{
+- 		metafynext();
+- 		goto kludge;
+- 		}
+X  	if (ret == z_vidigitorbeginningofline)
+X  		ret = (lastcmd & ZLE_ARG) ? z_digitargument : z_beginningofline;
+X  	return ret;
+X  }
+X  
+- void metafynext() /**/
+- {
+- 	ungetkey(getkey(0)|0x80);
+- }
+- 
+X  void sendstring() /**/
+X  {
+X  char buf[2];
+--- 281,295 ----
+X  				}
+X  			}
+X  		}
+X  	if (ret == z_vidigitorbeginningofline)
+X  		ret = (lastcmd & ZLE_ARG) ? z_digitargument : z_beginningofline;
++ 	else if (ret == z_executenamedcmd)
++ 		ret = executenamedcommand();
++ 	else if (ret == z_executelastnamedcmd)
++ 		ret = lastnamed;
+X  	return ret;
+X  }
+X  
+X  void sendstring() /**/
+X  {
+X  char buf[2];
+***************
+*** 312,321 ****
+X  
+X  void initxbindtab() /**/
+X  {
+! int t0;
+X  
+! 	for (t0 = 0; t0 != 256; t0++)
+! 		mainbindtab[t0] = emacsbind[t0];
+X  	for (t0 = 0; t0 != 128; t0++)
+X  		altbindtab[t0] = vicmdbind[t0];
+X  	for (t0 = 128; t0 != 256; t0++)
+--- 314,347 ----
+X  
+X  void initxbindtab() /**/
+X  {
+! int t0,vi = 0;
+! char buf[3],*s;
+X  
+! 	lastnamed = z_undefinedkey;
+! 	if (s = zgetenv("VISUAL"))
+! 		{
+! 		if (ztrstr(s,"vi"))
+! 			vi = 1;
+! 		}
+! 	else if ((s = zgetenv("EDITOR")) && ztrstr(s,"vi"))
+! 		vi = 1;
+! 	if (vi)
+! 		{
+! 		for (t0 = 0; t0 != 32; t0++)
+! 			mainbindtab[t0] = viinsbind[t0];
+! 		for (t0 = 32; t0 != 256; t0++)
+! 			mainbindtab[t0] = z_selfinsert;
+! 		mainbindtab[127] = z_backwarddeletechar;
+! 		}
+! 	else
+! 		{
+! 		for (t0 = 0; t0 != 128; t0++)
+! 			mainbindtab[t0] = emacsbind[t0];
+! 		for (t0 = 128; t0 != 256; t0++)
+! 			mainbindtab[t0] = z_selfinsert;
+! 		}
+! 	for (t0 = 0200; t0 != 0240; t0++)
+! 		mainbindtab[t0] = z_undefinedkey;
+X  	for (t0 = 0; t0 != 128; t0++)
+X  		altbindtab[t0] = vicmdbind[t0];
+X  	for (t0 = 128; t0 != 256; t0++)
+***************
+*** 323,333 ****
+X  	bindtab = mainbindtab;
+X  	kungetbuf = zalloc(kungetsz = 32);
+X  	kungetct = 0;
+! 	xbindtab = newhtable(13);
+! 	addhperm("\333C",makefunckey(z_forwardchar),xbindtab,NULL);
+! 	addhperm("\333D",makefunckey(z_backwardchar),xbindtab,NULL);
+! 	addhperm("\333A",makefunckey(z_uplineorhistory),xbindtab,NULL);
+! 	addhperm("\333B",makefunckey(z_downlineorhistory),xbindtab,NULL);
+X  	addhperm("\30*",makefunckey(z_expandword),xbindtab,NULL);
+X  	addhperm("\30g",makefunckey(z_listexpand),xbindtab,NULL);
+X  	addhperm("\30G",makefunckey(z_listexpand),xbindtab,NULL);
+--- 349,359 ----
+X  	bindtab = mainbindtab;
+X  	kungetbuf = zalloc(kungetsz = 32);
+X  	kungetct = 0;
+! 	xbindtab = newhtable(67);
+! 	addhperm("\33\133C",makefunckey(z_forwardchar),xbindtab,NULL);
+! 	addhperm("\33\133D",makefunckey(z_backwardchar),xbindtab,NULL);
+! 	addhperm("\33\133A",makefunckey(z_uplineorhistory),xbindtab,NULL);
+! 	addhperm("\33\133B",makefunckey(z_downlineorhistory),xbindtab,NULL);
+X  	addhperm("\30*",makefunckey(z_expandword),xbindtab,NULL);
+X  	addhperm("\30g",makefunckey(z_listexpand),xbindtab,NULL);
+X  	addhperm("\30G",makefunckey(z_listexpand),xbindtab,NULL);
+***************
+*** 343,348 ****
+--- 369,381 ----
+X  		xbindtab,NULL);
+X  	addhperm("run-help",mkanode(ztrdup("man"),1),aliastab,NULL);
+X  	addhperm("which-command",mkanode(ztrdup("whence"),1),aliastab,NULL);
++ 	strcpy(buf,"\33q");
++ 	for (t0 = 128; t0 != 256; t0++)
++ 		if (emacsbind[t0] != z_undefinedkey)
++ 			{
++ 			buf[1] = t0 & 0x7f;
++ 			addhnode(ztrdup(buf),makefunckey(emacsbind[t0]),xbindtab,NULL);
++ 			}
+X  	stackhist = stackcs = -1;
+X  }
+X  
+***************
+*** 355,366 ****
+X  
+X  	for (;*s;s++)
+X  		{
+! 		if (*s == '\33' && s[1] && first && bindtab[033] == z_metafynext)
+! 			{
+! 			*t++ = s[1]|0x80;
+! 			s++;
+! 			}
+! 		else if (*s == '\\' && s[1])
+X  			switch(*++s)
+X  				{
+X  				case 'a': *t++ = '\07'; break;
+--- 388,394 ----
+X  
+X  	for (;*s;s++)
+X  		{
+! 		if (*s == '\\' && s[1])
+X  			switch(*++s)
+X  				{
+X  				case 'a': *t++ = '\07'; break;
+***************
+*** 422,428 ****
+X  		if (icntrl(ch))
+X  			switch(ch)
+X  				{
+! 				case '\x7f': printf("^?"); break;
+X  				default: printf("^%c",(ch|0x40)); break;
+X  				}
+X  		else
+--- 450,456 ----
+X  		if (icntrl(ch))
+X  			switch(ch)
+X  				{
+! 				case 0x7f: printf("^?"); break;
+X  				default: printf("^%c",(ch|0x40)); break;
+X  				}
+X  		else
+***************
+*** 445,451 ****
+X  		printf("\"\n");
+X  		}
+X  	else
+! 		printf("%s\n",zlecmds[k->func]);
+X  }
+X  
+X  int bin_bindkey(name,argv,ops,junc) /**/
+--- 473,479 ----
+X  		printf("\"\n");
+X  		}
+X  	else
+! 		printf("%s\n",zlecmds[k->func].name);
+X  }
+X  
+X  int bin_bindkey(name,argv,ops,junc) /**/
+***************
+*** 464,471 ****
+X  			return 1;
+X  			}
+X  		if (ops['d'] || ops['e'])
+! 			for (t0 = 0; t0 != 256; t0++)
+! 				tab[t0] = emacsbind[t0];
+X  		else
+X  			{
+X  			for (t0 = 0; t0 != 32; t0++)
+--- 492,507 ----
+X  			return 1;
+X  			}
+X  		if (ops['d'] || ops['e'])
+! 			if (ops['m'])
+! 				for (t0 = 0; t0 != 256; t0++)
+! 					tab[t0] = emacsbind[t0];
+! 			else
+! 				{
+! 				for (t0 = 0; t0 != 128; t0++)
+! 					tab[t0] = emacsbind[t0];
+! 				for (t0 = 128; t0 != 256; t0++)
+! 					tab[t0] = z_selfinsert;
+! 				}
+X  		else
+X  			{
+X  			for (t0 = 0; t0 != 32; t0++)
+***************
+*** 478,483 ****
+--- 514,521 ----
+X  			altbindtab[t0] = vicmdbind[t0];
+X  		for (t0 = 128; t0 != 256; t0++)
+X  			altbindtab[t0] = emacsbind[t0];
++ 		for (t0 = 0200; t0 != 0240; t0++)
++ 			tab[t0] = z_undefinedkey;
+X  		return 0;
+X  		}
+X  	if (!*argv)
+***************
+*** 541,546 ****
+--- 579,585 ----
+X  			if (func == z_sendstring)
+X  				{
+X  				printbind(ky->str,ky->len);
++ 				putchar('\n');
+X  				return 0;
+X  				}
+X  			printf("%s\n",zlecmds[func].name);
+***************
+*** 614,620 ****
+X  }
+X  
+X  void freekey(x) /**/
+! void *x;
+X  {
+X  Key k = x;
+X  
+--- 653,659 ----
+X  }
+X  
+X  void freekey(x) /**/
+! vptr x;
+X  {
+X  Key k = x;
+X  
+*** src/zsh0/zsh2.00/src/zle_refresh.c	Tue Apr 23 00:30:05 1991
+--- zsh2.00/src/zle_refresh.c	Wed May  8 22:34:14 1991
+***************
+*** 32,38 ****
+X  
+X  #define ZLE
+X  #include "zsh.h"
+- #include "funcs.h"
+X  
+X  char **obuf = NULL,**nbuf = NULL;
+X  int olnct,nlnct;
+--- 32,37 ----
+*** src/zsh0/zsh2.00/src/zle_utils.c	Tue Apr 23 00:30:05 1991
+--- zsh2.00/src/zle_utils.c	Wed May  8 22:34:14 1991
+***************
+*** 32,38 ****
+X  
+X  #define ZLE
+X  #include "zsh.h"
+- #include "funcs.h"
+X  
+X  /* make sure that the line buffer has at least sz chars */
+X  
+--- 32,37 ----
+***************
+*** 171,176 ****
+--- 170,177 ----
+X  	*b = findeol();
+X  }
+X  
++ static int lastlinelen;
++ 
+X  void initundo() /**/
+X  {
+X  int t0;
+***************
+*** 178,184 ****
+X  	for (t0 = 0; t0 != UNDOCT; t0++)
+X  		undos[t0].change = NULL;
+X  	undoct = 0;
+! 	lastline = ztrdup(line);
+X  	lastcs = cs;
+X  }
+X  
+--- 179,186 ----
+X  	for (t0 = 0; t0 != UNDOCT; t0++)
+X  		undos[t0].change = NULL;
+X  	undoct = 0;
+! 	lastline = zalloc(lastlinelen = (ll+1 < 32) ? 32 : ll+1);
+! 	strcpy(lastline,line);
+X  	lastcs = cs;
+X  }
+X  
+***************
+*** 196,220 ****
+X  		s2 > s && t > t2 && s2[-1] == t2[-1]; s2--,t2--);
+X  	sf = strlen(s2);
+X  	ue = undos+(undoct = (UNDOCT-1) & (undoct+1));
+- 	if (ue->change)
+- 		free(ue->change);
+X  	ue->pref = pf;
+X  	ue->suff = sf;
+X  	ue->len = t2-t;
+X  	ue->cs = lastcs;
+! 	strncpy(ue->change = zalloc(ue->len),t,ue->len);
+! 	free(lastline);
+! 	lastline = ztrdup(line);
+X  	lastcs = cs;
+X  }
+X  
+X  void freeundo() /**/
+X  {
+- int t0;
+- 
+- 	for (t0 = 0; t0 != UNDOCT; t0++)
+- 		if (undos[t0].change)
+- 			free(undos[t0].change);
+X  	free(lastline);
+X  }
+X  
+--- 198,219 ----
+X  		s2 > s && t > t2 && s2[-1] == t2[-1]; s2--,t2--);
+X  	sf = strlen(s2);
+X  	ue = undos+(undoct = (UNDOCT-1) & (undoct+1));
+X  	ue->pref = pf;
+X  	ue->suff = sf;
+X  	ue->len = t2-t;
+X  	ue->cs = lastcs;
+! 	strncpy(ue->change = halloc(ue->len),t,ue->len);
+! 	while (ll+1 > lastlinelen)
+! 		{
+! 		free(lastline);
+! 		lastline = zalloc(lastlinelen *= 2);
+! 		}
+! 	strcpy(lastline,line);
+X  	lastcs = cs;
+X  }
+X  
+X  void freeundo() /**/
+X  {
+X  	free(lastline);
+X  }
+X  
+*** src/zsh0/zsh2.00/src/zle_vi.c	Tue Apr 23 00:30:05 1991
+--- zsh2.00/src/zle_vi.c	Wed May  8 22:34:14 1991
+***************
+*** 32,38 ****
+X  
+X  #define ZLE
+X  #include "zsh.h"
+- #include "funcs.h"
+X  
+X  int vigetkey() /**/
+X  {
+--- 32,37 ----
+***************
+*** 63,69 ****
+X  			feep();
+X  			return -1;
+X  			}
+! 		if (k2 == z_metafynext || zlecmds[k2].flags & ZLE_ARG)
+X  			zlecmds[k2].func();
+X  		else
+X  			break;
+--- 62,68 ----
+X  			feep();
+X  			return -1;
+X  			}
+! 		if (zlecmds[k2].flags & ZLE_ARG)
+X  			zlecmds[k2].func();
+X  		else
+X  			break;
+***************
+*** 150,156 ****
+X  int cq;
+X  
+X  	findline(&cs,&cq);
+! 	foredel(cq-cs+1);
+X  	bindtab = mainbindtab;
+X  	insmode = 1;
+X  }
+--- 149,155 ----
+X  int cq;
+X  
+X  	findline(&cs,&cq);
+! 	foredel(cq-cs);
+X  	bindtab = mainbindtab;
+X  	insmode = 1;
+X  }
+***************
+*** 403,411 ****
+X  		int ch = line[cs];
+X  
+X  		if (ch >= 'a' && ch <= 'z')
+! 			ch = toupper(ch);
+X  		else if (ch >= 'A' && ch <= 'Z')
+! 			ch = tolower(ch);
+X  		line[cs++] = ch;
+X  		}
+X  }
+--- 402,410 ----
+X  		int ch = line[cs];
+X  
+X  		if (ch >= 'a' && ch <= 'z')
+! 			ch = tuupper(ch);
+X  		else if (ch >= 'A' && ch <= 'Z')
+! 			ch = tulower(ch);
+X  		line[cs++] = ch;
+X  		}
+X  }
+***************
+*** 421,429 ****
+X  		int ch = line[cs];
+X  
+X  		if (ch >= 'a' && ch <= 'z')
+! 			ch = toupper(ch);
+X  		else if (ch >= 'A' && ch <= 'Z')
+! 			ch = tolower(ch);
+X  		line[cs++] = ch;
+X  		}
+X  }
+--- 420,428 ----
+X  		int ch = line[cs];
+X  
+X  		if (ch >= 'a' && ch <= 'z')
+! 			ch = tuupper(ch);
+X  		else if (ch >= 'A' && ch <= 'Z')
+! 			ch = tulower(ch);
+X  		line[cs++] = ch;
+X  		}
+X  }
+*** src/zsh0/zsh2.00/src/zsh.h	Wed Apr 24 17:49:49 1991
+--- zsh2.00/src/zsh.h	Wed May  8 22:13:27 1991
+***************
+*** 50,59 ****
+X  #endif
+X  #endif
+X  #include <sys/param.h>
+- #include <sys/stat.h>
+X  
+! #define VERSIONSTR "zsh v2.00.01"
+X  
+X  #define DEFWORDCHARS "*?_-.[]~=/&;!#$%^(){}<>"
+X  #define DEFTIMEFMT "%E real  %U user  %S system  %P"
+X  #ifdef UTMP_HOST
+--- 50,74 ----
+X  #endif
+X  #endif
+X  #include <sys/param.h>
+X  
+! #define VERSIONSTR "zsh v2.00.02"
+X  
++ #if 0 /* __STDC__ */
++ #include <unistd.h>
++ #include <stdlib.h>
++ #include <fcntl.h>
++ #include <stat.h>
++ #define DCLPROTO(X) X
++ #undef NULL
++ #define NULL ((void *)0)
++ #else /* not __STDC__ */
++ #include <sys/stat.h>
++ #define DCLPROTO(X) ()
++ #ifndef NULL
++ #define NULL 0
++ #endif
++ #endif /* __STDC__ */
++ 
+X  #define DEFWORDCHARS "*?_-.[]~=/&;!#$%^(){}<>"
+X  #define DEFTIMEFMT "%E real  %U user  %S system  %P"
+X  #ifdef UTMP_HOST
+***************
+*** 62,69 ****
+X  #define DEFWATCHFMT "%n has %a %l."
+X  #endif
+X  
+- #define DCLPROTO(X) ()
+- 
+X  #ifdef GLOBALS
+X  #define EXTERN
+X  #else
+--- 77,82 ----
+***************
+*** 72,85 ****
+X  
+X  #include "zle.h"
+X  
+! /* size of job list - set small on purpose */
+X  
+! #define MAXJOB 16
+X  
+X  /* memory allocation routines - changed with permalloc()/heapalloc() */
+X  
+! void *(*alloc)DCLPROTO((int));
+! void *(*ncalloc)DCLPROTO((int));
+X  
+X  #define addhnode(A,B,C,D) Addhnode(A,B,C,D,1)
+X  #define addhperm(A,B,C,D) Addhnode(A,B,C,D,0)
+--- 85,98 ----
+X  
+X  #include "zle.h"
+X  
+! /* size of job list */
+X  
+! #define MAXJOB 80
+X  
+X  /* memory allocation routines - changed with permalloc()/heapalloc() */
+X  
+! vptr (*alloc)DCLPROTO((int));
+! vptr (*ncalloc)DCLPROTO((int));
+X  
+X  #define addhnode(A,B,C,D) Addhnode(A,B,C,D,1)
+X  #define addhperm(A,B,C,D) Addhnode(A,B,C,D,0)
+***************
+*** 87,93 ****
+X  /* character tokens */
+X  
+X  #define ALPOP			((char) 0x81)
+- #define HERR			((char) 0x82)
+X  #define HISTSPACE		((char) 0x83)
+X  #define Pound			((char) 0x84)
+X  #define String			((char) 0x85)
+--- 100,105 ----
+***************
+*** 141,150 ****
+X  typedef struct lklist *Lklist;
+X  typedef struct lknode *Lknode;
+X  typedef struct comp *Comp;
+X  typedef struct complist *Complist;
+X  typedef struct heap *Heap;
+! typedef void (*FFunc)DCLPROTO((void *));
+! typedef void *(*VFunc)DCLPROTO((void *));
+X  typedef void (*HFunc)DCLPROTO((char *,char *));
+X  
+X  /* linked list abstract data type */
+--- 153,163 ----
+X  typedef struct lklist *Lklist;
+X  typedef struct lknode *Lknode;
+X  typedef struct comp *Comp;
++ typedef struct redir *Redir;
+X  typedef struct complist *Complist;
+X  typedef struct heap *Heap;
+! typedef void (*FFunc)DCLPROTO((vptr));
+! typedef vptr (*VFunc)DCLPROTO((vptr));
+X  typedef void (*HFunc)DCLPROTO((char *,char *));
+X  
+X  /* linked list abstract data type */
+***************
+*** 154,160 ****
+X  
+X  struct lknode {
+X     Lknode next,last;
+!    void *dat;
+X     };
+X  struct lklist {
+X     Lknode first,last;
+--- 167,173 ----
+X  
+X  struct lknode {
+X     Lknode next,last;
+!    vptr dat;
+X     };
+X  struct lklist {
+X     Lknode first,last;
+***************
+*** 181,197 ****
+X  
+X  struct node {
+X  	int data[4];			/* arbitrary integer data */
+! 	void *ptrs[4];			/* arbitrary pointer data */
+X  	int types[4];			/* what ptrs[] are pointing to */
+X  	int type;				/* node type */
+X  	};
+X  
+! enum node_type {
+! 	N_LIST,N_SUBLIST,N_PLINE,N_CMD,
+! 	N_REDIR,N_COND,N_FOR,N_CASE,
+! 	N_IF,N_WHILE,N_VARASG,
+! 	N_COUNT
+! 	};
+X  
+X  /* values for types[4] */
+X  
+--- 194,216 ----
+X  
+X  struct node {
+X  	int data[4];			/* arbitrary integer data */
+! 	vptr ptrs[4];			/* arbitrary pointer data */
+X  	int types[4];			/* what ptrs[] are pointing to */
+X  	int type;				/* node type */
+X  	};
+X  
+! #define N_LIST 0
+! #define N_SUBLIST 1
+! #define N_PLINE 2
+! #define N_CMD 3
+! #define N_REDIR 4
+! #define N_COND 5
+! #define N_FOR 6
+! #define N_CASE 7
+! #define N_IF 8
+! #define N_WHILE 9
+! #define N_VARASG 10
+! #define N_COUNT 11
+X  
+X  /* values for types[4] */
+X  
+***************
+*** 210,220 ****
+X     List right;
+X     };
+X  
+! enum list_type {
+!    SYNC,		/* ; */
+! 	ASYNC,	/* & */
+! 	TIMED
+!    };
+X  
+X  /* tree element for sublists */
+X  
+--- 229,237 ----
+X     List right;
+X     };
+X  
+! #define SYNC 0		/* ; */
+! #define ASYNC 1	/* & */
+! #define TIMED 2
+X  
+X  /* tree element for sublists */
+X  
+***************
+*** 226,235 ****
+X  	Sublist right;
+X  	};
+X  
+! enum sublist_type {
+! 	ORNEXT = 10,	/* || */
+! 	ANDNEXT			/* && */
+! 	};
+X  
+X  #define PFLAG_NOT 1			/* ! ... */
+X  #define PFLAG_COPROC 32		/* coproc ... */
+--- 243,250 ----
+X  	Sublist right;
+X  	};
+X  
+! #define ORNEXT 10		/* || */
+! #define ANDNEXT 11	/* && */
+X  
+X  #define PFLAG_NOT 1			/* ! ... */
+X  #define PFLAG_COPROC 32		/* coproc ... */
+***************
+*** 243,252 ****
+X     Pline right;
+X     };
+X  
+! enum pline_type {
+!    END,		/* pnode *right is null */
+! 	PIPE		/* pnode *right is the rest of the pipeline */
+!    };
+X  
+X  /* tree element for commands */
+X  
+--- 258,265 ----
+X     Pline right;
+X     };
+X  
+! #define END		0	/* pnode *right is null */
+! #define PIPE	1	/* pnode *right is the rest of the pipeline */
+X  
+X  /* tree element for commands */
+X  
+***************
+*** 268,287 ****
+X  	Lklist vars;			/* param assignments (struct varasg *'s) */
+X     };
+X  
+! enum cmd_type {
+! 	SIMPLE,		/* simple command */
+! 	SUBSH,		/* ( list ) */
+! 	ZCTIME,		/* time pline */
+! 	CURSH,		/* { list } */
+! 	FUNCDEF,		/* foo ... () { list } */
+! 	CFOR,
+! 	CWHILE,
+! 	CREPEAT,
+! 	CIF,
+! 	CCASE,
+! 	CSELECT,
+! 	COND,			/* [[ ... ]] */
+! 	};
+X  
+X  #define CFLAG_EXEC 1			/* exec ... */
+X  #define CFLAG_COMMAND 2		/* command ... */
+--- 281,298 ----
+X  	Lklist vars;			/* param assignments (struct varasg *'s) */
+X     };
+X  
+! #define SIMPLE 0
+! #define SUBSH 1
+! #define ZCTIME 2
+! #define CURSH 3
+! #define FUNCDEF 4
+! #define CFOR 5
+! #define CWHILE 6
+! #define CREPEAT 7
+! #define CIF 8
+! #define CCASE 9
+! #define CSELECT 10
+! #define COND 11
+X  
+X  #define CFLAG_EXEC 1			/* exec ... */
+X  #define CFLAG_COMMAND 2		/* command ... */
+***************
+*** 296,336 ****
+X  	struct redir *pair;		/* used by the parser */
+X     };
+X  
+! enum ftype {
+! 	WRITE,			/* fd1 > name */
+! 	WRITENOW,		/* fd1 >! name */
+! 	APP,				/* fd1 >> name */
+! 	APPNOW,			/* fd1 >>! name */
+! 	MERGEOUT,		/* fd1 >& fd2 */
+! 	MERGEOUTNOW,	/* fd1 >&! fd2 */
+! 	ERRAPP,        /* fd1 >>& */
+! 	ERRAPPNOW,     /* fd1 >>&! */
+! 	READ,				/* fd1 < name */
+! 	HEREDOC,			/* fd1 << foo */
+! 	MERGE,			/* fd1 <& fd2 */
+X  
+- 	CLOSE,			/* fd1 >&-, #<&- */
+- 	INPIPE,			/* fd1 < name, where name is <(...) */
+- 	OUTPIPE,			/* fd1 > name, where name is >(...)  */
+- 	HERESTR,			/* fd1 <<< foo */
+- 	NONE
+- 	};
+- 
+X  /* tree element for conditionals */
+X  
+X  struct cond {
+X  	int type;		/* can be cond_type, or a single letter (-a, -b, ...) */
+X  	int ifil[3];
+! 	void *left,*right,*vfil[2];
+X  	int types[4],typ;	/* from struct node.  DO NOT REMOVE */
+X  	};
+X  
+! enum cond_type {
+! 	COND_NOT,COND_AND,COND_OR,
+! 	COND_STREQ,COND_STRNEQ,COND_STRLT,COND_STRGTR,
+! 	COND_NT,COND_OT,COND_EF,
+! 	COND_EQ,COND_NE,COND_LT,COND_GT,COND_LE,COND_GE
+! 	};
+X  
+X  struct forcmd {		/* for/select */
+X  							/* Cmd->args contains list of words to loop thru */
+--- 307,355 ----
+X  	struct redir *pair;		/* used by the parser */
+X     };
+X  
+! #define WRITE 0
+! #define WRITENOW 1
+! #define APP 2
+! #define APPNOW 3
+! #define MERGEOUT 4
+! #define MERGEOUTNOW 5
+! #define ERRAPP 6
+! #define ERRAPPNOW 7
+! #define READ 8
+! #define HEREDOC 9
+! #define MERGE 10
+! #define CLOSE 11
+! #define INPIPE 12
+! #define OUTPIPE 13
+! #define HERESTR 14
+! #define NONE 15
+! #define HEREDOCDASH 16
+X  
+X  /* tree element for conditionals */
+X  
+X  struct cond {
+X  	int type;		/* can be cond_type, or a single letter (-a, -b, ...) */
+X  	int ifil[3];
+! 	vptr left,right,vfil[2];
+X  	int types[4],typ;	/* from struct node.  DO NOT REMOVE */
+X  	};
+X  
+! #define COND_NOT 0
+! #define COND_AND 1
+! #define COND_OR 2
+! #define COND_STREQ 3
+! #define COND_STRNEQ 4
+! #define COND_STRLT 5
+! #define COND_STRGTR 6
+! #define COND_NT 7
+! #define COND_OT 8
+! #define COND_EF 9
+! #define COND_EQ 10
+! #define COND_NE 11
+! #define COND_LT 12
+! #define COND_GT 13
+! #define COND_LE 14
+! #define COND_GE 15
+X  
+X  struct forcmd {		/* for/select */
+X  							/* Cmd->args contains list of words to loop thru */
+***************
+*** 395,406 ****
+X  		} u;
+X  	};
+X  
+! enum cmdnam_type {
+! 	EXCMD_PREDOT,		/* external command in path before . */
+! 	EXCMD_POSTDOT,		/* external command in path after . */
+! 	BUILTIN,
+! 	SHFUNC
+! 	};
+X  
+X  /* node used in parameter hash table (paramtab) */
+X  
+--- 414,423 ----
+X  		} u;
+X  	};
+X  
+! #define EXCMD_PREDOT 0
+! #define EXCMD_POSTDOT 1
+! #define BUILTIN 2
+! #define SHFUNC 3
+X  
+X  /* node used in parameter hash table (paramtab) */
+X  
+***************
+*** 422,428 ****
+X  		} gets;
+X  	int ct;				/* output base or field width */
+X  	int flags;
+! 	void *data;			/* used by getfns */
+X  	char *env;			/* location in environment, if exported */
+X  	char *ename;		/* name of corresponding environment var */
+X  	};
+--- 439,445 ----
+X  		} gets;
+X  	int ct;				/* output base or field width */
+X  	int flags;
+! 	vptr data;			/* used by getfns */
+X  	char *env;			/* location in environment, if exported */
+X  	char *ename;		/* name of corresponding environment var */
+X  	};
+***************
+*** 475,480 ****
+--- 492,498 ----
+X  	struct termio termio;
+X  #else
+X  	struct sgttyb sgttyb;
++ 	int lmodes;
+X  	struct tchars tchars;
+X  	struct ltchars ltchars;
+X  #endif
+***************
+*** 485,490 ****
+--- 503,509 ----
+X  	};
+X  
+X  EXTERN struct ttyinfo shttyinfo;
++ EXTERN struct ttyinfo savedttyinfo;
+X  
+X  /* entry in job table */
+X  
+***************
+*** 559,565 ****
+X  struct hashnode {
+X  	struct hashnode *next;
+X  	char *nam;
+! 	void *dat;
+X  	int canfree;		/* nam is free()able */
+X  	};
+X  
+--- 578,584 ----
+X  struct hashnode {
+X  	struct hashnode *next;
+X  	char *nam;
+! 	vptr dat;
+X  	int canfree;		/* nam is free()able */
+X  	};
+X  
+***************
+*** 617,625 ****
+X  #define RECEXACT 'S'
+X  #define CDABLEVARS 'T'
+X  #define MAILWARNING 'U'
+! #define SHUTUPKARTIK 'V'
+X  #define AUTORESUME 'W'
+! #define NICEAPPENDAGES 'X'			/* historical */
+X  #define MENUCOMPLETE 'Y'
+X  #define USEZLE 'Z'
+X  #define ALLEXPORT 'a'
+--- 636,644 ----
+X  #define RECEXACT 'S'
+X  #define CDABLEVARS 'T'
+X  #define MAILWARNING 'U'
+! #define NOPROMPTCLOBBER 'V'
+X  #define AUTORESUME 'W'
+! #define LISTTYPES 'X'
+X  #define MENUCOMPLETE 'Y'
+X  #define USEZLE 'Z'
+X  #define ALLEXPORT 'a'
+***************
+*** 639,644 ****
+--- 658,667 ----
+X  #define CHASELINKS 'w'
+X  #define XTRACE 'x'
+X  #define SHWORDSPLIT 'y'
++ #define MENUCOMPLETEBEEP '\2'
++ #define HISTNOSTORE '\3'
++ #define EXTENDEDGLOB '\5'
++ #define GLOBCOMPLETE '\6'
+X  
+X  #ifndef GLOBALS
+X  extern struct option optns[];
+***************
+*** 696,701 ****
+--- 719,728 ----
+X  	"chaselinks",'w',
+X  	"xtrace",'x',
+X  	"shwordsplit",'y',
++ 	"menucompletebeep",'\2',
++ 	"histnostore",'\3',
++ 	"extendedglob",'\5',
++ 	"globcomplete",'\6',
+X  	NULL,0
+X  };
+X  #endif
+***************
+*** 744,749 ****
+--- 771,780 ----
+X  #define	S_ISSOCK(m)	(((m)&_IFMT) == _IFSOCK)
+X  #endif
+X  
++ #if S_IFIFO == S_IFSOCK
++ #undef S_IFIFO
++ #endif
++ 
+X  /* buffered shell input for non-interactive shells */
+X  
+X  EXTERN FILE *bshin;
+***************
+*** 768,773 ****
+--- 799,808 ----
+X  
+X  EXTERN int errflag;
+X  
++ /* lexical analyzer error flag */
++ 
++ EXTERN int lexstop;
++ 
+X  /* suppress error messages */
+X  
+X  EXTERN int noerrs;
+***************
+*** 977,982 ****
+--- 1012,1018 ----
+X  EXTERN char *timefmt;
+X  EXTERN char *watchfmt;
+X  EXTERN char *wordchars;
++ EXTERN char *fceditparam;
+X  
+X  EXTERN char *argzero;	/* $0 */
+X  
+***************
+*** 1030,1035 ****
+--- 1066,1075 ----
+X  
+X  EXTERN int spaceflag;
+X  
++ /* don't do spelling correction */
++ 
++ EXTERN int nocorrect;
++ 
+X  /* != 0 means we have removed the current event from the history List */
+X  
+X  EXTERN int histremmed;
+***************
+*** 1150,1162 ****
+X  
+X  /* interesting termcap strings */
+X  
+! enum xtcaps {
+! 	TCCLEARSCREEN,TCLEFT,TCMULTLEFT,TCRIGHT,
+! 	TCMULTRIGHT,TCUP,TCMULTUP,TCDOWN,
+! 	TCMULTDOWN,TCDEL,TCMULTDEL,TCINS,
+! 	TCMULTINS,TCCLEAREOD,TCCLEAREOL,TCINSLINE,
+! 	TCDELLINE,TC_COUNT
+! 	};
+X  
+X  /* lengths of each string */
+X  
+--- 1190,1213 ----
+X  
+X  /* interesting termcap strings */
+X  
+! #define TCCLEARSCREEN 0
+! #define TCLEFT 1
+! #define TCMULTLEFT 2
+! #define TCRIGHT 3
+! #define TCMULTRIGHT 4
+! #define TCUP 5
+! #define TCMULTUP 6
+! #define TCDOWN 7
+! #define TCMULTDOWN 8
+! #define TCDEL 9
+! #define TCMULTDEL 10
+! #define TCINS 11
+! #define TCMULTINS 12
+! #define TCCLEAREOD 13
+! #define TCCLEAREOL 14
+! #define TCINSLINE 15
+! #define TCDELLINE 16
+! #define TC_COUNT 17
+X  
+X  /* lengths of each string */
+X  
+***************
+*** 1180,1182 ****
+--- 1231,1235 ----
+X  #define tccan(X) (!!tclen[X])
+X  
+X  #include "ztype.h"
++ #include "funcs.h"
++ 
+SHAR_EOF
+echo 'File patches is complete' &&
+chmod 0644 patches ||
+echo 'restore of patches failed'
+Wc_c="`wc -c < 'patches'`"
+test 182334 -eq "$Wc_c" ||
+	echo 'patches: original size 182334, current size' "$Wc_c"
+# ============= zsh2.00/README ==============
+if test ! -d 'zsh2.00'; then
+    echo 'x - creating directory zsh2.00'
+    mkdir 'zsh2.00'
+fi
+echo 'x - extracting zsh2.00/README (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/README' &&
+zsh is free software.  See the file COPYING for copying permission.
+X
+This is zsh 2.00.02.
+X
+To get this shell running, cd into the src directory and type
+"buildzsh".  I tested it on the following machines, where it compiled
+just by running this script:
+X
+Sun SPARCServer 4/490 running SunOS 4.1.1
+X
+Past versions have been tested successfully on the following machines:
+X
+Sun 3/60C running SunOS 4.1.1
+NeXTstation running Mach 2.0
+SGI-4D/25 running IRIX 3.3.1
+hp9000 running BSD 4.3
+DECSystem-5000 running ULTRIX 4.0
+X
+If it doesn't work, either complain to me, or tweak config.h, Makefile, and
+signals.h until it does.  Ignore the 5 shift/reduce conflicts reported
+by yacc.
+X
+Tabstops are 3 spaces.  If you're going to look at my code, run it
+though "expand -3" first, or set your tab stops to the same as mine.
+X
+If anyone has any questions, suggestions, comments, bugs, flames, or
+any other mail of any kind, send it to pfalstad@phoenix.princeton.edu.
+I did not supply any patches or bug fixes for version 1, because I junked
+most of it as soon as I released it.  This version will be more permanent,
+hopefully, so I'll be able to fix bugs quickly as soon as they're found.
+X
+Thanks to the following people for help, ideas, comments, patches, etc.:
+X _
+Goran Larsson
+Paul E. Maisano
+Josh Diamond
+Peter Moore
+XXev Gittler
+Rick Ohnemus
+Gary D. Kline
+Byron Rakitzis
+Dan Bernstein
+Jonathan I. Kamens
+Bruce Varney
+Greg Noel
+Paul Lew
+Kartik Subbarao
+Michael Marucheck
+Steve Giovanetti
+Kennedy Lemke
+Emin Gun Sirer
+Kazuo Itoh
+X
+Modification history:
+X
+00-01:
+X	- %M and %m now work as documented.
+X	- bad things no longer happen if COLUMNS is set to 0
+X	- SH_WORD_SPLIT and ${=foo} now work
+X	- the default value of WORDCHARS includes more characters
+X	- if the cursor is at the end of the line, vi-cmd-mode
+X	  moves it back one position.
+X	- delete-char now acts more like x in vi.
+X	- a "prompt" parameter has been added, which is equivalent to
+X	  PROMPT and PS1.
+X	- zsh no longer expands symbolic links.  The CHASELINKS option
+X	  has been provided to get the old behavior.
+X	- history searches ignore lines that are the same as the line
+X	  in the buffer.
+X	- you can get a literal ! in your prompt now with \!.
+X	- -z, -n, and != in [[ ... ]] expressions work.
+X	- the shell no longer hangs when inputting "[[ ]\n"
+X	- the "menu-complete" and "menu-expand-or-complete" bindings have
+X	  been added.
+X	- menu-complete no longer beeps.
+X	- reverse-menu-complete no longer dumps core if it gets called before
+X	  a normal completion.
+X	- typeahead lines are no longer thrown away on machines with sgttyb.
+X	- !foo no longer matches lines with 'foo' in them (not at the beginning)
+X	- kill -9 % no longer kills the shell
+X	- no longer sources .zshrc from shell scripts or with -c
+X	- no longer needs limits.h, strtol
+X	- exporting HOSTTYPE, etc. works
+X	- fixed serious bugs related to . in path
+X	- numbers in weird bases now work
+X
+01-02:
+X	- added script to convert most csh aliases to zsh aliases or functions
+X	- fc -l (history) now appears in the history itself; HISTNOSTORE
+X	  option added to get old behavior
+X	- the POSIX process group race has been fixed; so 'w | more' should
+X	  no longer hang
+X	- FCEDIT added, to match the documentation
+X	- %{...%} in the prompt added
+X	- execute-named-cmd and execute-last-named-cmd bindings added
+X	- sources ~/.zshenv in all shells, even if not interactive, unless
+X	  -f is given
+X	- ^ and # are no longer `magic' by default; use EXTENDEDGLOB option
+X	  to use them
+X	- now checks for tty sanity before each command
+X	- if the right side of a variable assignment expands to more than
+X	  one word, array assignment is assumed; so foo=*.c now works
+X	- ~foo is no longer expanded in completion
+X	- select now works even if the argument list is not sorted
+X	- menucompletebeep option added
+X	- emacs mode is now 8-bit clean by default; use bindkey -em
+X	  to get your meta key back
+X	- fc -R, fc -W added
+X	- nocorrect added
+X	- lines from history file are now split into words at spaces
+X	- glob-complete, accept-and-menu-complete,
+X	  beginning-of-line-hist, end-of-line-hist bindings added
+X	- insert-last-word bound to M-. in emacs mode by default; now moves
+X	  back through the history if run repeatedly
+X	- J and K now bound to history search in vi mode
+X	- delete-char no longer core dumps on an empty line
+X	- menu-complete works better
+X	- the editor checks the settings of VISUAL and EDITOR to set
+X	  default bindings
+X	- using [[ ... ]] expressions on a symbolic link works as expected
+X	- various problems with globbing were fixed
+X	- xx is now the same as !! if HISTCHARS=x
+X	- added config.h entry for compilers that don't know about void *
+X	- lexical analysis made more efficient
+X	- "if echo $? ; then : ; fi" no longer always prints 0
+X	- removed all enums, '\x7f's from code
+X	- in "case foo in bar) xxx ;; esac", foo and bar are no longer subject
+X	  to command alias expansion
+X	- works on platforms where toupper('A') != 'A'
+X	- \e sequence added to echo
+X	- + options now work with set
+X	- AUTORESUME and AUTOCD work better
+X	- getopts works better (?)
+X	- spell checking works better
+X	- "let 2+3=" no longer crashes the shell
+X	- "foo=bar; echo ${=foo}" no longer crashes the shell
+X	- "zsh -c" or "zsh -o" no longer causes a core dump
+X	- "unset MAIL; echo $MAIL" no longer causes a core dump
+X	- "(xterm&xterm&)&" no longer causes a core dump
+X	- "echo $HOM[tab]" beeps instead of deleting "$HOM"
+X	- incremental history search works better
+X	- the pwd of a fg'd job is now printed _before_ resuming it
+X	- rv=`echo -n foo` no longer puts garbage in $rv
+X	- "=1/*" now works as expected
+X	- ^Z can now be bound to something
+X	- the STTY parameter and the builtin builtin are now documented
+X	- IFS=x; foo=`echo foo` no longer puts a newline in $foo
+X	- $status added for csh compatibility
+X	- arrays are automatically expanded if you say 'foo[1234]=x'
+X	- shell now ignores SIGQUIT (it was commented out before :-)
+X	- the times builtin works on systems where times() returns > 0
+X	- no longer hangs the terminal if you ^S before flow control
+X	  is turned off
+X	- "date ; read foo" now works in interactive shells
+X	- <<-foo is now parsed as <<- foo, not << -foo
+X	- fixed various errors in the documentation
+X
+Stuff that needs to be done
+X	- port zsh to more places
+X	- improve vi emulation
+X
+Known Bugs
+X	- terminal acts weird under OpenWindows cmdtool
+X	- xterm run in background inherits bad terminal modes
+X	- here documents don't appear in the history, and cannot be
+X	  used inside eval statements
+X
+SHAR_EOF
+chmod 0644 zsh2.00/README ||
+echo 'restore of zsh2.00/README failed'
+Wc_c="`wc -c < 'zsh2.00/README'`"
+test 6468 -eq "$Wc_c" ||
+	echo 'zsh2.00/README: original size 6468, current size' "$Wc_c"
+# ============= zsh2.00/src/funcs.h ==============
+if test ! -d 'zsh2.00/src'; then
+    echo 'x - creating directory zsh2.00/src'
+    mkdir 'zsh2.00/src'
+fi
+echo 'x - extracting zsh2.00/src/funcs.h (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/src/funcs.h' &&
+struct asgment;
+struct utmp;
+X
+#include "glob.pro"
+#include "hist.pro"
+#include "table.pro"
+#include "subst.pro"
+#include "params.pro"
+#include "builtin.pro"
+#include "loop.pro"
+#include "jobs.pro"
+#include "exec.pro"
+#include "init.pro"
+#include "lex.pro"
+#include "parse.pro"
+#include "utils.pro"
+#include "cond.pro"
+#include "mem.pro"
+#include "text.pro"
+#include "watch.pro"
+X
+#include "zle_emacs.pro"
+#include "zle_utils.pro"
+#include "zle_main.pro"
+#include "zle_refresh.pro"
+#include "zle_tricky.pro"
+#include "zle_vi.pro"
+X
+char *mktemp DCLPROTO((char *));
+char *malloc DCLPROTO((int));
+#ifndef __STDC__
+char *realloc DCLPROTO((char *,int));
+char *calloc DCLPROTO((int,int));
+#endif /* __STDC__ */
+char *ttyname DCLPROTO((int));
+X
+extern char PC, *BC, *UP;
+extern short ospeed;
+extern int tgetent DCLPROTO((char *bp, char *name));
+extern int tgetnum DCLPROTO((char *id));
+extern int tgetflag DCLPROTO((char *id));
+extern char *tgetstr DCLPROTO((char *id, char **area));
+extern char *tgoto DCLPROTO((char *cm, int destcol, int destline));
+extern int tputs DCLPROTO((char *cp, int affcnt, int (*outc)()));
+SHAR_EOF
+chmod 0644 zsh2.00/src/funcs.h ||
+echo 'restore of zsh2.00/src/funcs.h failed'
+Wc_c="`wc -c < 'zsh2.00/src/funcs.h'`"
+test 1108 -eq "$Wc_c" ||
+	echo 'zsh2.00/src/funcs.h: original size 1108, current size' "$Wc_c"
+# ============= zsh2.00/src/lex.c ==============
+echo 'x - extracting zsh2.00/src/lex.c (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/src/lex.c' &&
+/*
+X
+X	lex.c - lexical analysis
+X
+X	This file is part of zsh, the Z shell.
+X
+X   zsh is free software; no one can prevent you from reading the source
+X   code, or giving it to someone else.
+X   This file is copyrighted under the GNU General Public License, which
+X   can be found in the file called COPYING.
+X
+X   Copyright (C) 1990, 1991 Paul Falstad
+X
+X   zsh is distributed in the hope that it will be useful, but
+X   WITHOUT ANY WARRANTY.  No author or distributor accepts
+X   responsibility to anyone for the consequences of using it or for
+X   whether it serves any particular purpose or works at all, unless he
+X   says so in writing.  Refer to the GNU General Public License
+X   for full details.
+X
+X   Everyone is granted permission to copy, modify and redistribute
+X   zsh, but only under the conditions described in the GNU General Public
+X   License.   A copy of this license is supposed to have been given to you
+X   along with zsh so you can know your rights and responsibilities.
+X   It should be in a file named COPYING.
+X
+X   Among other things, the copyright notice and this notice must be
+X   preserved on all copies.
+X
+*/
+X
+#include "zsh.h"
+#include "y.tab.h"
+X
+/* lexical state */
+X
+static int ignl;
+X
+static int xignl,xlsep,xincmd,xincond,xinfunc,xinredir,xincase;
+static int dbparens,xdbparens,xalstat;
+static char *xhlastw;
+X
+static int xisfirstln, xisfirstch, xhistremmed, xhistdone,
+X	xspaceflag, xstophist, xlithist, xalstackind,xhlinesz;
+static char *xhline, *xhptr;
+X
+static char *tokstr;
+X
+/* save the lexical state */
+X
+/* is this a hack or what? */
+X
+void lexsave() /**/
+{
+X	xignl = ignl;
+X	xlsep = lsep;
+X	xincmd = incmd;
+X	xincond = incond;
+X	xinredir = inredir;
+X	xinfunc = infunc;
+X	xincase = incase;
+X	xdbparens = dbparens;
+X	xalstat = alstat;
+X	xalstackind = alstackind;
+X	xisfirstln = isfirstln;
+X	xisfirstch = isfirstch;
+X	xhistremmed = histremmed;
+X	xhistdone = histdone;
+X	xspaceflag = spaceflag;
+X	xstophist = stophist;
+X	xlithist = lithist;
+X	xhline = hline;
+X	xhptr = hptr;
+X	xhlastw = hlastw;
+X	xhlinesz = hlinesz;
+}
+X
+/* restore lexical state */
+X
+void lexrestore() /**/
+{
+X	ignl = xignl;
+X	lsep = xlsep;
+X	incmd = xincmd;
+X	incond = xincond;
+X	inredir = xinredir;
+X	infunc = xinfunc;
+X	incase = xincase;
+X	dbparens = xdbparens;
+X	alstat = xalstat;
+X	isfirstln = xisfirstln;
+X	isfirstch = xisfirstch;
+X	histremmed = xhistremmed;
+X	histdone = xhistdone;
+X	spaceflag = xspaceflag;
+X	stophist = xstophist;
+X	lithist = xlithist;
+X	hline = xhline;
+X	hptr = xhptr;
+X	hlastw = xhlastw;
+X	alstackind = xalstackind;
+X	hlinesz = xhlinesz;
+X	lexstop = eofseen = errflag = 0;
+}
+X
+int yylex() /**/
+{
+int x;
+X
+X	for (;;)
+X		{
+X		do
+X			x = gettok();
+X		while (x != ENDINPUT && exalias(&x));
+X		if (x == NEWLIN && ignl)
+X			continue;
+X		if (x == SEMI || x == NEWLIN)
+X			{
+X			if (lsep)
+X				continue;
+X			x = SEPER;
+X			lsep = 1;
+X			}
+X		else
+X			lsep = (x == AMPER);
+X		break;
+X		}
+X	ignl = 0;
+X	switch (x)
+X		{
+X		case OUTPAR: infunc = incmd = incase = 0; break;
+X		case INPAR:case INBRACE:case DBAR:case DAMPER:case DO:
+X		case THEN:case ELIF:case BAR:case BARAMP:case IF:case WHILE:
+X		case ELSE:ignl = 1;infunc = 0;
+X			case INOUTPAR: case SEPER:
+X			case AMPER:incmd = nocorrect = 0; break;
+X		case ESAC: incase = 0; break;
+X		case STRING: case ENVARRAY:
+X			if (!inredir && !infunc) incmd = 1; inredir = 0; break;
+X		case FOR: case SELECT: incmd = 1; break;
+X		case OUTANG:case OUTANGBANG:case DOUTANG:case INANG:
+X		case DINANG:case TRINANG:case INANGAMP:case OUTANGAMP:case OUTANGAMPBANG:
+SHAR_EOF
+true || echo 'restore of zsh2.00/src/lex.c failed'
+echo 'End of  part 4'
+echo 'File zsh2.00/src/lex.c is continued in part 5'
+echo 5 > _shar_seq_.tmp
+exit 0
+              Paul Falstad  pfalstad@phoenix.princeton.edu
+         And on the roads, too, vicious gangs of KEEP LEFT signs!
+     If Princeton knew my opinions, they'd have expelled me long ago.
+
+exit 0 # Just in case...
+-- 
+Kent Landfield                   INTERNET: kent@sparky.IMD.Sterling.COM
+Sterling Software, IMD           UUCP:     uunet!sparky!kent
+Phone:    (402) 291-8300         FAX:      (402) 291-4362
+Please send comp.sources.misc-related mail to kent@uunet.uu.net.

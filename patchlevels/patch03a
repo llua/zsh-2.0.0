@@ -1,0 +1,1114 @@
+Path: funic!fuug!sics.se!sunic!hagbard!eru!bloom-beacon!ora!camb.com!spdcc!mintaka!think.com!rpi!crdgw1!uunet!sparky!kent
+From: pfalstad@phoenix.princeton.edu (Paul Falstad)
+Newsgroups: comp.sources.misc
+Subject: v20i022:  The Z shell, Patch03a/4
+Message-ID: <csm-v20i022=zsh2.00.114111@sparky.IMD.Sterling.COM>
+Date: 29 May 91 16:43:27 GMT
+Sender: kent@sparky.IMD.Sterling.COM (Kent Landfield)
+Organization: League For Fighting Chartered Accountancy
+Lines: 1102
+Approved: kent@sparky.imd.sterling.com
+X-Md4-Signature: f3d0c520e1c7bed17452b903194395f0
+
+Submitted-by: Paul Falstad <pfalstad@phoenix.princeton.edu>
+Posting-number: Volume 20, Issue 22
+Archive-name: zsh2.00/patch03a
+Patch-To: zsh2.00: Volume 18, Issue 84-98
+
+Included in this patchlevel is a 36-page TeX document,
+"An Introduction to the Z Shell", which gives a lot of examples
+and information on why anyone would want to use zsh.  The first
+two parts of this patch contain this document, and may be unsharred
+separately.
+
+Part of the README follows, and then part 1 of the patch itself.
+
+---
+To get this shell running, cd into the src directory and type
+"buildzsh".  I tested it on the following machines, where it compiled
+just by running this script:
+
+Sun SPARCServer 4/490 running SunOS 4.1.1
+Sun 3/60C running SunOS 4.1.1
+Sun 3/50M running SunOS 4.0
+NeXTstation running Mach 2.0
+hp9000 running BSD 4.3
+DECSystem-5000 running ULTRIX 4.0
+
+02-03:
+	- two stupid bugs that were introduced in the last patch were fixed:
+	  - multiple command substitution on a line failed
+	  - a file descriptor leak caused the shell to crash after a while
+	- added 'An Introduction to the Z Shell'
+	- behaves properly when the tty session dies suddenly
+	- had a serious memory leak on some systems
+	- the test and [ builtins have been added, although [[...]]
+	  is more efficient
+	- in your prompt, %m2 now prints foo.bar, %m3 prints foo.bar.com, etc.
+	- the -D and -P options to print have been added
+	- the NULLCMD and ZDOTDIR parameters have been added
+	- ${*:-foo} works
+	- "$@" and "$arr[@]" work like ksh
+	- .zprofile is sourced before .zshrc in login shells
+	- the CSHJUNKIEQUOTES and PUSHDMINUS options have been added
+	- REAL_TTY compilation switch added
+	- aliases beginning with a space cause the history line to be junked
+	  if HISTIGNORESPACE is set
+	- echo prints bad options instead of complaining about them
+	- "set -o" no longer dumps core
+	- "alias a=alias; date >a" no longer creates a file called "alias"
+	- "function foo() \n { date }" is now legal (the () and the newline
+	  are allowed)
+	- nested brace expressions work properly
+	- disabled commands stay disabled after a rehash (or after the shell
+	  finishes sourcing your .zshrc)
+	- corrected aliases work
+	- executables in the currect directory are now completed
+	- in "case foo", "foo" is not interpreted as a directory name with autocd
+	- aliases were not always interpreted properly after a completion
+	- bindkey '^?' didn't work
+	- echo ${HOST:-{bar}} didn't work
+	- editor update is more efficient in some cases
+	- menucomplete works even better
+	- assign to an array element "foo[1]=bar" didn't always work
+	- doesn't print directories like "~tmp" if HOME=/
+	- quotes in case statement patterns caused problems
+	- pressing ^C right after typing "fc" caused the editor to share
+	  the tty with the shell
+	- echo $(echo 2) produced no output, but echo $(echo x) worked fine (weird)
+
+Paul Falstad  pfalstad@phoenix.princeton.edu
+
+---cut here---cut here---cut here---cut here---cut here---cut here---
+#!/bin/sh
+# patch03a
+# This is a shell archive (produced by shar 3.49)
+# To extract the files from this archive, save it to a file, remove
+# everything above the "!/bin/sh" line above, and type "sh file_name".
+#
+# Extract this _inside_ the zsh2.00 directory, unlike 
+# previous patches.
+#
+# made 05/26/1991 03:48 UTC by pf@dendrite
+# Source directory /home/learning/pf/zsh/zsh2.00
+#
+# existing files will NOT be overwritten unless -c is specified
+#
+# do not concatenate these parts, unpack them in order with /bin/sh        
+#
+# This shar contains:
+# length  mode       name
+# ------ ---------- ------------------------------------------
+#  56686 -rw-r--r-- doc/zshintro.tex
+#
+if test -r _shar_seq_.tmp; then
+	echo 'Must unpack archives in sequence!'
+	echo Please unpack part `cat _shar_seq_.tmp` next
+	exit 1
+fi
+# ============= doc/zshintro.tex ==============
+if test ! -d 'doc'; then
+    echo 'x - creating directory doc'
+    mkdir 'doc'
+fi
+if test -f 'doc/zshintro.tex' -a X"$1" != X"-c"; then
+	echo 'x - skipping doc/zshintro.tex (File already exists)'
+	rm -f _shar_wnt_.tmp
+else
+> _shar_wnt_.tmp
+echo 'x - extracting doc/zshintro.tex (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'doc/zshintro.tex' &&
+% this is TeX, not LaTex
+\newskip\ttglue
+\ttglue=.5em plus .25em minus .15em
+\outer\def\begindisplay{\obeylines\startdisplay}
+{\obeylines\gdef\startdisplay#1
+X  {\catcode`\^^M=5$$#1\halign\bgroup\indent##\hfil&&\qquad##\hfil\cr}}
+\outer\def\enddisplay{\crcr\egroup$$}
+\def\ttverbatim{\begingroup \catcode`\\=12 \catcode`\{=12
+\catcode`\}=12 \catcode`\$=12 \catcode`\&=12
+\catcode`\#=12 \catcode`\%=12 \catcode`\~=12
+\catcode`\_=12 \catcode`\^=12
+\obeyspaces \obeylines \tt}
+{\obeyspaces\gdef {\ }}
+X
+\outer\def\beg{\parindent=20pt $$\let\par=\endgraf \ttverbatim \parskip=0pt
+\catcode`\@=0 \rightskip=-5pc \ttfinish}
+{\catcode`\@=0 @catcode`@\=12
+@obeylines
+@gdef@ttfinish#1^^M#2\end{#1@vbox{#2}@endgroup$$@parindent=0pt}}
+X
+\catcode`\@=13
+\def\@{\char`\@}
+\def\opt#1{{\sl #1}}
+\def\parm#1{{\bf #1}}
+{\obeylines\gdef@{\ttverbatim\spaceskip=\ttglue\let^^M=\ \let@=\endgroup}}
+\parskip=9pt \parindent=0pt
+\def\C#1#2{\hbox{\sl \char`\^#2}}
+\def\c#1{{\sl \char`\^#1}}
+\def\E#1#2{\hbox{\sl ESC-#2}}
+\def\e#1{{\sl ESC-#1}}
+\def\TAB{\hbox{\sl TAB}}
+\def\curs#1#2{\underbar{#2}}
+\def\ecurs{\underbar{\ }}
+\def\dot{$\ldots$}
+\def\space{\ }
+\nopagenumbers
+\headline={\rm\ifnum\pageno<2\hfil\else
+X	An Introduction to the Z Shell\hfil\folio\fi}
+X
+%\def\topglue{\nointerlineskip \vglue-\topskip \vglue}
+\topglue 1in % uncomment previous line if your TeX doesn't know this
+\centerline{\bf An Introduction to the Z Shell}
+\bigskip
+\centerline{Paul Falstad}
+\centerline{Department of Computer Science} % actually, I'm an undergrad.
+\centerline{Princeton University}
+\centerline{Princeton, NJ 08544}
+\bigskip
+{\bf zsh} is a shell designed for interactive use, although it
+is also a powerful scripting language.  Many of the useful
+features of bash, ksh, and tcsh were incorporated into zsh;
+many original features were added.
+This document details some of the unique features of zsh.
+It assumes basic knowledge of the standard UNIX shells;
+the intent is to show a reader already familiar with one of the
+other major shells what makes zsh more useful or more powerful.
+This document is not at all comprehensive; read the manual entry
+for a description of the shell that is
+complete and concise,
+although somewhat overwhelming and devoid of examples.
+\beginsection Filename Generation
+X
+Otherwise known as {\it globbing}, filename generation
+is quite extensive in zsh.  Of course, it has all the
+basics:
+\beg
+% ls
+Makefile   file.pro   foo.o      main.o     q.c        run234     stuff
+bar.o      foo        link       morestuff  run123     run240     sub
+file.h     foo.c      main.h     pipe       run2       run303
+% ls *.c
+foo.c  q.c
+% ls *.[co]
+bar.o   foo.c   foo.o   main.o  q.c
+% ls foo.?
+foo.c  foo.o
+% ls *.[^c]
+bar.o   file.h  foo.o   main.h  main.o
+% ls *.[^oh]
+foo.c  q.c
+\end
+Also, if the \opt{EXTENDEDGLOB} option is set,
+some new features are activated.
+For example, the @^@ character negates the pattern following it:
+\beg
+% setopt extendedglob
+% ls -d ^*.c
+Makefile   file.pro   link       morestuff  run2       run303
+bar.o      foo        main.h     pipe       run234     stuff
+file.h     foo.o      main.o     run123     run240     sub
+% ls -d ^*.*
+Makefile   link       pipe       run2       run240     stuff
+foo        morestuff  run123     run234     run303     sub
+% ls -d ^Makefile
+bar.o      foo        link       morestuff  run123     run240     sub
+file.h     foo.c      main.h     pipe       run2       run303
+file.pro   foo.o      main.o     q.c        run234     stuff
+% ls -d *.^c
+.rhosts   bar.o     file.h    file.pro  foo.o     main.h    main.o
+\end
+An expression of the form @<@$x$--$y$@>@ matches a range of integers:
+\beg
+% ls run<200-300>
+run234  run240
+% ls run<300-400>
+run303
+% ls run<-200>
+run123  run2
+% ls run<300->
+run303
+% ls run<>
+run123  run2    run234  run240  run303
+\end
+Grouping is possible:
+\beg
+% ls (foo|bar).*
+bar.o  foo.c  foo.o
+% ls *.(c|o|pro)
+bar.o     file.pro  foo.c     foo.o     main.o    q.c
+\end
+Also, the string @..../@ forces a recursive search of
+subdirectories:
+\beg
+% ls -R
+Makefile   file.pro   foo.o      main.o     q.c        run234     stuff
+bar.o      foo        link       morestuff  run123     run240     sub
+file.h     foo.c      main.h     pipe       run2       run303
+@space
+morestuff:
+@space
+stuff:
+file  xxx   yyy
+@space
+stuff/xxx:
+foobar
+@space
+stuff/yyy:
+frobar
+% ls ..../*bar
+stuff/xxx/foobar  stuff/yyy/frobar
+% ls ..../f*
+file.h            foo               foo.o             stuff/xxx/foobar
+file.pro          foo.c             stuff/file        stuff/yyy/frobar
+% ls *bar*
+bar.o
+% ls ..../*bar*
+bar.o             stuff/xxx/foobar  stuff/yyy/frobar
+% ls stuff/..../*bar*
+stuff/xxx/foobar  stuff/yyy/frobar
+\end
+\filbreak
+\par
+One can add a number of {\it qualifiers} to the end of
+any of these patterns, to restrict matches to certain
+file types.  A qualified pattern is of the form
+\begindisplay
+{\it pattern}@(@\dot@)@
+\enddisplay
+with single-letter qualifiers inside the parentheses.
+\beg
+% alias l='ls -dF'
+% l *
+Makefile    foo*        main.h      q.c         run240
+bar.o       foo.c       main.o      run123      run303
+file.h      foo.o       morestuff/  run2        stuff/
+file.pro    link@@       pipe        run234      sub
+% l *(/)
+morestuff/  stuff/
+% l *(@@)
+link@@
+% l *(*)
+foo*        link@@       morestuff/  stuff/
+% l *(x)
+foo*        link@@       morestuff/  stuff/
+% l *(X)
+foo*        link@@       morestuff/  stuff/
+% l *(R)
+bar.o       foo*        link@@       morestuff/  run123      run240
+file.h      foo.c       main.h      pipe        run2        run303
+file.pro    foo.o       main.o      q.c         run234      stuff/
+\end
+Note that @*(x)@ and @*(*)@ both match executables.
+@*(X)@ matches files executable by others, as opposed to
+@*(x)@, which matches files executable by the owner.
+@*(R)@ and @*(r)@ match readable files;
+@*(W)@ and @*(w)@, which checks for writable files.
+@*(W)@ is especially important, since it checks for world-writable
+files:
+\beg
+% l *(w)
+bar.o       foo*        link@@       morestuff/  run123      run240
+file.h      foo.c       main.h      pipe        run2        run303
+file.pro    foo.o       main.o      q.c         run234      stuff/
+% l *(W)
+link@@   run240
+% l -l link run240
+lrwxrwxrwx  1 pfalstad       10 May 23 18:12 link -> /bin/false*
+-rw-rw-rw-  1 pfalstad        0 May 23 18:12 run240
+\end
+You can filter out the symbolic links with the @^@ character:
+\beg
+% l *(W^@@)
+run240
+% l *(x)
+foo*        link@@       morestuff/  stuff/
+% l *(x^@@/)
+foo*
+\end
+To find all plain files, you can use @.@:
+\beg
+% l *(.)
+Makefile  file.h    foo*      foo.o     main.o    run123    run234    run303
+bar.o     file.pro  foo.c     main.h    q.c       run2      run240    sub
+% l *(^.)
+link@@       morestuff/  pipe        stuff/
+% l s*(.)
+stuff/   sub
+% l *(p)
+pipe
+% l -l *(p)
+prw-r--r--  1 pfalstad        0 May 23 18:12 pipe
+\end
+@*(U)@ matches all files owned by you.
+To search for all files not owned by you, use @*(^U)@:
+\beg
+% l -l *(^U)
+-rw-------  1 subbarao       29 May 23 18:13 sub
+\end
+This searches for setuid files:
+\beg
+% l -l *(s)
+-rwsr-xr-x  1 pfalstad       16 May 23 18:12 foo*
+\end
+This checks for a certain user's files:
+\beg
+% ypmatch subbarao passwd
+subbarao:*:3338:35:Kartik Subbarao:/u/subbarao:/usr/princeton/bin/zsh
+% l -l *(u3338)
+-rw-------  1 subbarao       29 May 23 18:13 sub
+\end
+\beginsection Startup Files
+X
+There are five startup files that zsh will read commands from:
+\beg
+$ZDOTDIR/.zshenv
+$ZDOTDIR/.zprofile
+$ZDOTDIR/.zshrc
+$ZDOTDIR/.zlogin
+$ZDOTDIR/.zlogout
+\end
+If \parm{ZDOTDIR} is not set, then the value of \parm{HOME} is used;
+this is the usual case.
+\par
+@.zshenv@ is sourced on all invocations of the shell,
+unless the @-f@ option is set.  It should contain commands to set
+the command search path, plus other important environment
+variables.
+@.zshenv@ should not contain commands that produce output
+or assume the shell is attached to a tty.
+\par
+@.zshrc@ is sourced in interactive shells.  It should contain
+commands to set up aliases, functions, options, key bindings, etc.
+Putting commands like @stty@ or ``@echo executing .zshrc....@''
+in one's @.zshrc@ is considered bad style.
+\par
+@.zlogin@ is sourced in login shells.  It should contain
+commands that should be executed only in login shells.
+@.zlogout@ is sourced when login shells exit.
+@.zprofile@ is similar to @.zlogin@, except that it is sourced before
+@.zshrc@.
+@.zprofile@ is meant as an alternative to @.zlogin@ for
+ksh fans;
+the two are not intended to be used together, although this
+could certainly be done if desired.
+@.zlogin@ is not the place for alias definitions, options, environment
+variable settings, etc.;
+as a general rule, it should not change the shell environment
+at all.  Rather, it should be used to set the terminal type
+and run a series of external commands (@fortune@, @msgs@, etc).
+\beginsection Shell Functions
+X
+zsh also allows you to create your own commands by defining shell
+functions.  For example:
+\beg
+% yp () {
+>       ypmatch $1 passwd.byname
+> }
+% yp pfalstad
+pfalstad:*:3564:35:Paul John Falstad:/u/pfalstad:/usr/princeton/bin/zsh
+\end
+This function looks up a user in the NIS password map.
+The @$1@ expands to the first argument to @yp@.
+The function could have been equivalently defined in one of the following
+ways:
+\beg
+% function yp {
+>       ypmatch $1 passwd.byname
+> }
+% function yp () {
+>       ypmatch $1 passwd.byname
+> }
+\end
+Note that aliases are expanded when the function definition is
+parsed, not when the function is executed.  For example:
+\beg
+% alias ypmatch=echo
+% yp pfalstad
+pfalstad:*:3564:35:Paul John Falstad:/u/pfalstad:/usr/princeton/bin/zsh
+\end
+Since the alias was defined after the function was parsed, it has
+no effect on the function's execution.
+However, if we define the function again with the alias in place:
+\beg
+% function yp () { ypmatch $1 passwd.byname }
+% yp pfalstad
+pfalstad passwd.byname
+\end
+it is parsed with the new alias definition in place.
+Therefore, in general you must define aliases before functions.
+\par
+We can make the function take multiple arguments:
+\beg
+% unalias ypmatch
+% yp () {
+>       for i
+>       do ypmatch $i passwd.byname
+>       done
+> }
+% yp pfalstad subbarao sukthnkr
+pfalstad:*:3564:35:Paul John Falstad:/u/pfalstad:/usr/princeton/bin/zsh
+subbarao:*:3338:35:Kartik Subbarao:/u/subbarao:/usr/princeton/bin/zsh
+sukthnkr:*:1267:35:Rahul Sukthankar:/u/sukthnkr:/usr/princeton/bin/tcsh
+\end
+The @for i@ loops through each of the function's arguments,
+setting @i@ equal to each of them in turn.
+We can also make the function do something sensible
+if no arguments are given:
+\beg
+% yp () {
+>       if (( $# == 0 ))
+>       then echo usage: yp name ...; fi
+>       for i; do ypmatch $i passwd.byname; done
+> }
+% yp
+usage: yp name ...
+% yp pfalstad sukthnkr
+pfalstad:*:3564:35:Paul John Falstad:/u/pfalstad:/usr/princeton/bin/zsh
+sukthnkr:*:1267:35:Rahul Sukthankar:/u/sukthnkr:/usr/princeton/bin/tcsh
+\end
+@$#@ is the number of arguments supplied to the function.
+If it is equal to zero, we print a usage message; otherwise,
+we loop through the arguments, and @ypmatch@ all of them.
+\par
+Here's a function that selects a random line from a file:
+\beg
+% randline () {
+>       integer z=$(wc -l <$1)
+>       sed -n $[RANDOM % z + 1]p $1
+> }
+% randline /etc/motd
+PHOENIX WILL BE DOWN briefly Friday morning, 5/24/91 from 8 AM to
+% randline /etc/motd
+SunOS Release 4.1.1 (PHOENIX) #19: Tue May 14 19:03:15 EDT 1991
+% randline /etc/motd
+| Please use the "msgs" command to read announcements.  Refer to the   |
+% echo $z
+X
+%
+\end
+@randline@ has a local variable, @z@, that holds the number of
+lines in the file.  @$[RANDOM % z + 1]@ expands to a random number
+between 1 and @z@.  An expression of the form @$[@\dot@]@
+expands to the value of the arithmetic expression within the brackets,
+and the \parm{RANDOM} variable returns a random number each time it
+is referenced.  @%@ is the modulus operator, as in C.
+Therefore, @sed -n $[RANDOM%z+1]p@ picks a random line from its
+input, from 1 to @z@.
+\par
+Function definitions can be viewed with the @functions@ builtin:
+\beg
+% functions randline
+randline () {
+X        integer z=$(wc -l <$1)
+X        sed -n $[RANDOM % z + 1]p $1
+X
+}
+% functions
+yp () {
+X        if let $# == 0 
+X        
+X        then
+X                echo usage: yp name ...
+X        
+X        fi
+X        for i
+X        do
+X                ypmatch $i passwd.byname
+X        
+X                done
+X
+}
+randline () {
+X        integer z=$(wc -l <$1)
+X        sed -n $[RANDOM % z + 1]p $1
+X
+}
+\end
+Here's another one:
+\beg
+% cx () { chmod +x $* }
+% ls -l foo bar
+-rw-r--r--  1 pfalstad       29 May 24 04:38 bar
+-rw-r--r--  1 pfalstad       29 May 24 04:38 foo
+% cx foo bar
+% ls -l foo bar
+-rwxr-xr-x  1 pfalstad       29 May 24 04:38 bar
+-rwxr-xr-x  1 pfalstad       29 May 24 04:38 foo
+\end
+Note that this could also have been implemented as an alias:
+\beg
+% chmod 644 foo bar
+% alias cx='chmod +x'
+% cx foo bar
+% ls -l foo bar
+-rwxr-xr-x  1 pfalstad       29 May 24 04:38 bar
+-rwxr-xr-x  1 pfalstad       29 May 24 04:38 foo
+\end
+\filbreak\par
+Instead of defining a lot of functions in your @.zshrc@,
+all of which you may not use,
+it is often better to use the @autoload@ builtin.
+The idea is, you create a directory where function
+definitions are stored, declare the names in
+your @.zshrc@, and tell the shell where to look for them.
+Whenever you reference a function, the shell
+will automatically load it into memory.
+\beg
+% mkdir /tmp/funs
+% cat >/tmp/funs/yp
+ypmatch $1 passwd.byname
+^D
+% cat >/tmp/funs/cx
+chmod +x $*
+^D
+% FPATH=/tmp/funs
+% autoload cx yp
+% functions cx yp
+undefined cx ()
+undefined yp ()
+% chmod 755 /tmp/funs/{cx,yp}
+% yp egsirer
+egsirer:*:3214:35:Emin Gun Sirer:/u/egsirer:/bin/sh
+% functions yp
+yp () {
+X        ypmatch $1 passwd.byname
+}
+\end
+This idea has other benefits.  By adding a @#!@ header
+to the files, you can make them double as shell scripts.
+(Although it is faster to use them as functions, since a
+separate process is not created.)
+\beg
+% ed /tmp/funs/yp
+25
+i
+#! /usr/local/bin/zsh
+.
+w
+42
+q
+% </tmp/funs/yp
+#! /usr/local/bin/zsh
+ypmatch $1 passwd.byname
+% /tmp/funs/yp sukthnkr
+sukthnkr:*:1267:35:Rahul Sukthankar:/u/sukthnkr:/usr/princeton/bin/tcsh
+\end
+Now other people, who may not use zsh, or who don't want to
+copy all of your @.zshrc@, may use these functions as shell
+scripts.
+\beginsection Directories
+X
+One nice feature of zsh is the way it prints directories.
+For example, if we set the prompt like this:
+\beg
+phoenix% PROMPT='%~> '
+~> cd src
+~/src>
+\end
+the shell will print the current directory in the prompt,
+using the @~@ character.
+However, zsh is smarter than most other shells in this respect:
+\beg
+~/src> cd ~subbarao
+~subbarao> cd ~maruchck
+~maruchck> cd lib
+~maruchck/lib> cd fun
+~maruchck/lib/fun> foo=/usr/princeton/common/src
+~maruchck/lib/fun> cd ~foo
+~foo> cd ..
+/usr/princeton/common> cd src
+~foo> cd news/nntp
+~foo/news/nntp> cd inews
+~foo/news/nntp/inews>
+\end
+Note that zsh prints {\it other} users' directories 
+in the form @~user@.  Also note that you can
+set a parameter and use it as a directory name;
+zsh will act as if @foo@ is a user
+with the login directory @/usr/princeton/common/src@.
+This is convenient, especially if you're sick of seeing
+prompts like this:
+\beg
+phoenix:/usr/princeton/common/src/X.V11R4/contrib/clients/xv/docs>
+\end
+If you get stuck in this position, you can give the current
+directory a short name, like this:
+\beg
+/usr/princeton/common/src/news/nntp/inews> inews=$PWD
+/usr/princeton/common/src/news/nntp/inews> echo ~inews
+/usr/princeton/common/src/news/nntp/inews
+~inews>
+\end
+When you reference a directory in the form @~inews@,
+the shell assumes that you want the directory displayed
+in this form; thus simply typing @echo ~inews@ or
+@cd ~inews@ causes the prompt to be shortened.
+You can define a shell function for this purpose:
+\beg
+~inews> namedir () { $1=$PWD ;  : ~$1 }
+~inews> cd /usr/princeton/bin
+/usr/princeton/bin> namedir pbin
+~pbin> cd /var/spool/mail
+/var/spool/mail> namedir spool
+~spool> cd .msgs
+~spool/.msgs>
+\end
+You may want to add this one-line function to your
+@.zshrc@.
+X
+zsh can also put the current directory in your title bar,
+if you are using a windowing system.
+One way to do this is with the @chpwd@ function, which is
+automatically executed by the shell whenever you change
+directory.  If you are using xterm, this will work:
+\beg
+chpwd () { print -Pn '^[]2;%~^G' }
+\end
+The @-P@ option tells @print@ to treat its arguments like a prompt
+string; otherwise the @%~@ would not be expanded.
+The @-n@ option suppresses the terminating newline, as with @echo@.
+\par
+If you are using an IRIS @wsh@, do this:
+\beg
+chpwd () { print -Pn '^[P1.y%~^[\' }
+\end
+The @print -D@ command has other uses.  For example, to
+print the current directory to standard output in short form,
+you can do this:
+\beg
+% print -D $PWD
+~subbarao/src
+\end
+and to print each component of the path in short form:
+\beg
+% print -D $path
+/bin /usr/bin ~locbin ~locbin/X11 ~/bin
+\end
+\beginsection Directory Stacks
+X
+If you use csh, you may know about directory stacks.
+The @pushd@ command puts the current directory on the
+stack, and changes to a new directory; the @popd@ command
+pops a directory off the stack and changes to it.
+\beg
+phoenix% cd 
+phoenix% PROMPT='Z %~> '
+Z ~> pushd /tmp
+/tmp ~
+Z /tmp> pushd /usr/etc
+/usr/etc /tmp ~
+Z /usr/etc> pushd /usr/bin
+/usr/bin /usr/etc /tmp ~
+Z /usr/bin> popd
+/usr/etc /tmp ~
+Z /usr/etc> popd
+/tmp ~
+Z /tmp> pushd /etc
+/etc /tmp ~
+Z /etc> popd 
+/tmp ~
+\end
+zsh's directory stack commands work similarly.  One
+difference is the way @pushd@ is handled if no arguments
+are given.  As in csh, this exchanges the top two elements
+of the directory stack:
+\beg
+Z /tmp> dirs
+/tmp ~
+Z /tmp> pushd
+~ /tmp
+\end
+unless the stack only has one entry:
+\beg
+Z ~> popd
+/tmp
+Z /tmp> dirs
+/tmp
+Z /tmp> pushd
+~ /tmp
+\end
+or unless the \opt{PUSHDTOHOME} option is set:
+\beg
+Z ~> setopt pushdtohome
+Z ~> pushd
+~ ~ /tmp
+\end
+\filbreak\par
+As an alternative to using directory stacks in this manner,
+we can get something like a {\it directory history}
+by setting a few more options and parameters:
+\beg
+~> DIRSTACKSIZE=8
+~> setopt autopushd pushdminus pushdsilent pushdtohome
+~> alias dh='dirs -v'
+~> cd /tmp
+/tmp> cd /usr
+/usr> cd bin
+/usr/bin> cd ../pub
+/usr/pub> dh
+0       /usr/pub
+1       /usr/bin
+2       /usr
+3       /tmp
+4       ~
+/usr/pub> cd -3
+/tmp> dh
+0       /tmp
+1       /usr/pub
+2       /usr/bin
+3       /usr
+4       ~
+/tmp> ls =2/df
+/usr/bin/df
+/tmp> cd -4
+~>
+\end
+Note that @=2@ expanded to the second directory in the
+history list, and that @cd -3@ recalled the third
+directory in the list.
+\par
+You may be wondering what all those options do.
+\opt{AUTOPUSHD} made @cd@ act like @pushd@.
+(@alias cd=pushd@ is not sufficient, for various reasons.)
+\opt{PUSHDMINUS} swapped the meaning of @cd +1@ and
+@cd -1@; we want them to mean the opposite of what they mean in csh,
+because it makes more sense in this scheme, and it's easier to type:
+\beg
+~> dh
+0       ~
+1       /tmp
+2       /usr/pub
+3       /usr/bin
+4       /usr
+~> unsetopt pushdminus
+~> cd +1
+/tmp> dh
+0       /tmp
+1       ~
+2       /usr/pub
+3       /usr/bin
+4       /usr
+/tmp> cd +2
+/usr/pub>
+\end
+\goodbreak
+\opt{PUSHDSILENT} keeps the shell from printing
+the directory stack each time we do a @cd@,
+and \opt{PUSHDTOHOME} we mentioned earlier:
+\beg
+/usr/pub> unsetopt pushdsilent
+/usr/pub> cd /etc
+/etc /usr/pub /tmp ~ /usr/bin /usr
+/etc> cd
+~ /etc /usr/pub /tmp ~ /usr/bin /usr
+~> unsetopt pushdtohome
+~> cd
+/etc ~ /usr/pub /tmp ~ /usr/bin /usr
+/etc>
+\end
+\parm{DIRSTACKSIZE} keeps the directory stack
+from getting too large, much like \opt{HISTSIZE}:
+\beg
+/etc> setopt pushdsilent
+/etc> cd /
+/> cd /
+/> cd /
+/> cd /
+/> cd /
+/> cd /
+/> cd /
+/> cd /
+/> dh
+0       /
+1       /
+2       /
+3       /
+4       /
+5       /
+6       /
+7       /
+\end
+\beginsection Command/Process Substitution
+X
+Command substitution in zsh can take two forms.
+In the traditional form, a command enclosed in
+backquotes (@`@\dot@`@) is replaced on the command line with its output.
+This is the form used by the older shells.
+Newer shells (like zsh) also provide another form,
+@$(@\dot@)@.  This form is much easier to nest.
+\beg
+% ls -l `echo /vmunix`
+-rwxr-xr-x  1 root      1209702 May 14 19:04 /vmunix
+% ls -l $(echo /vmunix)
+-rwxr-xr-x  1 root      1209702 May 14 19:04 /vmunix
+% who | grep mad
+subbarao ttyt7   May 23 15:02   (mad55sx15.Prince)
+pfalstad ttyu1   May 23 16:25   (mad55sx14.Prince)
+subbarao ttyu6   May 23 15:04   (mad55sx15.Prince)
+pfalstad ttyv3   May 23 16:25   (mad55sx14.Prince)
+% who | grep mad | awk '{print $2}'
+ttyt7
+ttyu1
+ttyu6
+ttyv3
+% cd /dev; ls -l $(who |
+> grep $(echo mad) |
+> awk '{ print $2 }')
+crwx-w----  1 subbarao  20,  71 May 23 18:35 ttyt7
+crw--w----  1 pfalstad  20,  81 May 23 18:42 ttyu1
+crwx-w----  1 subbarao  20,  86 May 23 18:38 ttyu6
+crw--w----  1 pfalstad  20,  99 May 23 18:41 ttyv3
+\end
+Many common uses of command substitution, however, are
+superseded by other mechanisms of zsh:
+\beg
+% ls -l `tty`
+crw-rw-rw-  1 root      20,  28 May 23 18:35 /dev/ttyqc
+% ls -l $TTY
+crw-rw-rw-  1 root      20,  28 May 23 18:35 /dev/ttyqc
+% ls -l `which rn`
+-rwxr-xr-x  1 root       172032 Mar  6 18:40 /usr/princeton/bin/rn
+% ls -l =rn
+-rwxr-xr-x  1 root       172032 Mar  6 18:40 /usr/princeton/bin/rn
+\end
+A command name with a @=@ prepended is replaced with its full
+pathname.  This can be very convenient; constructs like
+@`which foo`@ are probably the most common use of
+command substitution in a shell.
+\par
+Another nice feature is process substitution:
+\beg
+% who | fgrep -f =(print -l root lemke shgchan subbarao)
+root     console May 19 10:41
+lemke    ttyq0   May 22 10:05   (narnia:0.0)
+lemke    ttyr7   May 22 10:05   (narnia:0.0)
+lemke    ttyrd   May 22 10:05   (narnia:0.0)
+shgchan  ttys1   May 23 16:52   (gaudi.Princeton.)
+subbarao ttyt7   May 23 15:02   (mad55sx15.Prince)
+subbarao ttyu6   May 23 15:04   (mad55sx15.Prince)
+shgchan  ttyvb   May 23 16:51   (gaudi.Princeton.)
+\end
+A command of the form @=(@\dot@)@ is replaced with the name of a {\it file}
+containing its output.  (A command substitution, on the other
+hand, is replaced with the output itself.)
+@print -l@ is like @echo@, excepts that it prints its arguments
+one per line, the way @fgrep@ expects them:
+\beg
+% print -l foo bar
+foo
+bar
+\end
+We could also have written:
+\beg
+% who | fgrep -f =(echo 'root
+> lemke
+> shgchan
+> subbarao')
+\end
+Using process substitution,
+you can edit the output of a command:
+\beg
+% ed =(who | fgrep -f ~/.friends)
+355
+g/lemke/d
+w /tmp/filbar
+226
+q
+% cat /tmp/filbar
+root     console May 19 10:41
+shgchan  ttys1   May 23 16:52   (gaudi.Princeton.)
+subbarao ttyt7   May 23 15:02   (mad55sx15.Prince)
+subbarao ttyu6   May 23 15:04   (mad55sx15.Prince)
+shgchan  ttyvb   May 23 16:51   (gaudi.Princeton.)
+\end
+or easily read archived mail:
+\beg
+% mail -f =(zcat ~/mail/oldzshmail.Z)
+"/tmp/zsha06024": 84 messages, 0 new, 43 unread
+>  1  U  TO: pfalstad, zsh (10)
+X   2  U  nytim!tim@@uunet.uu.net, Re: Zsh on Sparc1 /SunOS 4.0.3
+X   3  U  JAM%TPN@@utrcgw.utc.com, zsh fix (15)
+X   4  U  djm@@eng.umd.edu, way to find out if running zsh? (25)
+X   5  U  djm@@eng.umd.edu, Re: way to find out if running zsh? (17)
+X   6   r djm@@eng.umd.edu, Meta . (18)
+X   7  U  jack@@cs.glasgow.ac.uk, Re: problem building zsh (147)
+X   8  U  nytim!tim@@uunet.uu.net, Re: Zsh on Sparc1 /SunOS 4.0.3
+X   9     ursa!jmd, Another fix... (61)
+X  10  U  pplacewa@@bbn.com, Re: v18i084: Zsh 2.00 - A small complaint (36)
+X  11  U  lubkin@@cs.rochester.edu, POSIX job control (34)
+X  12  U  yale!bronson!tan@@uunet.UU.NET
+X  13  U  brett@@rpi.edu, zsh (36)
+X  14  S  subbarao, zsh sucks!!!!
+X  15  U  snibru!d241s008!d241s013!ala@@relay.EU.net, zsh (165)
+X  16  U  nytim!tim@@uunet.UU.NET, Re: Zsh on Sparc1 /SunOS 4.0.3
+X  17  U  subbarao, zsh is a junk shell (43)
+X  18  U  amaranth@@vela.acs.oakland.edu, zsh (33)
+43u/84 1: x
+% ls -l /tmp/zsha06024
+/tmp/zsha06024 not found
+\end
+Note that the shell creates a temporary file, and deletes it
+when the command is finished.
+\goodbreak
+\beg
+% diff =(ls) =(ls -F)
+3c3
+< fortune
+---
+> fortune*
+10c10
+< strfile
+---
+> strfile*
+\end
+If you read zsh's man page, you may notice that @<(@\dot@)@
+is another form of process substitution which is similar to
+@=(@\dot@)@.
+There is an important difference between the two.
+In the @<(@\dot@)@ case, the shell creates a named pipe (FIFO)
+instead of a file.  This is better, since it does not
+fill up the file system; but it does not work in all cases.
+In fact, if we had replaced @=(@\dot@)@ with @<(@\dot@)@ in 
+the examples above, all of them would have stopped working
+except for @fgrep -f <(@\dot@)@.
+You can not edit a pipe, or open it as a mail folder;
+@fgrep@, however, has no problem with reading
+a list of words from a pipe.
+You may wonder why @diff <(foo) bar@ doesn't work, since
+@foo | diff - bar@ works; this is because @diff@ creates
+a temporary file if it notices that one of its arguments
+is @-@, and then copies its standard input to the temporary
+file.
+\beginsection Aliasing
+X
+Often-used commands can be abbreviated with an alias:
+\beg
+% alias uc=uncompress
+% ls
+hanoi.Z
+% uc hanoi
+% ls
+hanoi
+\end
+or commands with certain desired options:
+\beg
+% alias fm='finger -m'
+% fm root
+Login name: root                        In real life: Operator
+Directory: /                            Shell: /bin/csh
+On since May 19 10:41:15 on console     3 days 5 hours Idle Time
+No unread mail
+No Plan.
+X
+% alias lock='lock -p -60000'
+% lock
+lock: /dev/ttyr4 on phoenix. timeout in 60000 minutes
+time now is Fri May 24 04:23:18 EDT 1991
+Key: 
+X
+% alias l='ls -AF'
+% l /
+.bash_history              kadb*
+.bashrc                    lib@@
+.cshrc                     licensed/
+.exrc                      lost+found/
+.login                     macsyma
+@dot
+\end
+Aliases can also be used to replace old commands:
+\beg
+% alias grep=egrep ps=sps make=gmake
+% alias whoami='echo root'
+% whoami
+root
+\end
+or to define new ones:
+\beg
+% cd /
+% alias sz='ls -l | sort -n +3 | tail -10'
+% sz
+drwxr-sr-x  7 bin          3072 May 23 11:59 etc
+drwxrwxrwx 26 root         5120 May 24 04:20 tmp
+drwxr-xr-x  2 root         8192 Dec 26 19:34 lost+found
+drwxr-sr-x  2 bin         14848 May 23 18:48 dev
+-r--r--r--  1 root       140520 Dec 26 20:08 boot
+-rwxr-xr-x  1 root       311172 Dec 26 20:08 kadb
+-rwxr-xr-x  1 root      1209695 Apr 16 15:33 vmunix.old
+-rwxr-xr-x  1 root      1209702 May 14 19:04 vmunix
+-rwxr-xr-x  1 root      1209758 May 21 12:23 vmunix.new.kernelmap.old
+-rwxr-xr-x  1 root      1711848 Dec 26 20:08 vmunix.org
+% alias rable='ls -AFtrd *(R)' nrable='ls -AFtrd *(^R)'
+% rable
+README      func/       bin/        pub/        News/       src/
+nicecolors  etc/        scr/        tmp/        iris/       zsh*
+% nrable
+Mailboxes/  mail/       notes
+\end
+(The pattern @*(R)@ matches all readable files in the current
+directory, and @*(^R)@ matches all unreadable files.)
+\par
+Most other shells have aliases of this kind ({\it command} aliases).
+However, zsh also has {\it global} aliases, which are substituted
+anywhere on a line.
+Global aliases can be used to abbreviate frequently-typed
+usernames, hostnames, etc.
+\beg
+% alias -g me=pfalstad gun=egsirer mjm=maruchck
+% who | grep me
+pfalstad ttyp0   May 24 03:39   (mickey.Princeton)
+pfalstad ttyp5   May 24 03:42   (mickey.Princeton)
+% fm gun
+Login name: egsirer                     In real life: Emin Gun Sirer
+Directory: /u/egsirer                   Shell: /bin/sh
+Last login Thu May 23 19:05 on ttyq3 from bow.Princeton.ED
+New mail received Fri May 24 02:30:28 1991;
+X  unread since Fri May 24 02:30:27 1991
+% alias -g phx=phoenix.princeton.edu warc=wuarchive.wustl.edu
+% ftp warc
+Connected to wuarchive.wustl.edu.
+\end
+\goodbreak
+Here are some more interesting uses.
+\begindisplay
+@% alias -g M='| more' GF='| fgrep -f ~/.friends'@\cr
+@% who M   #@ {\it pipes the output of @who@ through @more@}\cr
+@% who GF  #@ {\it see if your friends are on}\cr
+@% w GF    #@ {\it see what your friends are doing}\cr
+\enddisplay
+\goodbreak
+Another example makes use of zsh's process substitution.
+If you miss being able to do this:
+\beg
+% grep pfalstad /etc/passwd
+\end
+you can define an alias that will seem more natural
+than @ypmatch pfalstad passwd@:
+\beg
+% alias -g PASS='<(ypcat passwd)'
+% grep pfalstad PASS
+pfalstad:*:3564:35:Paul John Falstad:/u/pfalstad:/usr/princeton/bin/zsh
+\end
+If you're really crazy, you can even call it @/etc/passwd@:
+\beg
+% alias -g /etc/passwd='<(ypcat passwd)'
+% grep pfalstad /etc/passwd
+pfalstad:*:3564:35:Paul John Falstad:/u/pfalstad:/usr/princeton/bin/zsh
+\end
+The last example shows one of the perils of global aliases;
+they have a lot of potential to cause confusion.
+For example, if you defined a global alias called @|@ (which is
+possible), zsh would begin to act very strangely; every pipe
+SHAR_EOF
+true || echo 'restore of doc/zshintro.tex failed'
+fi
+echo 'End of  part 1'
+echo 'File doc/zshintro.tex is continued in part 2'
+echo 2 > _shar_seq_.tmp
+exit 0
+exit 0 # Just in case...
+-- 
+Kent Landfield                   INTERNET: kent@sparky.IMD.Sterling.COM
+Sterling Software, IMD           UUCP:     uunet!sparky!kent
+Phone:    (402) 291-8300         FAX:      (402) 291-4362
+Please send comp.sources.misc-related mail to kent@uunet.uu.net.

@@ -1,0 +1,1186 @@
+Path: funic!news.funet.fi!sunic!mcsun!uunet!sparky!kent
+From: pf@learning.siemens.com (Paul Falstad)
+Newsgroups: comp.sources.misc
+Subject: v18i100:  zsh2.00 - The Z shell, Patch01b/2
+Message-ID: <1991Apr25.004047.25962@sparky.IMD.Sterling.COM>
+Date: 25 Apr 91 00:40:47 GMT
+Sender: kent@sparky.IMD.Sterling.COM (Kent Landfield)
+Reply-To: uunet!phoenix.princeton.edu!pfalstad
+Organization: League For Fighting Chartered Accountancy
+Lines: 1173
+Approved: kent@sparky.imd.sterling.com
+X-Checksum-Snefru: 963456e2 067ddc7d ec38d2ba ba6374b5
+
+Submitted-by: Paul Falstad <pfalstad@phoenix.princeton.edu>
+Posting-number: Volume 18, Issue 100
+Archive-name: zsh2.00/patch01b
+Patch-To: zsh2.00: Volume 18, Issue 84-98
+
+
+This is part 2 of the patchfile.  Pipe though "patch -p0".
+
+*** ../zshdist/zsh2.00/src/init.c	Tue Apr 16 19:44:34 1991
+--- zsh2.00/src/init.c	Tue Apr 23 01:29:26 1991
+***************
+*** 71,77 ****
+  			zexit(NULL);
+  			continue;
+  			}
+! 		zerrnam("\nzsh",(!islogin) ? "use 'exit' to exit."
+  			: "use 'logout' to logout.",NULL,0);
+  		notect++;
+  		if (notect == 10)
+--- 71,77 ----
+  			zexit(NULL);
+  			continue;
+  			}
+! 		zerrnam("zsh",(!islogin) ? "use 'exit' to exit."
+  			: "use 'logout' to logout.",NULL,0);
+  		notect++;
+  		if (notect == 10)
+***************
+*** 138,144 ****
+  		opts[c] = opts[c-'a'+'A'] = OPT_UNSET;
+  	for (c = '0'; c <= '9'; c++)
+  		opts[c] = OPT_UNSET;
+! 	opts['A'] = opts['V'] = OPT_INVALID;
+  	opts['i'] = (isatty(0)) ? OPT_SET : OPT_UNSET;
+  	opts[BGNICE] = opts[NOTIFY] = OPT_SET;
+  	opts[USEZLE] = (interact && SHTTY != -1) ? OPT_SET : OPT_UNSET;
+--- 138,144 ----
+  		opts[c] = opts[c-'a'+'A'] = OPT_UNSET;
+  	for (c = '0'; c <= '9'; c++)
+  		opts[c] = OPT_UNSET;
+! 	opts['A'] = OPT_INVALID;
+  	opts['i'] = (isatty(0)) ? OPT_SET : OPT_UNSET;
+  	opts[BGNICE] = opts[NOTIFY] = OPT_SET;
+  	opts[USEZLE] = (interact && SHTTY != -1) ? OPT_SET : OPT_UNSET;
+***************
+*** 223,230 ****
+  
+  void setmoreflags() /**/
+  {
+! 	setvbuf(stdout,NULL,_IOFBF,BUFSIZ);	/* stdout,stderr fully buffered */
+! 	setvbuf(stderr,NULL,_IOFBF,BUFSIZ);
+  	subsh = 0;
+  	opts[MONITOR] = (interact) ? OPT_SET : OPT_UNSET;
+  	if (jobbing)
+--- 223,231 ----
+  
+  void setmoreflags() /**/
+  {
+! 	/* stdout,stderr fully buffered */
+! 	setbuffer(stdout,malloc(BUFSIZ),BUFSIZ);
+! 	setbuffer(stderr,malloc(BUFSIZ),BUFSIZ);
+  	subsh = 0;
+  	opts[MONITOR] = (interact) ? OPT_SET : OPT_UNSET;
+  	if (jobbing)
+***************
+*** 285,294 ****
+--- 286,300 ----
+  	baud = bauds[shttyinfo.sgttyb.sg_ospeed];
+  #endif
+  #endif
++ #ifdef TIOCGWINSZ
+  	if (!(columns = shttyinfo.winsize.ws_col))
+  		columns = 80;
+  	if (!(lines = shttyinfo.winsize.ws_row))
+  		lines = 24;
++ #else
++ 	columns = 80;
++ 	lines = 24;
++ #endif
+  	home = ztrdup("/");
+  	ifs = ztrdup(" \t\n");
+  	if (pwd = getpwuid(getuid()))
+***************
+*** 305,311 ****
+  	watchfmt = ztrdup(DEFWATCHFMT);
+  	ttystrname = ztrdup(ttyname(SHTTY));
+  	wordchars = ztrdup(DEFWORDCHARS);
+! 	cwd = zgetwd();
+  	oldpwd = ztrdup(cwd);
+  	hostM = zalloc(512);	/* get hostname, with and without .podunk.edu */
+  	hostm = hostM+256;
+--- 311,322 ----
+  	watchfmt = ztrdup(DEFWATCHFMT);
+  	ttystrname = ztrdup(ttyname(SHTTY));
+  	wordchars = ztrdup(DEFWORDCHARS);
+! 	if (ispwd(home))
+! 		cwd = ztrdup(home);
+! 	else if ((ptr = zgetenv("PWD")) && ispwd(ptr))
+! 		cwd = ztrdup(ptr);
+! 	else
+! 		cwd = zgetwd();
+  	oldpwd = ztrdup(cwd);
+  	hostM = zalloc(512);	/* get hostname, with and without .podunk.edu */
+  	hostm = hostM+256;
+***************
+*** 327,333 ****
+  	path = (char **) zalloc(4*sizeof *path);
+  	path[0] = ztrdup("/bin"); path[1] = ztrdup("/usr/bin");
+  	path[2] = ztrdup("/usr/ucb"); path[3] = NULL;
+! 	for (ptr = hostM; *ptr && *ptr != '.'; ptr++);
+  	*ptr = '\0';
+  	inittyptab();
+  	setupparams();
+--- 338,344 ----
+  	path = (char **) zalloc(4*sizeof *path);
+  	path[0] = ztrdup("/bin"); path[1] = ztrdup("/usr/bin");
+  	path[2] = ztrdup("/usr/ucb"); path[3] = NULL;
+! 	for (ptr = hostm; *ptr && *ptr != '.'; ptr++);
+  	*ptr = '\0';
+  	inittyptab();
+  	setupparams();
+***************
+*** 391,399 ****
+  
+  void runscripts() /**/
+  {
+! /*	if (interact)
+! 		checkfirstmail();*/
+! 	if (opts[NORCS] == OPT_UNSET)
+  		{
+  #ifdef GLOBALZSHRC
+  		source(GLOBALZSHRC);
+--- 402,408 ----
+  
+  void runscripts() /**/
+  {
+! 	if (interact && opts[NORCS] == OPT_UNSET)
+  		{
+  #ifdef GLOBALZSHRC
+  		source(GLOBALZSHRC);
+***************
+*** 417,426 ****
+--- 426,437 ----
+  		hungets(cmd);
+  		strinbeg();
+  		}
++ #ifdef TIOCSWINSZ
+  	if (!(columns = shttyinfo.winsize.ws_col))
+  		columns = 80;
+  	if (!(lines = shttyinfo.winsize.ws_row))
+  		lines = 24;
++ #endif
+  }
+  
+  void ainit() /**/
+*** ../zshdist/zsh2.00/src/jobs.c	Mon Apr 15 19:44:56 1991
+--- zsh2.00/src/jobs.c	Tue Apr 23 00:30:05 1991
+***************
+*** 162,169 ****
+  		if (!val)
+  			{
+  			gettyinfo(&shttyinfo);
+! 			columns = shttyinfo.winsize.ws_col;
+  			lines = shttyinfo.winsize.ws_row;
+  			}
+  		else
+  			settyinfo(&shttyinfo);
+--- 162,172 ----
+  		if (!val)
+  			{
+  			gettyinfo(&shttyinfo);
+! #ifdef TIOCSWINSZ
+! 			if (!(columns = shttyinfo.winsize.ws_col))
+! 				columns = 80;
+  			lines = shttyinfo.winsize.ws_row;
++ #endif
+  			}
+  		else
+  			settyinfo(&shttyinfo);
+*** ../zshdist/zsh2.00/src/lex.c	Tue Apr 16 19:40:56 1991
+--- zsh2.00/src/lex.c	Tue Apr 23 00:30:05 1991
+***************
+*** 275,280 ****
+--- 275,284 ----
+  				peek = DSEMI;
+  			return peek;
+  		case '!':
++ 			d = hgetc();
++ 			hungetc(d);
++ 			if (!inblank(d))
++ 				break;
+  			if (!incm || incond)
+  				{
+  				peek = BANG;
+***************
+*** 336,341 ****
+--- 340,346 ----
+  		case ']':
+  			if (!incond)
+  				break;
++ 			incond = 0;
+  			d = hgetc();
+  			if (d == ']')
+  				return DOUTBRACK;
+*** ../zshdist/zsh2.00/src/math.c	Tue Apr 16 20:24:39 1991
+--- zsh2.00/src/math.c	Wed Apr 24 00:21:22 1991
+***************
+*** 166,172 ****
+  			case '\0': unary = 1; ptr--; return EOI;
+  			case '[': unary = 0;
+  				{ int base = zstrtol(ptr,&ptr,10);
+! 					yyval = zstrtol(ptr+1,&ptr,lastbase = base); return NUM; }
+  			case ' ': case '\t':
+  				break;
+  			default:
+--- 166,174 ----
+  			case '\0': unary = 1; ptr--; return EOI;
+  			case '[': unary = 0;
+  				{ int base = zstrtol(ptr,&ptr,10);
+! 					if (*ptr == ']') ptr++;
+! 					yyval = zstrtol(ptr,&ptr,lastbase = base);
+! 					return NUM; }
+  			case ' ': case '\t':
+  				break;
+  			default:
+***************
+*** 181,187 ****
+  					p = ptr;
+  					if (lvc == LVCOUNT)
+  						{
+! 						zerr("too many identifiers in expression",NULL,0);
+  						return EOI;
+  						}
+  					unary = 0;
+--- 183,189 ----
+  					p = ptr;
+  					if (lvc == LVCOUNT)
+  						{
+! 						zerr("too many identifiers (complain to author)",NULL,0);
+  						return EOI;
+  						}
+  					unary = 0;
+***************
+*** 267,273 ****
+  
+  	if (sp < 0)
+  		{
+! 		zerr("stack empty",NULL,0);
+  		return;
+  		}
+  	switch(what) {
+--- 269,275 ----
+  
+  	if (sp < 0)
+  		{
+! 		zerr("bad math expression: stack empty",NULL,0);
+  		return;
+  		}
+  	switch(what) {
+***************
+*** 345,351 ****
+  	mathparse(prek);
+  	*ep = ptr;
+  	if (sp)
+! 		zerr("unbalanced stack",NULL,0);
+  	for (t0 = 0; t0 != lvc; t0++)
+  		free(lvals[t0]);
+  	return stack[0].val;
+--- 347,353 ----
+  	mathparse(prek);
+  	*ep = ptr;
+  	if (sp)
+! 		zerr("bad math expression: unbalanced stack",NULL,0);
+  	for (t0 = 0; t0 != lvc; t0++)
+  		free(lvals[t0]);
+  	return stack[0].val;
+***************
+*** 361,367 ****
+  		return 0;
+  	x = mathevall(s,TOPPREC,&junk);
+  	if (*junk)
+! 		zerr("illegal character: %c",NULL,*junk);
+  	return x;
+  }
+  
+--- 363,369 ----
+  		return 0;
+  	x = mathevall(s,TOPPREC,&junk);
+  	if (*junk)
+! 		zerr("bad math expression: illegal character: %c",NULL,*junk);
+  	return x;
+  }
+  
+*** ../zshdist/zsh2.00/src/params.c	Sun Apr 14 19:36:27 1991
+--- zsh2.00/src/params.c	Tue Apr 23 11:50:55 1991
+***************
+*** 111,116 ****
+--- 111,117 ----
+  
+  	"OPTARG",&optarg,		/* read/write */
+  	"MAIL",&mailfile,
++ 	"prompt",&prompt,
+  	"PROMPT",&prompt,
+  	"PROMPT2",&prompt2,
+  	"PROMPT3",&prompt3,
+***************
+*** 1347,1353 ****
+  	x = (v < 0) ? -v : v;
+  	while (digs >= 0)
+  		{
+! 		s[digs--] = '0'+(x % base);
+  		x /= base;
+  		}
+  	if (v < 0)
+--- 1348,1355 ----
+  	x = (v < 0) ? -v : v;
+  	while (digs >= 0)
+  		{
+! 		int dig = x%base;
+! 		s[digs--] = (dig < 10) ? '0'+dig : dig-10+'A';
+  		x /= base;
+  		}
+  	if (v < 0)
+*** ../zshdist/zsh2.00/src/parse.y	Sun Apr 14 20:43:08 1991
+--- zsh2.00/src/parse.y	Tue Apr 23 00:30:05 1991
+***************
+*** 209,215 ****
+  			| FUNC wordlist INBRACE list OUTBRACE
+  				{ $$ = makefuncdef($2,$4); }
+  			| TIME sublist2
+! 				{ $$ = makecnode(CTIME); $$->u.pline = $2; }
+  			| DINBRACK cond DOUTBRACK
+  				{ $$ = makecnode(COND); $$->u.cond = $2; }
+  			;
+--- 209,215 ----
+  			| FUNC wordlist INBRACE list OUTBRACE
+  				{ $$ = makefuncdef($2,$4); }
+  			| TIME sublist2
+! 				{ $$ = makecnode(ZCTIME); $$->u.pline = $2; }
+  			| DINBRACK cond DOUTBRACK
+  				{ $$ = makecnode(COND); $$->u.cond = $2; }
+  			;
+***************
+*** 556,562 ****
+  
+  	if (b[0] == Equals && !b[1])
+  		n->type = COND_STREQ;
+! 	else if (b[0] == '!' && b[1] == Equals && !b[2])
+  		n->type = COND_STRNEQ;
+  	else if (b[0] == '-')
+  		{
+--- 556,562 ----
+  
+  	if (b[0] == Equals && !b[1])
+  		n->type = COND_STREQ;
+! 	else if (b[0] == '!' && b[1] == '=' && !b[2])
+  		n->type = COND_STRNEQ;
+  	else if (b[0] == '-')
+  		{
+*** ../zshdist/zsh2.00/src/subst.c	Sun Apr 14 15:15:27 1991
+--- zsh2.00/src/subst.c	Tue Apr 23 00:30:05 1991
+***************
+*** 308,314 ****
+  			ptr = str+2;
+  			}
+  		else
+! 			val = strtol(str+1,&ptr,10);	/* =# */
+  		ds = dstackent(val);
+  		if (!ds)
+  			return 1;
+--- 308,314 ----
+  			ptr = str+2;
+  			}
+  		else
+! 			val = zstrtol(str+1,&ptr,10);	/* =# */
+  		ds = dstackent(val);
+  		if (!ds)
+  			return 1;
+***************
+*** 625,642 ****
+  			isarr = 0;
+  			}
+  	if (qt)
+  		if (isarr)
+  			{
+  			val = spacejoin(aval);
+  			isarr = 0;
+  			}
+! 		else if (spbreak)
+! 			{
+! 			if (isarr)
+! 				val = spacejoin(aval);
+! 			isarr = 1;
+! 			aval = spacesplit(s);
+! 			}
+  	if (isarr)
+  		if (plan9)
+  			{
+--- 625,644 ----
+  			isarr = 0;
+  			}
+  	if (qt)
++ 		{
+  		if (isarr)
+  			{
+  			val = spacejoin(aval);
+  			isarr = 0;
+  			}
+! 		}
+! 	else if (spbreak)
+! 		{
+! 		if (isarr)
+! 			val = spacejoin(aval);
+! 		isarr = 1;
+! 		aval = spacesplit(val);
+! 		}
+  	if (isarr)
+  		if (plan9)
+  			{
+*** ../zshdist/zsh2.00/src/table.c	Sat Apr 13 02:55:32 1991
+--- zsh2.00/src/table.c	Tue Apr 23 00:30:05 1991
+***************
+*** 314,320 ****
+  	free(tab);
+  }
+   
+! char *strstr(s,t) /**/
+  char *s;char *t;
+  {
+  char *p1,*p2;
+--- 314,320 ----
+  	free(tab);
+  }
+   
+! char *ztrstr(s,t) /**/
+  char *s;char *t;
+  {
+  char *p1,*p2;
+*** ../zshdist/zsh2.00/src/table.pro	Sat Apr 13 21:49:10 1991
+--- zsh2.00/src/table.pro	Tue Apr 23 00:30:01 1991
+***************
+*** 13,18 ****
+  void *getnode DCLPROTO((Lklist list));
+  void *ugetnode DCLPROTO((Lklist list));
+  void freetable DCLPROTO((Lklist tab,FFunc freefunc));
+! char *strstr DCLPROTO((char *s,char *t));
+  void inslist DCLPROTO((Lklist l,Lknode where,Lklist x));
+  int countnodes DCLPROTO((Lklist x));
+--- 13,18 ----
+  void *getnode DCLPROTO((Lklist list));
+  void *ugetnode DCLPROTO((Lklist list));
+  void freetable DCLPROTO((Lklist tab,FFunc freefunc));
+! char *ztrstr DCLPROTO((char *s,char *t));
+  void inslist DCLPROTO((Lklist l,Lknode where,Lklist x));
+  int countnodes DCLPROTO((Lklist x));
+*** ../zshdist/zsh2.00/src/text.c	Sat Apr 13 02:55:32 1991
+--- zsh2.00/src/text.c	Tue Apr 23 00:30:05 1991
+***************
+*** 190,196 ****
+  					tindent--;
+  					taddstr(" )");
+  					break;
+! 				case CTIME:
+  					taddstr("time ");
+  					tindent++;
+  					gt2(nn->u.pline);
+--- 190,196 ----
+  					tindent--;
+  					taddstr(" )");
+  					break;
+! 				case ZCTIME:
+  					taddstr("time ");
+  					tindent++;
+  					gt2(nn->u.pline);
+*** ../zshdist/zsh2.00/src/utils.c	Mon Apr 15 20:06:18 1991
+--- zsh2.00/src/utils.c	Tue Apr 23 11:42:30 1991
+***************
+*** 239,249 ****
+--- 239,283 ----
+  
+  static char xbuf[MAXPATHLEN];
+  
++ char *fixcwd(s) /**/
++ char *s;
++ {
++ struct stat sbuf,tbuf;
++ char *t;
++ 
++ 	strcpy(xbuf,"");
++ 	if (*s == '/')
++ 		t = ztrdup(s);
++ 	else
++ 		t = tricat((cwd[1]) ? cwd : "","/",s);
++ 	(void) xsymlinks(t+1); 
++ 	free(t);
++ 	if (!*xbuf)
++ 		strcpy(xbuf,"/");
++ 	if (stat(xbuf,&sbuf) == 0 && stat(".",&tbuf) == 0)
++ 		if (!(sbuf.st_dev == tbuf.st_dev && sbuf.st_ino == tbuf.st_ino))
++ 			chdir(xbuf);
++ 	return ztrdup(xbuf);
++ }
++ 
++ int ispwd(s) /**/
++ char *s;
++ {
++ struct stat sbuf,tbuf;
++ 
++ 	if (stat(s,&sbuf) == 0 && stat(".",&tbuf) == 0)
++ 		if (sbuf.st_dev == tbuf.st_dev && sbuf.st_ino == tbuf.st_ino)
++ 			return 1;
++ 	return 0;
++ }
++ 
+  /* expand symlinks in s, and remove other weird things */
+  
+  char *xsymlink(s) /**/
+  char *s;
+  {
++ 	if (unset(CHASELINKS))
++ 		return ztrdup(s);
+  	if (*s != '/')
+  		return NULL;
+  	strcpy(xbuf,"");
+***************
+*** 318,323 ****
+--- 352,364 ----
+  			*p = '\0';
+  			continue;
+  			}
++ 		if (unset(CHASELINKS))
++ 			{
++ 			strcat(xbuf,"/");
++ 			strcat(xbuf,*pp);
++ 			free(*pp);
++ 			continue;
++ 			}
+  		sprintf(xbuf2,"%s/%s",xbuf,*pp);
+  		t0 = readlink(xbuf2,xbuf3,MAXPATHLEN);
+  		if (t0 == -1)
+***************
+*** 672,678 ****
+  			dot = 1;
+  			break;
+  			}
+! 	for (pathct = t0,t0 = pathct-1; t0 >= 0; t0--)
+  		if (!strcmp(".",path[t0]))
+  			dot = 0;
+  		else if (strncmp("/./",path[t0],3))
+--- 713,719 ----
+  			dot = 1;
+  			break;
+  			}
+! 	for (pathct = arrlen(path), t0 = pathct-1; t0 >= 0; t0--)
+  		if (!strcmp(".",path[t0]))
+  			dot = 0;
+  		else if (strncmp("/./",path[t0],3))
+***************
+*** 759,765 ****
+--- 800,808 ----
+  		ioctl(SHTTY,TIOCGLTC,&ti->ltchars);
+  #endif
+  #endif
++ #ifdef TIOCGWINSZ
+  		ioctl(SHTTY,TIOCGWINSZ,&ti->winsize);
++ #endif
+  		}
+  }
+  
+***************
+*** 774,795 ****
+  #ifdef TERMIO
+  		ioctl(SHTTY,TCSETA,&ti->termio);
+  #else
+! 		ioctl(SHTTY,TIOCSETP,&ti->sgttyb);
+  		ioctl(SHTTY,TIOCSETC,&ti->tchars);
+  		ioctl(SHTTY,TIOCSLTC,&ti->ltchars);
+  #endif
+  #endif
+  		ioctl(SHTTY,TIOCSWINSZ,&ti->winsize);
+  		}
+  }
+  
+  void adjustwinsize() /**/
+  {
+  	ioctl(SHTTY,TIOCGWINSZ,&shttyinfo.winsize);
+! 	columns = shttyinfo.winsize.ws_col;
+  	lines = shttyinfo.winsize.ws_row;
+  	if (zleactive)
+  		refresh();
+  }
+  
+  int zyztem(s,t) /**/
+--- 817,845 ----
+  #ifdef TERMIO
+  		ioctl(SHTTY,TCSETA,&ti->termio);
+  #else
+! 		ioctl(SHTTY,TIOCSETN,&ti->sgttyb);
+  		ioctl(SHTTY,TIOCSETC,&ti->tchars);
+  		ioctl(SHTTY,TIOCSLTC,&ti->ltchars);
+  #endif
+  #endif
++ #ifdef TIOCGWINSZ
++ 		signal(SIGWINCH,SIG_IGN);
+  		ioctl(SHTTY,TIOCSWINSZ,&ti->winsize);
++ 		signal(SIGWINCH,handler);
++ #endif
+  		}
+  }
+  
+  void adjustwinsize() /**/
+  {
++ #ifdef TIOCGWINSZ
+  	ioctl(SHTTY,TIOCGWINSZ,&shttyinfo.winsize);
+! 	if (!(columns = shttyinfo.winsize.ws_col))
+! 		columns = 80;
+  	lines = shttyinfo.winsize.ws_row;
+  	if (zleactive)
+  		refresh();
++ #endif
+  }
+  
+  int zyztem(s,t) /**/
+*** ../zshdist/zsh2.00/src/utils.pro	Sat Apr 13 21:49:11 1991
+--- zsh2.00/src/utils.pro	Tue Apr 23 00:30:02 1991
+***************
+*** 8,13 ****
+--- 8,15 ----
+  void holdintr DCLPROTO((void));
+  char *fgetline DCLPROTO((char *buf,int len,FILE *in));
+  char *findcwd DCLPROTO((char *s));
++ char *fixcwd DCLPROTO((char *s));
++ int ispwd DCLPROTO((char *s));
+  char *xsymlink DCLPROTO((char *s));
+  char **slashsplit DCLPROTO((char *s));
+  int islink DCLPROTO((char *s));
+*** ../zshdist/zsh2.00/src/zle.h	Sun Apr 14 21:05:40 1991
+--- zsh2.00/src/zle.h	Mon Apr 22 20:37:46 1991
+***************
+*** 225,230 ****
+--- 225,232 ----
+  z_listchoices,
+  z_listexpand,
+  z_magicspace,
++ z_menucompleteword,
++ z_menuexpandorcomplete,
+  z_metafynext,
+  z_overwritemode,
+  z_pushline,
+*** ../zshdist/zsh2.00/src/zle_bindings.c	Sun Apr 14 20:33:07 1991
+--- zsh2.00/src/zle_bindings.c	Tue Apr 23 00:30:05 1991
+***************
+*** 84,89 ****
+--- 84,91 ----
+  "list-choices",listchoices,0,
+  "list-expand",listexpand,0,
+  "magic-space",magicspace,ZLE_MOD,
++ "menu-complete-word",menucompleteword,ZLE_MOD|ZLE_MENUCMP,
++ "menu-expand-or-complete",menuexpandorcomplete,ZLE_MOD|ZLE_MENUCMP,
+  "metafy-next",metafynext,0,
+  "overwrite-mode",overwritemode,0,
+  "push-line",pushline,ZLE_MOD,
+*** ../zshdist/zsh2.00/src/zle_emacs.c	Sun Apr 14 20:29:52 1991
+--- zsh2.00/src/zle_emacs.c	Tue Apr 23 00:30:05 1991
+***************
+*** 99,110 ****
+  		eofsent = 1;
+  		return;
+  		}
+! 	if (cs+mult > ll)
+! 		{
+! 		feep();
+! 		return;
+! 		}
+! 	cs += mult;
+  	backdel(mult);
+  }
+  
+--- 99,106 ----
+  		eofsent = 1;
+  		return;
+  		}
+! 	if (!(cs+mult > ll || line[cs] == '\n'))
+! 		cs += mult;
+  	backdel(mult);
+  }
+  
+***************
+*** 619,625 ****
+  			histline = ohistline;
+  			return;
+  			}
+! 		if (!hstrncmp(s,line,t0))
+  			break;
+  		}
+  	sethistline(s);
+--- 615,621 ----
+  			histline = ohistline;
+  			return;
+  			}
+! 		if (!hstrncmp(s,line,t0) && hstrcmp(s,line))
+  			break;
+  		}
+  	sethistline(s);
+***************
+*** 646,652 ****
+  			histline = ohistline;
+  			return;
+  			}
+! 		if (!hstrncmp(s,line,t0))
+  			break;
+  		}
+  	sethistline(s);
+--- 642,648 ----
+  			histline = ohistline;
+  			return;
+  			}
+! 		if (!hstrncmp(s,line,t0) && hstrcmp(s,line))
+  			break;
+  		}
+  	sethistline(s);
+***************
+*** 816,822 ****
+  char *s,*oldl;
+  char ibuf[256],*sbuf = ibuf+10;
+  int sbptr = 0,ch,ohl = histline,ocs = cs;
+! int nomatch = 0;
+  
+  	strcpy(ibuf,"i-search: ");
+  	statusline = ibuf;
+--- 812,818 ----
+  char *s,*oldl;
+  char ibuf[256],*sbuf = ibuf+10;
+  int sbptr = 0,ch,ohl = histline,ocs = cs;
+! int nomatch = 0,chequiv = 0;
+  
+  	strcpy(ibuf,"i-search: ");
+  	statusline = ibuf;
+***************
+*** 848,860 ****
+  				if ((sbuf[0] == '^') ?
+  						(t = (hstrncmp(s,sbuf+1,sbptr-1)) ? NULL : s) :
+  						(t = hstrnstr(s,sbuf,sbptr)))
+! 					{
+! 					sethistline(s);
+! 					cs = t-s+sbptr;
+! 					break;
+! 					}
+  				histline += dir;
+  				}
+  			}
+  		refresh();
+  		if ((ch = getkey(0)) == -1)
+--- 844,858 ----
+  				if ((sbuf[0] == '^') ?
+  						(t = (hstrncmp(s,sbuf+1,sbptr-1)) ? NULL : s) :
+  						(t = hstrnstr(s,sbuf,sbptr)))
+! 					if (!(chequiv && !hstrcmp(line,s)))
+! 						{
+! 						sethistline(s);
+! 						cs = t-s+sbptr;
+! 						break;
+! 						}
+  				histline += dir;
+  				}
++ 			chequiv = 0;
+  			}
+  		refresh();
+  		if ((ch = getkey(0)) == -1)
+***************
+*** 886,896 ****
+--- 884,896 ----
+  		else if (ch == 18)
+  			{
+  			ohl = (histline += (dir = -1));
++ 			chequiv = 1;
+  			continue;
+  			}
+  		else if (ch == 19)
+  			{
+  			ohl = (histline += (dir = 1));
++ 			chequiv = 1;
+  			continue;
+  			}
+  		if (!nomatch && sbptr != 39 && !icntrl(ch))
+*** ../zshdist/zsh2.00/src/zle_main.c	Sun Apr 14 21:52:05 1991
+--- zsh2.00/src/zle_main.c	Tue Apr 23 00:30:05 1991
+***************
+*** 35,41 ****
+  #include "zsh.h"
+  #include "funcs.h"
+  #include <sys/types.h>
+- #include <sys/time.h>
+  #include <sys/errno.h>
+  
+  static Key cky;
+--- 35,40 ----
+***************
+*** 176,182 ****
+  		}
+  	initundo();
+  	setterm();
+! 	putchar('\r');
+  	refresh();
+  	if (tmout)
+  		alarm(tmout);
+--- 175,182 ----
+  		}
+  	initundo();
+  	setterm();
+! 	if (unset(SHUTUPKARTIK))
+! 		putchar('\r');
+  	refresh();
+  	if (tmout)
+  		alarm(tmout);
+***************
+*** 212,218 ****
+  		FD_SET(0,&foofd);
+  		if ((tv.tv_usec = cost*costmult) > 500000)
+  			tv.tv_usec = 500000;
+! 		if (!kungetct && !select(1,&foofd,NULL,NULL,&tv))
+  			refresh();
+  		}
+  	if (menucmp)
+--- 212,222 ----
+  		FD_SET(0,&foofd);
+  		if ((tv.tv_usec = cost*costmult) > 500000)
+  			tv.tv_usec = 500000;
+! 		if (!kungetct
+! #ifdef HAS_SELECT
+! 			&& !select(1,&foofd,NULL,NULL,&tv)
+! #endif
+! 			)
+  			refresh();
+  		}
+  	if (menucmp)
+*** ../zshdist/zsh2.00/src/zle_tricky.c	Mon Apr 15 20:05:34 1991
+--- zsh2.00/src/zle_tricky.c	Tue Apr 23 00:30:05 1991
+***************
+*** 36,42 ****
+  #include "y.tab.h"
+  #include <sys/dir.h>
+  
+! static int we,wb;
+  
+  static int menub,menue;
+  static Lklist menulist;
+--- 36,42 ----
+  #include "y.tab.h"
+  #include <sys/dir.h>
+  
+! static int we,wb,usemenu;
+  
+  static int menub,menue;
+  static Lklist menulist;
+***************
+*** 64,69 ****
+--- 64,70 ----
+  
+  void completeword() /**/
+  {
++ 	usemenu = isset(MENUCOMPLETE);
+  	if (c == '\t' && usetab())
+  		selfinsert();
+  	else
+***************
+*** 70,87 ****
+--- 71,100 ----
+  		docomplete(COMP_COMPLETE);
+  }
+  
++ void menucompleteword() /**/
++ {
++ 	usemenu = 1;
++ 	if (c == '\t' && usetab())
++ 		selfinsert();
++ 	else
++ 		docomplete(COMP_COMPLETE);
++ }
++ 
+  void listchoices() /**/
+  {
++ 	usemenu = isset(MENUCOMPLETE);
+  	docomplete(COMP_LIST_COMPLETE);
+  }
+  
+  void spellword() /**/
+  {
++ 	usemenu = isset(MENUCOMPLETE);
+  	docomplete(COMP_SPELL);
+  }
+  
+  void deletecharorlist() /**/
+  {
++ 	usemenu = isset(MENUCOMPLETE);
+  	if (cs != ll)
+  		deletechar();
+  	else
+***************
+*** 90,95 ****
+--- 103,109 ----
+  
+  void expandword() /**/
+  {
++ 	usemenu = isset(MENUCOMPLETE);
+  	if (c == '\t' && usetab())
+  		selfinsert();
+  	else
+***************
+*** 98,103 ****
+--- 112,118 ----
+  
+  void expandorcomplete() /**/
+  {
++ 	usemenu = isset(MENUCOMPLETE);
+  	if (c == '\t' && usetab())
+  		selfinsert();
+  	else
+***************
+*** 104,111 ****
+--- 119,136 ----
+  		docomplete(COMP_EXPAND_COMPLETE);
+  }
+  
++ void menuexpandorcomplete() /**/
++ {
++ 	usemenu = 1;
++ 	if (c == '\t' && usetab())
++ 		selfinsert();
++ 	else
++ 		docomplete(COMP_EXPAND_COMPLETE);
++ }
++ 
+  void listexpand() /**/
+  {
++ 	usemenu = isset(MENUCOMPLETE);
+  	docomplete(COMP_LIST_EXPAND);
+  }
+  
+***************
+*** 114,120 ****
+--- 139,148 ----
+  char *s;
+  
+  	if (!menucmp)
++ 		{
+  		feep();
++ 		return;
++ 		}
+  	cs = menub;
+  	foredel(menue-menub);
+  	if (menunode == firstnode(menulist))
+***************
+*** 367,375 ****
+  					unset(NICEAPPENDAGES) ? NULL : (haspath) ? s : "./");
+  	else if (nextnode(firstnode(matches)))
+  		{
+! 		if (isset(MENUCOMPLETE))
+  			{
+- 			feep();
+  			menucmp = 1;
+  			cs = wb;
+  			foredel(we-wb);
+--- 395,402 ----
+  					unset(NICEAPPENDAGES) ? NULL : (haspath) ? s : "./");
+  	else if (nextnode(firstnode(matches)))
+  		{
+! 		if (usemenu)
+  			{
+  			menucmp = 1;
+  			cs = wb;
+  			foredel(we-wb);
+*** ../zshdist/zsh2.00/src/zle_tricky.pro	Sat Apr 13 21:49:13 1991
+--- zsh2.00/src/zle_tricky.pro	Tue Apr 23 00:30:04 1991
+***************
+*** 1,9 ****
+--- 1,11 ----
+  void completeword DCLPROTO((void));
++ void menucompleteword DCLPROTO((void));
+  void listchoices DCLPROTO((void));
+  void spellword DCLPROTO((void));
+  void deletecharorlist DCLPROTO((void));
+  void expandword DCLPROTO((void));
+  void expandorcomplete DCLPROTO((void));
++ void menuexpandorcomplete DCLPROTO((void));
+  void listexpand DCLPROTO((void));
+  void reversemenucomplete DCLPROTO((void));
+  void docomplete DCLPROTO((int lst));
+*** ../zshdist/zsh2.00/src/zle_utils.c	Sat Apr 13 02:55:32 1991
+--- zsh2.00/src/zle_utils.c	Tue Apr 23 00:30:05 1991
+***************
+*** 227,232 ****
+--- 227,241 ----
+  	return len;
+  }
+  
++ int hstrcmp(s,t) /**/
++ char *s;char *t;
++ {
++ 	while (*s && (*s == *t || (*s == ' ' && *t == HISTSPACE) ||
++ 			(*s == HISTSPACE && *t == ' ')))
++ 		s++,t++;
++ 	return !(*s == '\0' && *t == '\0');
++ }
++ 
+  char *hstrnstr(s,t,len) /**/
+  char *s;char *t;int len;
+  {
+*** ../zshdist/zsh2.00/src/zle_utils.pro	Sat Apr 13 21:49:14 1991
+--- zsh2.00/src/zle_utils.pro	Tue Apr 23 00:30:04 1991
+***************
+*** 14,17 ****
+--- 14,18 ----
+  void addundo DCLPROTO((void));
+  void freeundo DCLPROTO((void));
+  int hstrncmp DCLPROTO((char *s,char *t,int len));
++ int hstrcmp DCLPROTO((char *s,char *t));
+  char *hstrnstr DCLPROTO((char *s,char *t,int len));
+*** ../zshdist/zsh2.00/src/zle_vi.c	Sun Apr 14 20:18:02 1991
+--- zsh2.00/src/zle_vi.c	Tue Apr 23 00:30:05 1991
+***************
+*** 303,308 ****
+--- 303,310 ----
+  void vicmdmode() /**/
+  {
+  	bindtab = altbindtab;
++ 	if (cs && (cs == ll || line[cs] == '\n') && line[cs-1] != '\n')
++ 		cs--;
+  }
+  
+  void viputafter() /**/
+***************
+*** 502,507 ****
+--- 504,511 ----
+  			histline = ohistline;
+  			return;
+  			}
++ 		if (!hstrcmp(line,s))
++ 			continue;
+  		if (*visrchstr == '^')
+  			{
+  			if (!hstrncmp(s,visrchstr+1,t0-1))
+*** ../zshdist/zsh2.00/src/zsh.h	Tue Apr 16 19:48:45 1991
+--- zsh2.00/src/zsh.h	Wed Apr 24 17:49:49 1991
+***************
+*** 52,60 ****
+  #include <sys/param.h>
+  #include <sys/stat.h>
+  
+! #define VERSIONSTR "zsh v2.00.00"
+  
+! #define DEFWORDCHARS "*?_-.[]~=/"
+  #define DEFTIMEFMT "%E real  %U user  %S system  %P"
+  #ifdef UTMP_HOST
+  #define DEFWATCHFMT "%n has %a %l from %m."
+--- 52,60 ----
+  #include <sys/param.h>
+  #include <sys/stat.h>
+  
+! #define VERSIONSTR "zsh v2.00.01"
+  
+! #define DEFWORDCHARS "*?_-.[]~=/&;!#$%^(){}<>"
+  #define DEFTIMEFMT "%E real  %U user  %S system  %P"
+  #ifdef UTMP_HOST
+  #define DEFWATCHFMT "%n has %a %l from %m."
+***************
+*** 271,277 ****
+  enum cmd_type {
+  	SIMPLE,		/* simple command */
+  	SUBSH,		/* ( list ) */
+! 	CTIME,		/* time pline */
+  	CURSH,		/* { list } */
+  	FUNCDEF,		/* foo ... () { list } */
+  	CFOR,
+--- 271,277 ----
+  enum cmd_type {
+  	SIMPLE,		/* simple command */
+  	SUBSH,		/* ( list ) */
+! 	ZCTIME,		/* time pline */
+  	CURSH,		/* { list } */
+  	FUNCDEF,		/* foo ... () { list } */
+  	CFOR,
+***************
+*** 479,485 ****
+--- 479,487 ----
+  	struct ltchars ltchars;
+  #endif
+  #endif
++ #ifdef TIOCGWINSZ
+  	struct winsize winsize;
++ #endif
+  	};
+  
+  EXTERN struct ttyinfo shttyinfo;
+***************
+*** 615,620 ****
+--- 617,623 ----
+  #define RECEXACT 'S'
+  #define CDABLEVARS 'T'
+  #define MAILWARNING 'U'
++ #define SHUTUPKARTIK 'V'
+  #define AUTORESUME 'W'
+  #define NICEAPPENDAGES 'X'			/* historical */
+  #define MENUCOMPLETE 'Y'
+***************
+*** 633,638 ****
+--- 636,642 ----
+  #define SHINSTDIN 's'
+  #define NOUNSET 'u'
+  #define VERBOSE 'v'
++ #define CHASELINKS 'w'
+  #define XTRACE 'x'
+  #define SHWORDSPLIT 'y'
+  
+***************
+*** 670,675 ****
+--- 674,680 ----
+  	"recexact",'S',
+  	"cdablevars",'T',
+  	"mailwarning",'U',
++ 	"nopromptclobber",'V',
+  	"autoresume",'W',
+  	"listtypes",'X',
+  	"menucomplete",'Y',
+***************
+*** 688,693 ****
+--- 693,699 ----
+  	"shinstdin",'s',
+  	"nounset",'u',
+  	"verbose",'v',
++ 	"chaselinks",'w',
+  	"xtrace",'x',
+  	"shwordsplit",'y',
+  	NULL,0
+***************
+*** 720,727 ****
+  #define	_IFCHR	0020000
+  #define	_IFBLK	0060000
+  #define	_IFREG	0100000
+- #define	_IFLNK	0120000
+- #define	_IFSOCK	0140000
+  #define	_IFIFO	0010000
+  #define	S_ISBLK(m)	(((m)&_IFMT) == _IFBLK)
+  #define	S_ISCHR(m)	(((m)&_IFMT) == _IFCHR)
+--- 726,731 ----
+***************
+*** 728,733 ****
+--- 732,745 ----
+  #define	S_ISDIR(m)	(((m)&_IFMT) == _IFDIR)
+  #define	S_ISFIFO(m)	(((m)&_IFMT) == _IFIFO)
+  #define	S_ISREG(m)	(((m)&_IFMT) == _IFREG)
++ #endif
++ 
++ #ifndef S_ISSOCK
++ #ifndef _IFMT
++ #define _IFMT 0170000
++ #endif
++ #define	_IFLNK	0120000
++ #define	_IFSOCK	0140000
+  #define	S_ISLNK(m)	(((m)&_IFMT) == _IFLNK)
+  #define	S_ISSOCK(m)	(((m)&_IFMT) == _IFSOCK)
+  #endif
+--
+Paul Falstad, pfalstad@phoenix.princeton.edu | 10 PRINT "PRINCETON CS"
+[Your blood pressure just went up.]          | 20 GOTO 10
+Princeton University would like to apologize to everyone for this article.
+
+exit 0 # Just in case...
+-- 
+Kent Landfield                   INTERNET: kent@sparky.IMD.Sterling.COM
+Sterling Software, IMD           UUCP:     uunet!sparky!kent
+Phone:    (402) 291-8300         FAX:      (402) 291-4362
+Please send comp.sources.misc-related mail to kent@uunet.uu.net.

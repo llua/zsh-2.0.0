@@ -1,0 +1,36 @@
+zsh is free software.  See the file COPYING for copying permission.
+
+To get this shell running, cd into the src directory and type
+"buildzsh".  I tested it on the following machines, where it compiled
+just by running this script:
+
+Sun SPARCServer 4/490 running SunOS 4.1.1
+Sun 3/60C running SunOS 4.1.1
+Sun 4-something running SunOS 4.0.3
+NeXTstation running Mach 2.0
+SGI-4D/25 running IRIX 3.3.1
+hp9000 running a variant of BSD4.3
+
+If it doesn't work, either complain to me, or tweak config.h, Makefile, and
+signals.h until it does.
+
+Tabstops are 3 spaces.  If you're going to look at my code, run it
+though "expand -3" first, or set your tab stops to the same as mine.
+
+If anyone has any questions, suggestions, comments, bugs, flames, or
+any other mail of any kind, send it to pfalstad@phoenix.princeton.edu.
+I did not supply any patches or bug fixes for version 1, because I junked
+most of it as soon as I released it.  This version will be more permanent,
+hopefully, so I'll be able to fix bugs quickly as soon as they're found.
+
+Thanks to the following people for help, ideas, comments, patches, etc.:
+ _
+Goran Larsson
+Byron Rakitzis
+Greg A. Woods
+Kartik Subbarao
+Michael Marucheck
+Kennedy Lemke
+Paul E. Maisano
+Kazuo Itoh
+

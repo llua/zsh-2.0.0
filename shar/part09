@@ -1,0 +1,2329 @@
+Path: funic!news.funet.fi!sunic!kth.se!eru!bloom-beacon!mintaka!think.com!samsung!uunet!sparky!kent
+From: pfalstad@phoenix.princeton.edu (Paul Falstad)
+Newsgroups: comp.sources.misc
+Subject: v18i092:  zsh2.00 - The Z shell, Part09/15
+Message-ID: <1991Apr24.194240.19272@sparky.IMD.Sterling.COM>
+Date: 24 Apr 91 19:42:40 GMT
+Sender: kent@sparky.IMD.Sterling.COM (Kent Landfield)
+Organization: League For Fighting Chartered Accountancy
+Lines: 2317
+Approved: kent@sparky.imd.sterling.com
+X-Checksum-Snefru: c3b72fca e748ff74 6df0ae9e 95076afe
+
+Submitted-by: Paul Falstad <pfalstad@phoenix.princeton.edu>
+Posting-number: Volume 18, Issue 92
+Archive-name: zsh2.00/part09
+
+#!/bin/sh
+# this is zsh2.00.00.shar.09 (part 9 of zsh2.00.00)
+# do not concatenate these parts, unpack them in order with /bin/sh
+# file zsh2.00/src/parse.y continued
+#
+if test ! -r _shar_seq_.tmp; then
+	echo 'Please unpack part 1 first!'
+	exit 1
+fi
+(read Scheck
+ if test "$Scheck" != 9; then
+	echo Please unpack part "$Scheck" next!
+	exit 1
+ else
+	exit 0
+ fi
+) < _shar_seq_.tmp || exit 1
+if test ! -f _shar_wnt_.tmp; then
+	echo 'x - still skipping zsh2.00/src/parse.y'
+else
+echo 'x - continuing file zsh2.00/src/parse.y'
+sed 's/^X//' << 'SHAR_EOF' >> 'zsh2.00/src/parse.y' &&
+X   WITHOUT ANY WARRANTY.  No author or distributor accepts
+X   responsibility to anyone for the consequences of using it or for
+X   whether it serves any particular purpose or works at all, unless he
+X   says so in writing.  Refer to the GNU General Public License
+X   for full details.
+X
+X   Everyone is granted permission to copy, modify and redistribute
+X   zsh, but only under the conditions described in the GNU General Public
+X   License.   A copy of this license is supposed to have been given to you
+X   along with zsh so you can know your rights and responsibilities.
+X   It should be in a file named COPYING.
+X
+X   Among other things, the copyright notice and this notice must be
+X   preserved on all copies.
+X
+X*/
+X
+X#include "zsh.h"
+X#include "funcs.h"
+X
+Xstruct list *tree;
+X%}
+X
+X%left DOITNOW
+X%left EMPTY LEXERR SEPER NEWLIN SEMI
+X%left DSEMI AMPER INPAR INBRACE OUTPAR
+X%right DBAR
+X%right DAMPER
+X%right BANG
+X%left OUTBRACE OUTANG OUTANGBANG DOUTANG DOUTANGBANG INANG DINANG
+X%left INANGAMP OUTANGAMP OUTANGAMPBANG DOUTANGAMP DOUTANGAMPBANG
+X%left TRINANG
+X%left BAR BARAMP DINBRACK DOUTBRACK STRING ENVSTRING
+X%left ENVARRAY ENDINPUT INOUTPAR
+X%left DO DONE ESAC THEN ELIF ELSE FI FOR CASE IF WHILE
+X%left FUNC REPEAT TIME UNTIL EXEC COMMAND SELECT COPROC NOGLOB DASH
+X%left DOITLATER
+X
+X%start event
+X
+X%union {
+X	Pline Pline;
+X	List List;
+X	Sublist Sublist;
+X	struct cmd *Comm;
+X	struct redir *Fnode;
+X	struct cond *Cond;
+X	struct forcmd *Fornode;
+X	struct casecmd *Casenode;
+X	struct ifcmd *Ifnode;
+X	struct whilecmd *Whilenode;
+X	struct repeatcmd *Repeatnode;
+X	struct varasg *Varnode;
+X	Lklist Table;
+X	struct fdpair fds;
+X	char *str;
+X	int value;
+X}
+X
+X%type <List> event list list1 list2
+X%type <Sublist> sublist sublist2
+X%type <Pline> pline
+X%type <Comm> xcommand command simplecommand stufflist 
+X%type <Cond> cond
+X%type <Table> redirstring 
+X%type <Fnode> redir
+X%type <fds> redirop BAR
+X%type <fds> OUTANG OUTANGBANG DOUTANG DOUTANGBANG
+X%type <fds> INANG DINANG INANGAMP OUTANGAMP TRINANG
+X%type <fds> OUTANGAMPBANG DOUTANGAMP DOUTANGAMPBANG
+X%type <str> STRING ENVSTRING ENVARRAY word
+X%type <Table> optinword wordlist
+X%type <Ifnode> optelsifs 
+X%type <Casenode> caselist
+X%%
+X
+Xevent	: ENDINPUT { tree = NULL; eofseen = 1; return 0; }
+X		| SEPER { tree = NULL; lsep = 0; return 0; }
+X		| list1 { tree = $1; return 0; }
+X		| error ENDINPUT { errflag = 1; tree = NULL; eofseen = 1; return 1; }
+X		| error SEPER { errflag = 1; tree = NULL; return 1; }
+X		| error LEXERR { errflag = 1; tree = NULL; return 1; }
+X		;
+X
+Xlist1	: sublist ENDINPUT { $$ = makelnode($1,SYNC); eofseen = 1; }
+X		| sublist SEPER { $$ = makelnode($1,SYNC); }
+X		| sublist AMPER { $$ = makelnode($1,ASYNC); }
+X		;
+X
+Xlist2	: sublist { $$ = makelnode($1,SYNC); }
+X		;
+X
+Xlist	: sublist SEPER list { $$ = makelnode($1,SYNC); $$->right = $3; }
+X		| sublist AMPER list { $$ = makelnode($1,ASYNC); $$->right = $3; }
+X		| sublist { $$ = makelnode($1,SYNC); }
+X		;
+X
+Xsublist	: sublist2
+X			| sublist DBAR sublist
+X				{ $$ = $1; $$->right = $3; $$->type = ORNEXT; }
+X			| sublist DAMPER sublist %prec DBAR 
+X				{ $$ = $1; $$->right = $3; $$->type = ANDNEXT; }
+X			;
+X
+Xsublist2	: pline { $$ = makel2node($1,0); }
+X			| COPROC pline { $$ = makel2node($2,PFLAG_COPROC); }
+X			| BANG pline { $$ = makel2node($2,PFLAG_NOT); }
+X			;
+X
+Xpline	: xcommand { $$ = makepnode($1,NULL,END); }
+X		| xcommand BAR pline 
+X			{ $$ = makepnode($1,$3,PIPE); }
+X		| xcommand BARAMP pline 
+X			{ struct redir *rdr = alloc(sizeof *rdr);
+X			rdr->type = MERGE; rdr->fd1 = 2; rdr->fd2 = 1;
+X			addnode($1->redir,rdr); $$ = makepnode($1,$3,PIPE);
+X			}
+X		;
+X
+Xxcommand	: redirstring command redirstring
+X				{ $$ = $2;
+X				inslist($1,(Lknode) ($2->redir),$2->redir);
+X				inslist($3,lastnode($2->redir),$2->redir); }
+X			;
+X
+Xstufflist	: STRING stufflist
+X					{ $$ = $2; pushnode($$->args,$1); }
+X				| ENVSTRING stufflist
+X					{ struct varasg *v = makevarnode(PMFLAG_s);
+X					equalsplit(v->name = $1,&v->str); $$ = $2;
+X					pushnode($$->vars,v); }
+X				| ENVARRAY wordlist OUTPAR stufflist
+X					{ struct varasg *v = makevarnode(PMFLAG_A);
+X					v->name = $1; v->arr = $2; $$ = $4;
+X					pushnode($$->vars,v); }
+X				| redir stufflist { $$ = $2;
+X					if ($1->pair) pushnode($2->redir,$1->pair);
+X					pushnode($2->redir,$1);
+X					}
+X				| INOUTPAR INBRACE list OUTBRACE
+X					{ $$ = makefuncdef(newlist(),$3); }
+X				| %prec DOITNOW { $$ = makecnode(SIMPLE); }
+X				;
+X
+Xsimplecommand	: COMMAND simplecommand
+X						{ $$ = $2; $$->flags |= CFLAG_COMMAND; }
+X					| EXEC simplecommand
+X						{ $$ = $2; $$->flags |= CFLAG_EXEC; }
+X					| NOGLOB simplecommand
+X						{ $$ = $2; $$->flags |= CFLAG_NOGLOB; }
+X					| DASH simplecommand
+X						{ $$ = $2; $$->flags |= CFLAG_DASH; }
+X					| stufflist { $$ = $1;
+X							if (full($$->args))
+X								{
+X								if (underscore)
+X									free(underscore);
+X								underscore = ztrdup(getdata(lastnode($$->args)));
+X								untokenize(underscore);
+X								}
+X							}
+X					;
+X
+Xcommand	: simplecommand { $$=$1; }
+X			| FOR STRING optinword SEPER DO list DONE
+X				{ $$ = makefornode($2,$3,$6,CFOR); }
+X			| FOR STRING optinword SEPER list2
+X				{ $$ = makefornode($2,$3,$5,CFOR); }
+X			| SELECT STRING optinword SEPER DO list DONE
+X				{ $$ = makefornode($2,$3,$6,CSELECT); }
+X			| SELECT STRING optinword SEPER list2
+X				{ $$ = makefornode($2,$3,$5,CSELECT); }
+X			| CASE word STRING optbreak caselist ESAC
+X				{ $$ = makecnode(CCASE); $$->u.casecmd = $5;
+X				addnode($$->args,$2); }
+X			| IF list THEN list optelsifs FI
+X				{ $$ = makecnode(CIF); $$->u.ifcmd = makeifnode($2,$4,$5); }
+X			| WHILE list DO list DONE
+X				{ $$ = makewhilenode($2,$4,0); }
+X			| UNTIL list DO list DONE
+X				{ $$ = makewhilenode($2,$4,1); }
+X			| REPEAT word SEPER DO list DONE
+X				{ $$ = makecnode(CREPEAT); $$->u.list = $5;
+X				addnode($$->args,$2); }
+X			| REPEAT word list2
+X				{ $$ = makecnode(CREPEAT); $$->u.list = $3;
+X				addnode($$->args,$2); }
+X			| INPAR list OUTPAR
+X				{ $$ = makecnode(SUBSH); $$->u.list = $2; }
+X			| INBRACE list OUTBRACE
+X				{ $$ = makecnode(CURSH); $$->u.list = $2; }
+X			| FUNC wordlist INBRACE list OUTBRACE
+X				{ $$ = makefuncdef($2,$4); }
+X			| TIME sublist2
+X				{ $$ = makecnode(CTIME); $$->u.pline = $2; }
+X			| DINBRACK cond DOUTBRACK
+X				{ $$ = makecnode(COND); $$->u.cond = $2; }
+X			;
+X
+Xcond	: word word { $$ = makecond(); parcond2($1,$2,$$); }
+X		| word word word { $$ = makecond(); parcond3($1,$2,$3,$$); }
+X		| word INANG word
+X			{ $$ = makecond(); $$->left = $1;
+X			$$->right = $3; $$->type = COND_STRLT;
+X			$$->types[0] = $$->types[1] = NT_STR; }
+X		| word OUTANG word
+X			{ $$ = makecond(); $$->left = $1;
+X			$$->right = $3; $$->type = COND_STRGTR;
+X			$$->types[0] = $$->types[1] = NT_STR; }
+X		| INPAR cond OUTPAR { $$ = $2; }
+X		| BANG cond { $$ = makecond(); $$->left = $2; $$->type = COND_NOT; }
+X		| cond DAMPER cond
+X			{ $$ = makecond(); $$->left = $1; $$->right = $3; 
+X			$$->type = COND_AND; }
+X		| cond DBAR cond
+X			{ $$ = makecond(); $$->left = $1; $$->right = $3;
+X			$$->type = COND_OR; }
+X		;
+X
+Xredir	: redirop word { $$ = parredir($1,$2); }
+X		;
+X
+Xredirstring : redir redirstring { $$ = $2;
+X					pushnode($2,$1);
+X					if ($1->pair) pushnode($2,$1->pair); }
+X				| %prec DOITNOW { $$ = newlist(); }
+X				;
+X
+Xredirop	: OUTANG { $$.fd1 = $1.fd1; $$.fd2 = WRITE; }
+X			| OUTANGBANG { $$.fd1 = $1.fd1; $$.fd2 = WRITENOW; }
+X			| DOUTANG { $$.fd1 = $1.fd1; $$.fd2 = APP; }
+X			| DOUTANGBANG { $$.fd1 = $1.fd1; $$.fd2 = APPNOW; }
+X			| INANG { $$.fd1 = $1.fd1; $$.fd2 = READ; }
+X			| DINANG { $$.fd1 = $1.fd1; $$.fd2 = HEREDOC; }
+X			| INANGAMP { $$.fd1 = $1.fd1; $$.fd2 = MERGE; }
+X			| OUTANGAMP { $$.fd1 = $1.fd1; $$.fd2 = MERGEOUT; }
+X			| OUTANGAMPBANG { $$.fd1 = $1.fd1; $$.fd2 = MERGEOUTNOW; }
+X			| DOUTANGAMP { $$.fd1 = $1.fd1; $$.fd2 = ERRAPP; }
+X			| DOUTANGAMPBANG { $$.fd1 = $1.fd1; $$.fd2 = ERRAPPNOW; }
+X			| TRINANG { $$.fd1 = $1.fd1; $$.fd2 = HERESTR; }
+X			;
+X
+Xoptinword	: { $$ = NULL; }
+X				| word wordlist { $$ = $2; pushnode($2,$1); }
+X				;
+X
+Xoptelsifs	: { $$ = NULL; }
+X				| ELSE list { $$ = makeifnode(NULL,$2,NULL); }
+X				| ELIF list THEN list optelsifs
+X					{ $$ = makeifnode($2,$4,$5); $$->ifl = $2; }
+X				;
+X
+Xcaselist	: word OUTPAR list DSEMI optbreak caselist
+X				{ $$ = makecasenode($1,$3,$6); }
+X			| word OUTPAR list optbreak
+X				{ $$ = makecasenode($1,$3,NULL); }
+X			| { $$ = NULL; }
+X			;
+X
+Xword	: STRING
+X		| ENVSTRING
+X		;
+X
+Xoptbreak	:
+X			| SEPER
+X			;
+X
+Xwordlist	: word wordlist { $$ = $2; pushnode($2,$1); }
+X			| { $$ = newlist(); }
+X			;
+X%%
+X
+X/* get fd associated with str */
+X
+Xint getfdstr(s) /**/
+Xchar *s;
+X{
+X	if (s[1])
+X		return -1;
+X	if (idigit(*s))
+X		return *s-'0';
+X	if (*s == 'p')
+X		return -2;
+X	return -1;
+X}
+X
+Xstruct redir *parredir(fdp,toks) /**/
+Xstruct fdpair fdp;char *toks;
+X{
+Xstruct redir *fn = allocnode(N_REDIR);
+Xint mrg2 = 0;
+X
+X	fn->type = fdp.fd2;
+X	if (fdp.fd1 != -1)
+X		fn->fd1 = fdp.fd1;
+X	else
+X		if (fn->type < READ)
+X			fn->fd1 = 1;
+X		else
+X			fn->fd1 = 0;
+X	if ((*toks == Inang || *toks == Outang) && toks[1] == Inpar)
+X		{
+X		if (fn->type == WRITE)
+X			fn->type = OUTPIPE;
+X		else if (fn->type == READ)
+X			fn->type = INPIPE;
+X		else
+X			{
+X			zerr("parse error: bad process redirection",NULL,0);
+X			return fn;
+X			}
+X		fn->name = toks;
+X		}
+X	else if (fn->type == HEREDOC)
+X		{
+X		fn->name = gethere(toks);
+X		fn->type = HERESTR;
+X		}
+X	else if (fn->type >= MERGEOUT && fn->type <= ERRAPPNOW &&
+X			getfdstr(toks) == -1)
+X		{
+X		mrg2 = 1;
+X		fn->name = toks;
+X		fn->type = fn->type-MERGEOUT+WRITE;
+X		}
+X	else if (fn->type == ERRAPP || fn->type == ERRAPPNOW)
+X		{
+X		zerr("parse error: filename expected",NULL,0);
+X		return fn;
+X		}
+X	else if (fn->type == MERGEOUT)
+X		{
+X		struct redir *fe = allocnode(N_REDIR);
+X
+X		fn->type = CLOSE;
+X		fn->pair = fe;
+X		fe->fd1 = fn->fd1;
+X		fe->fd2 = getfdstr(toks);
+X		if (fe->fd2 == -2)
+X			fe->fd2 = coprocout;
+X		fe->type = MERGEOUT;
+X		}
+X	else if (fn->type == MERGE || fn->type == MERGEOUT)
+X		{
+X		if (*toks == '-')
+X			fn->type = CLOSE;
+X		else
+X			{
+X			fn->fd2 = getfdstr(toks);
+X			if (fn->fd2 == -2)
+X				fn->fd2 = (fn->type == MERGEOUT) ? coprocout : coprocin;
+X			}
+X		}
+X	else
+X		fn->name = toks;
+X	if (mrg2)
+X		{
+X		struct redir *fe = allocnode(N_REDIR);
+X
+X		fe->fd1 = 2;
+X		fe->fd2 = fn->fd1;
+X		fe->type = MERGEOUT;
+X		fn->pair = fe;
+X		}
+X	return fn;
+X}
+X
+Xstruct list *parev() /**/
+X{
+X	yyparse();
+X	return tree;
+X}
+X
+Xstruct list *parlist() /**/
+X{
+Xstruct list *l,*lp;
+X
+X	eofseen = 0;
+X	do
+X		lp = l = parev();
+X	while (!lp && !errflag && inbufct);
+X	while (!eofseen && inbufct && !errflag)
+X		{
+X		lsep = 0;
+X		if (lp->right = parev())
+X			lp = lp->right;
+X		}
+X	return (errflag)? NULL : l;
+X}
+X
+Xstruct list *makelnode(x,type) /**/
+Xstruct sublist *x;int type;
+X{
+Xstruct list *n = allocnode(N_LIST);
+X
+X	n->left = x;
+X	n->type = type;
+X	return n;
+X}
+X
+Xstruct sublist *makel2node(p,type) /**/
+Xstruct pline *p;int type;
+X{
+Xstruct sublist *n = allocnode(N_SUBLIST);
+X
+X	n->left = p;
+X	n->flags = type;
+X	return n;
+X}
+X
+Xstruct pline *makepnode(c,p,type) /**/
+Xstruct cmd *c;struct pline *p;int type;
+X{
+Xstruct pline *n = allocnode(N_PLINE);
+X
+X	n->left = c;
+X	n->right = p;
+X	n->type = type;
+X	return n;
+X}
+X
+Xstruct cmd *makefornode(str,t,l,type) /**/
+Xchar *str;Lklist t;struct list *l;int type;
+X{
+Xstruct cmd *c = makecnode(type);
+Xstruct forcmd *f = allocnode(N_FOR);
+Xchar *s;
+X
+X	if (t)
+X		{
+X		c->args = t;
+X		s = ugetnode(t);
+X		if (strcmp(s,"in"))
+X			{
+X			errflag = 1;
+X			yyerror();
+X			}
+X		}
+X	c->u.forcmd = f;
+X	f->name = str;
+X	f->list = l;
+X	f->inflag = !!t;
+X	return c;
+X}
+X
+Xstruct ifcmd *makeifnode(l1,l2,i2) /**/
+Xstruct list *l1;struct list *l2; struct ifcmd *i2;
+X{
+Xstruct ifcmd *i1 = allocnode(N_IF);
+X
+X	i1->next = i2;
+X	i1->ifl = l1;
+X	i1->thenl = l2;
+X	return i1;
+X}
+X
+Xstruct cmd *makewhilenode(l1,l2,sense) /**/
+Xstruct list *l1;struct list *l2; int sense;
+X{
+Xstruct cmd *c = makecnode(CWHILE);
+Xstruct whilecmd *w = allocnode(N_WHILE);
+X
+X	c->u.whilecmd = w;
+X	w->cont = l1;
+X	w->loop = l2;
+X	w->cond = sense;
+X	return c;
+X}
+X
+Xstruct cmd *makecnode(type) /**/
+Xint type;
+X{
+Xstruct cmd *c = allocnode(N_CMD);
+X
+X	c->args = newlist();
+X	c->redir = newlist();
+X	c->vars = newlist();
+X	c->type = type;
+X	return c;
+X}
+X
+Xstruct cmd *makefuncdef(x,l) /**/
+XLklist x;struct list *l;
+X{
+Xstruct cmd *c = makecnode(FUNCDEF);
+X
+X	c->args = x;
+X	c->u.list = l;
+X	return c;
+X}
+X
+Xstruct cond *makecond() /**/
+X{
+Xstruct cond *cn = allocnode(N_COND);
+X
+X	return cn;
+X}
+X
+Xstruct varasg *makevarnode(type) /**/
+Xint type;
+X{
+Xstruct varasg *v = allocnode(N_VARASG);
+X
+X	v->type = type;
+X	return v;
+X}
+X
+Xstruct casecmd *makecasenode(str,l,c) /**/
+Xchar *str;struct list *l;struct casecmd *c;
+X{
+Xstruct casecmd *n = allocnode(N_CASE);
+X
+X	n->next = c;
+X	n->pat = str;
+X	n->list = l;
+X	return n;
+X}
+X
+Xvoid parcond2(a,b,n) /**/
+Xchar *a;char *b;struct cond *n;
+X{
+X	if (a[0] != '-' || !a[1] || a[2])
+X		{
+X		zerr("parse error: condition expected: %s",a,0);
+X		return;
+X		}
+X	n->left = b;
+X	n->type = a[1];
+X	n->types[0] = n->types[1] = NT_STR;
+X}
+X
+Xvoid parcond3(a,b,c,n) /**/
+Xchar *a;char *b;char *c;struct cond *n;
+X{
+Xstatic char *condstrs[] = {
+X	"nt","ot","ef","eq","ne","lt","gt","le","ge",NULL
+X	};
+Xint t0;
+X
+X	if (b[0] == Equals && !b[1])
+X		n->type = COND_STREQ;
+X	else if (b[0] == '!' && b[1] == Equals && !b[2])
+X		n->type = COND_STRNEQ;
+X	else if (b[0] == '-')
+X		{
+X		for (t0 = 0; condstrs[t0]; t0++)
+X			if (!strcmp(condstrs[t0],b+1))
+X				break;
+X		if (condstrs[t0])
+X			n->type = t0+COND_NT;
+X		else
+X			zerr("unrecognized condition: %s",b,0);
+X		}
+X	else
+X		zerr("condition expected: %s",b,0);
+X	n->left = a;
+X	n->right = c;
+X	n->types[0] = n->types[1] = NT_STR;
+X}
+X
+Xyyerror() /* NO PROTO */
+X{
+Xint t0;
+X
+X	for (t0 = 0; t0 != 20; t0++)
+X		if (!yytext[t0] || yytext[t0] == '\n' || yytext[t0] == HISTSPACE)
+X			break;
+X	if (t0 == 20)
+X		zerr("parse error near `%l...'",yytext,20);
+X	else if (t0)
+X		zerr("parse error near `%l'",yytext,t0);
+X	else
+X		zerr("parse error",NULL,0);
+X}
+X
+SHAR_EOF
+echo 'File zsh2.00/src/parse.y is complete' &&
+chmod 0644 zsh2.00/src/parse.y ||
+echo 'restore of zsh2.00/src/parse.y failed'
+Wc_c="`wc -c < 'zsh2.00/src/parse.y'`"
+test 13927 -eq "$Wc_c" ||
+	echo 'zsh2.00/src/parse.y: original size 13927, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+# ============= zsh2.00/src/subst.c ==============
+if test -f 'zsh2.00/src/subst.c' -a X"$1" != X"-c"; then
+	echo 'x - skipping zsh2.00/src/subst.c (File already exists)'
+	rm -f _shar_wnt_.tmp
+else
+> _shar_wnt_.tmp
+echo 'x - extracting zsh2.00/src/subst.c (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/src/subst.c' &&
+X/*
+X
+X	subst.c - various substitutions
+X
+X	This file is part of zsh, the Z shell.
+X
+X	zsh is free software; no one can prevent you from reading the source
+X   code, or giving it to someone else.
+X
+X   This file is copyrighted under the GNU General Public License, which
+X   can be found in the file called COPYING.
+X
+X   Copyright (C) 1990, 1991 Paul Falstad
+X
+X   zsh is distributed in the hope that it will be useful, but
+X   WITHOUT ANY WARRANTY.  No author or distributor accepts
+X   responsibility to anyone for the consequences of using it or for
+X   whether it serves any particular purpose or works at all, unless he
+X   says so in writing.  Refer to the GNU General Public License
+X   for full details.
+X
+X   Everyone is granted permission to copy, modify and redistribute
+X   zsh, but only under the conditions described in the GNU General Public
+X   License.   A copy of this license is supposed to have been given to you
+X   along with zsh so you can know your rights and responsibilities.
+X   It should be in a file named COPYING.
+X
+X   Among other things, the copyright notice and this notice must be
+X   preserved on all copies.
+X
+X*/
+X
+X#include "zsh.h"
+X#include "funcs.h"
+X#include <pwd.h>
+X
+X/* do substitutions before fork */
+X
+Xvoid prefork(list) /**/
+XLklist list;
+X{
+XLknode node = firstnode(list);
+Xint qt;
+X
+X	while (node)
+X		{
+X		char *str,*str3;
+X		
+X		str = str3 = getdata(node);
+X		if (str[1] == Inpar && (*str == Inang ||
+X				*str == Outang || *str == Equals))
+X			{
+X			if (*str == Inang)
+X				setdata(node,getoutproc(str+2));		/* <(...) */
+X			else if (*str == Equals)
+X				setdata(node,getoutputfile(str+2));	/* =(...) */
+X			else
+X				setdata(node,getinproc(str+2));		/* >(...) */
+X			if (!getdata(node))
+X				{
+X				zerr("parse error in process substitution",NULL,0);
+X				return;
+X				}
+X			}
+X		else while (*str)
+X			{
+X			if ((qt = *str == Qstring) || *str == String)
+X				if (str[1] != Inpar)
+X					if (str[1] == Inbrack)
+X						{
+X						arithsubst((void **) &str,&str3);	/* $[...] */
+X						setdata(node,str3);
+X						}
+X					else
+X						{
+X						paramsubst(list,node,str,str3,qt);
+X						if (errflag)
+X							return;
+X						str3 = str = getdata(node);
+X						continue;
+X						}
+X			str++;
+X			if (errflag)
+X				return;
+X			}
+X		if (*(char *) getdata(node))
+X			remnulargs(getdata(node));
+X		if (unset(IGNOREBRACES))
+X			while (hasbraces(getdata(node)))
+X				xpandbraces(list,&node);
+X		filesub((char **) getaddrdata(node));
+X		if (errflag)
+X			return;
+X		incnode(node);
+X		}
+X}
+X
+Xvoid postfork(list,doglob) /**/
+XLklist list;int doglob;
+X{
+XLknode node = firstnode(list);
+Xint glb = 1;
+X
+X	if (isset(NOGLOBOPT) || !doglob)
+X		glb = 0;
+X	while (node)
+X		{
+X		char *str3,*str;
+X		
+X		str = str3 = getdata(node);
+X		while (*str)
+X			{
+X			if (((*str == String || *str == Qstring) && str[1] == Inpar) ||
+X					*str == Tick || *str == Qtick)
+X				{
+X				Lknode n = prevnode(node);
+X
+X				commsubst(list,node,str,str3,
+X					(*str == Qstring || *str == Qtick));	/* `...`,$(...) */
+X				if (errflag)
+X					return;
+X				str = str3 = getdata(node = nextnode(n));
+X				}
+X			str++;
+X			}
+X		if (glb)
+X			{
+X			if (haswilds(getdata(node)))
+X				glob(list,&node);
+X			if (errflag)
+X				return;
+X			}
+X		incnode(node);
+X		}
+X}
+X
+X/* perform substitution on a single word */
+X
+Xvoid singsub(s) /**/
+Xchar **s;
+X{
+XLklist foo;
+Xchar *t;
+X
+X	for (t = *s; *t; t++)
+X		if (*t == String)
+X			*t = Qstring;
+X		else if (*t == Tick)
+X			*t = Qtick;
+X	foo = newlist();
+X	addnode(foo,*s);
+X	prefork(foo);
+X	if (errflag)
+X		return;
+X	postfork(foo,0);
+X	if (errflag)
+X		return;
+X	*s = ugetnode(foo);
+X	if (firstnode(foo))
+X		zerr("ambiguous: %s",*s,0);
+X}
+X
+X/* strdup, but returns "Nularg" if this is a null string */
+X
+Xvoid *nstrdup(s) /**/
+Xvoid *s;
+X{
+Xchar *t = s;
+Xchar u[2];
+X
+X	u[0] = Nularg; u[1] = '\0';
+X	if (!*t)
+X		return strdup(u);
+X	return strdup(t);
+X}
+X
+Xchar *dynread(stop) /**/
+Xint stop;
+X{
+Xint bsiz = 256,ct = 0,c;
+Xchar *buf = zalloc(bsiz),*ptr;
+X 
+X	ptr = buf;
+X	while ((c = hgetc()) != stop)
+X		{
+X		*ptr++ = c;
+X		if (++ct == bsiz)
+X			{
+X			buf = realloc(buf,bsiz *= 2);
+X			ptr = buf+ct;
+X			}
+X		}
+X	*ptr = 0;
+X	return buf;
+X}
+X
+Xint filesub(namptr) /**/
+Xchar **namptr;
+X{
+Xchar *str = *namptr,*cnam;
+X
+X	if (*str == Tilde && str[1] != '=')
+X		{
+X		if (str[1] == '+')
+X			{
+X			char *foo = strdup(cwd);	/* ~+ */
+X
+X			str+=2;
+X			modify(&foo,&str);
+X			*namptr = dyncat(cwd,str);
+X			return 1;
+X			}
+X		else if (str[1] == '-')			/* ~- */
+X			{
+X			char *foo;
+X
+X			if (cnam = oldpwd)
+X				foo = cnam;
+X			else
+X				foo = cwd;
+X			str += 2;
+X			foo = strdup(foo);
+X			modify(&foo,&str);
+X			*namptr = dyncat(foo,str);
+X			return 1;
+X			}
+X		if (ialpha(str[1]))		/* ~foo */
+X			{
+X			char *ptr,*hom;
+X 
+X			for (ptr = ++str; *ptr && iuser(*ptr); ptr++)
+X				if (*ptr == '-')
+X					*ptr = '-';
+X			if (!(hom = gethome(str,ptr-str)))
+X				{
+X				zerr("user not found: %l",str,ptr-str);
+X				errflag = 1;
+X				return 0;
+X				}
+X			modify(&hom,&ptr);
+X			*namptr = dyncat(hom,ptr);
+X			return 1;
+X			}
+X		else if (str[1] == '/')	/* ~/foo */
+X			{
+X			*namptr = dyncat(home,str+1);
+X			return 1;
+X			}
+X		else if (!str[1])		/* ~ by itself */
+X			{
+X			*namptr = strdup(home);
+X			return 1;
+X			}
+X		}
+X	if (*str == Equals && iuser(str[1]))
+X		{
+X		char *ptr,*s,*ds;
+X		int val;
+X		
+X		untokenize(str);
+X		if (ialpha(str[1]))		/* =foo */
+X			{
+X			struct cmdnam *chn;
+X			struct alias *t;
+X			char sav,*pp;
+X 
+X			for (pp = str+1; *pp && *pp != ':'; pp++);
+X			sav = *pp;
+X			*pp = '\0';
+X			if ((t = gethnode(str+1,aliastab)) && t->cmd)
+X				if (t->cmd >= 0)
+X					cnam = strdup(t->text);
+X				else
+X					{
+X					zerr("%s: shell reserved word",str+1,0);
+X					errflag = 1;
+X					return 0;
+X					}
+X		 	else if (chn = gethnode(str+1,cmdnamtab))
+X				if (chn->type != BUILTIN && chn->type != SHFUNC)
+X					cnam = strdup(chn->u.nam);
+X				else
+X					{
+X					zerr((chn->type == BUILTIN) ?
+X						"shell built-in command: %s" :
+X						"shell function: %s",str+1,0);
+X					errflag = 1;
+X					return 0;
+X					}
+X			else if (!(cnam = findcmd(str+1)))
+X				{
+X				zerr("%s not found",str+1,0);
+X				errflag = 1;
+X				return 0;
+X				}
+X			*namptr = cnam;
+X			if ((*pp = sav) == ':')
+X				{
+X				modify(namptr,&pp);
+X				s = *namptr;
+X				*namptr = dyncat(*namptr,pp);
+X				}
+X			return 1;
+X			}
+X		if (str[1] == '-') 	/* =- */
+X			{
+X			val = -1;
+X			ptr = str+2;
+X			}
+X		else
+X			val = strtol(str+1,&ptr,10);	/* =# */
+X		ds = dstackent(val);
+X		if (!ds)
+X			return 1;
+X		s = strdup(ds);
+X		modify(&s,&ptr);
+X		*namptr = dyncat(s,ptr);
+X		return 1;
+X		}
+X	return 0;
+X}
+X
+X/* get a named directory */
+X
+Xchar *gethome(user,len) /**/
+Xchar *user;int len;
+X{
+Xchar sav,*str;
+Xstruct passwd *pw;
+X 
+X	sav = user[len];
+X	user[len] = '\0';
+X	if (str = getsparamval(user,len))
+X		{
+X		str = strdup(str);
+X		adduserdir(user,str);
+X		user[len] = sav;
+X		return str;
+X		}
+X	if (!(pw = getpwnam(user)))
+X		{
+X		user[len] = sav;
+X		return NULL;
+X		}
+X	str = xsymlink(pw->pw_dir);
+X	adduserdir(user,str);
+X	user[len] = sav;
+X	return str;
+X}
+X
+X/* `...`, $(...) */
+X
+Xvoid commsubst(l,n,str3,str,qt) /**/
+XLklist l;Lknode n;char *str3;char *str;int qt;
+X{
+Xchar *str2;
+XLknode where = prevnode(n);
+XLklist pl;
+X
+X	if (*str3 == Tick || *str3 == Qtick)
+X		{
+X		*str3 = '\0';
+X		for (str2 = ++str3; *str3 != Tick && *str3 != Qtick; str3++);
+X		*str3++ = '\0';
+X		}
+X	else
+X		{
+X		*str3++ = '\0';
+X		for (str2 = ++str3; *str3 != Outpar; str3++);
+X		*str3++ = '\0';
+X		}
+X	uremnode(l,n);
+X	if (!(pl = getoutput(str2,qt)))
+X		{
+X		zerr("parse error in command substitution",NULL,0);
+X		errflag = 1;
+X		return;
+X		}
+X	if (full(pl))
+X		{
+X		setdata(firstnode(pl),dyncat(str,peekfirst(pl)));
+X		setdata(lastnode(pl),dyncat(getdata(lastnode(pl)),str3));
+X		inslist(pl,where,l);
+X		}
+X	else
+X		insnode(l,where,dyncat(str,str3));
+X}
+X
+X/* parameter substitution */
+X
+Xvoid paramsubst(l,n,aptr,bptr,qt) /**/
+XLklist l;Lknode n;char *aptr;char *bptr;int qt;
+X{
+Xchar *s = aptr,*u,*idbeg,*idend,*ostr = bptr;
+Xint brs;			/* != 0 means ${...}, otherwise $... */
+Xint colf;		/* != 0 means we found a colon after the name */
+Xint doub = 0;	/* != 0 means we have %%, not %, or ##, not # */
+Xint isarr = 0;
+Xint plan9 = isset(RCEXPANDPARAM);
+Xint getlen = 0;
+Xint vunset = 0;
+Xint spbreak = isset(SHWORDSPLIT) && !qt;
+Xchar *val = NULL,**aval = NULL;
+Xint fwidth = 0;
+XValue v;
+X
+X	*s++ = '\0';
+X	if (!ialnum(*s) && *s != '#' && *s != Pound && *s != '-' &&
+X			*s != '!' && *s != '$' && *s != String && *s != Qstring &&
+X			*s != '?' && *s != Quest && *s != '_' &&
+X			*s != '*' && *s != Star && *s != '@' && *s != '{' &&
+X			*s != Inbrace && *s != '=' && *s != Hat && *s != '^')
+X		{
+X		s[-1] = '$';
+X		return;
+X		}
+X	if (brs = (*s == '{' || *s == Inbrace))
+X		s++;
+X	for (;;)
+X		if (*s == '^' || *s == Hat)
+X			plan9 ^= 1,s++;
+X		else if (*s == '=')
+X			spbreak ^= 1,s++;
+X		else if ((*s == '#' || *s == Pound) && iident(s[1]))
+X			getlen = 1,s++;
+X		else
+X			break;
+X
+X	idbeg = s;
+X	if (!(v = getvalue(&s,1)))
+X		{
+X		vunset = 1;
+X		idend = s;
+X		}
+X	else
+X		if (isarr = v->isarr)
+X			aval = getarrvalue(v);
+X		else
+X			{
+X			val = getstrvalue(v);
+X			fwidth = v->pm->ct;
+X			switch (v->pm->flags & (PMFLAG_L | PMFLAG_R | PMFLAG_Z))
+X				{
+X				char *t;
+X				int t0;
+X
+X				case PMFLAG_L:
+X				case PMFLAG_L|PMFLAG_Z:
+X					t = val;
+X					if (v->pm->flags & PMFLAG_Z)
+X						while (*t == '0') t++;
+X					else
+X						while (isep(*t)) t++;
+X					val = ncalloc(fwidth+1);
+X					val[fwidth] = '\0';
+X					strcpy(val,t);
+X					if ((t0 = strlen(t)) > fwidth)
+X						t0 = fwidth;
+X					memset(val,' ',fwidth);
+X					strncpy(val,t,t0);
+X					break;
+X				case PMFLAG_R:
+X				case PMFLAG_Z:
+X				case PMFLAG_Z|PMFLAG_R:
+X					if (strlen(val) < fwidth)
+X						{
+X						t = ncalloc(fwidth+1);
+X						memset(t,(v->pm->flags & PMFLAG_R) ? ' ' : '0',fwidth);
+X						if ((t0 = strlen(val)) > fwidth)
+X							t0 = fwidth;
+X						strcpy(t+(fwidth-t0),val);
+X						val = t;
+X						}
+X					break;
+X				}
+X			switch (v->pm->flags & (PMFLAG_l | PMFLAG_u))
+X				{
+X				char *t;
+X
+X				case PMFLAG_l:
+X					t = val;
+X					for (;*t;t++)
+X						*t = tolower(*t);
+X					break;
+X				case PMFLAG_u:
+X					t = val;
+X					for (;*t;t++)
+X						*t = toupper(*t);
+X					break;
+X				}
+X			}
+X	if (colf = *s == ':')
+X		s++;
+X	
+X	/* check for ${..?...} or ${..=..} or one of those.  Only works
+X		if the name is in braces. */
+X
+X	if (brs && (*s == '-' || *s == '=' || *s == '?' || *s == '+' || *s == '#' ||
+X			*s == '%' || *s == Quest || *s == Pound))
+X		{
+X		if (v && v->isarr)
+X			{
+X			zerr("operator requires a scalar",NULL,0);
+X			return;
+X			}
+X		if (*s == s[1])
+X			{
+X			s++;
+X			doub = 1;
+X			}
+X		u = ++s;
+X		if (brs)
+X			while (*s != '}' && *s != Outbrace)
+X				s++;
+X		else
+X			{
+X			while (*s++);
+X			s--;
+X			}
+X		*s = '\0';
+X		if (colf && !vunset)
+X			vunset = !*val;
+X		switch (u[-1])
+X			{
+X			case '-':
+X				if (vunset)
+X					val = strdup(u);
+X				break;
+X			case '=':
+X				if (vunset)
+X					{
+X					char sav = *idend;
+X
+X					*idend = '\0';
+X					setsparam(idbeg,ztrdup(val = strdup(u)));
+X					*idend = sav;
+X					}
+X				break;
+X			case '?':
+X			case Quest:
+X				if (vunset)
+X					{
+X					zerr("%s",(*u) ? u : "parameter not set",0);
+X					if (!interact)
+X						exit(1);
+X					return;
+X					}
+X				break;
+X			case '+':
+X				if (vunset)
+X					val = strdup("");
+X				else
+X					val = strdup(u);
+X				break;
+X			case '#':
+X			case Pound:
+X				if (vunset)
+X					val = strdup("");
+X				getmatch(&val,u,doub);
+X				break;
+X			case '%':
+X				if (vunset)
+X					val = strdup("");
+X				getmatch(&val,u,doub+2);
+X				break;
+X			}
+X		}
+X	else		/* no ${...=...} or anything, but possible modifiers. */
+X		{
+X		if (vunset)
+X			{
+X			if (isset(NOUNSET))
+X				{
+X				zerr("parameter not set",NULL,0);
+X				return;
+X				}
+X			val = strdup("");
+X			}
+X		if (colf)
+X			{
+X			s--;
+X			if (!isarr)
+X				modify(&val,&s);
+X			/*else
+X				modifyarr(&aval,&s);*/
+X			}
+X		if (brs)
+X			{
+X			if (*s != '}' && *s != Outbrace)
+X				{
+X				zerr("closing brace expected",NULL,0);
+X				errflag = 1;
+X				return;
+X				}
+X			s++;
+X			}
+X		}
+X	if (errflag)
+X		return;
+X	if (getlen)
+X		{
+X		long len = 0;
+X		char buf[14];
+X
+X		if (isarr)
+X			{
+X			char **ctr;
+X			for (ctr = aval; *ctr; ctr++,len++);
+X			}
+X		else
+X			len = strlen(val);
+X		sprintf(buf,"%ld",len);
+X		val = strdup(buf);
+X		isarr = 0;
+X		}
+X	if (isarr && !plan9)
+X		if (!aval || !aval[0])
+X			{
+X			val = strdup("");
+X			isarr = 0;
+X			}
+X		else if (!aval[1])
+X			{
+X			val = aval[0];
+X			isarr = 0;
+X			}
+X	if (qt)
+X		if (isarr)
+X			{
+X			val = spacejoin(aval);
+X			isarr = 0;
+X			}
+X		else if (spbreak)
+X			{
+X			if (isarr)
+X				val = spacejoin(aval);
+X			isarr = 1;
+X			aval = spacesplit(s);
+X			}
+X	if (isarr)
+X		if (plan9)
+X			{
+X			int dlen;
+X			char *y;
+X
+X			y = ncalloc((dlen = (char *) aptr-bptr+strlen(s)+1)+strlen(aval[0]));
+X			setdata(n,y);
+X			strcpy(y,ostr);
+X			strcat(y,aval[0]);
+X			strcat(y,s);
+X			while (*++aval)
+X				{
+X				char *x = ncalloc(dlen+strlen(*aval));
+X
+X				strcpy(x,ostr);
+X				strcat(x,*aval);
+X				strcat(x,s);
+X				insnode(l,n,x), incnode(n);
+X				}
+X			}
+X		else
+X			{
+X			char *zz;
+X
+X			zz = ncalloc((char *) aptr-(bptr)+strlen(aval[0])+1);
+X			setdata(n,zz);
+X			strcpy(zz,ostr);
+X			strcat(zz,*aval++);
+X			while (aval[1])
+X				insnode(l,n,*aval++), incnode(n);
+X			zz = ncalloc(strlen(*aval)+strlen(s)+1);
+X			strcpy(zz,*aval);
+X			strcat(zz,s);
+X			insnode(l,n,zz);
+X			}
+X	else
+X		{
+X		bptr = ncalloc((char *) aptr-bptr+strlen(val)+strlen(s)+1);
+X		setdata(n,bptr);
+X		strcpy(bptr,ostr);
+X		strcat(bptr,val);
+X		strcat(bptr,s);
+X		}
+X}
+X
+X/* arithmetic substitution */
+X
+Xvoid arithsubst(aptr,bptr) /**/
+Xvoid **aptr;char **bptr;
+X{
+Xchar *s = *aptr,*t,buf[16];
+Xlong v;
+X
+X	*s = '\0';
+X	for (; *s != Outbrack; s++);
+X	*s++ = '\0';
+X	v = matheval((char *) *aptr+2);
+X	sprintf(buf,"%ld",v);
+X	t = ncalloc(strlen(*bptr)+strlen(buf)+strlen(s)+1);
+X	strcpy(t,*bptr);
+X	strcat(t,buf);
+X	strcat(t,s);
+X	*bptr = t;
+X}
+X
+Xvoid modify(str,ptr) /**/
+Xchar **str;char **ptr;
+X{
+Xchar *ptr1,*ptr2,*ptr3,del,*lptr;
+Xint gbal;
+X
+X	if (**ptr == ':')
+X		*str = strdup(*str);
+X	while (**ptr == ':')
+X		{
+X		lptr = *ptr;
+X		(*ptr)++;
+X		gbal = 0;
+Xhere:
+X		switch(*(*ptr)++)
+X			{
+X			case 'h': remtpath(str); break;
+X			case 'r': remtext(str); break;
+X			case 'e': rembutext(str); break;
+X			case 't': remlpaths(str); break;
+X			case 'l': downcase(str); break;
+X			case 'u': upcase(str); break;
+X			case 's':
+X				if (hsubl)
+X					free(hsubl);
+X				if (hsubr)
+X					free(hsubr);
+X				ptr1 = *ptr;
+X				del = *ptr1++;
+X				for (ptr2 = ptr1; *ptr2 != del && *ptr2; ptr2++);
+X				if (!*ptr2)
+X					{
+X					zerr("bad subtitution",NULL,0);
+X					errflag = 1;
+X					return;
+X					}
+X				*ptr2++ = '\0';
+X				for (ptr3 = ptr2; *ptr3 != del && *ptr3; ptr3++);
+X				if (*ptr3)
+X					*ptr3++ = '\0';
+X				hsubl = ztrdup(ptr1);
+X				hsubr = ztrdup(ptr2);
+X				*ptr = ptr3;
+X			case '&':
+X				if (hsubl && hsubr)
+X					subst(str,hsubl,hsubr,gbal);
+X				break;
+X			case 'g': gbal = 1; goto here;
+X			default: *ptr = lptr; return;
+X			}
+X		}
+X}
+X
+X/* get a directory stack entry */
+X
+Xchar *dstackent(val) /**/
+Xint val;
+X{
+XLknode node;
+X 
+X	if ((val < 0 && !firstnode(dirstack)) || !val--)
+X		return cwd;
+X	if (val < 0)
+X		node = lastnode(dirstack);
+X	else
+X		for (node = firstnode(dirstack); node && val; val--,incnode(node));
+X	if (!node)
+X		{
+X		zerr("not enough dir stack entries.",NULL,0);
+X		errflag = 1;
+X		return NULL;
+X		}
+X	return getdata(node);
+X}
+X
+X/* make an alias hash table node */
+X
+Xstruct alias *mkanode(txt,cmflag) /**/
+Xchar *txt;int cmflag;
+X{
+Xstruct alias *ptr = (void *) zcalloc(sizeof *ptr);
+X
+X	ptr->text  = txt;
+X	ptr->cmd = cmflag;
+X	ptr->inuse = 0;
+X	return ptr;
+X}
+SHAR_EOF
+chmod 0644 zsh2.00/src/subst.c ||
+echo 'restore of zsh2.00/src/subst.c failed'
+Wc_c="`wc -c < 'zsh2.00/src/subst.c'`"
+test 14939 -eq "$Wc_c" ||
+	echo 'zsh2.00/src/subst.c: original size 14939, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+# ============= zsh2.00/src/subst.pro ==============
+if test -f 'zsh2.00/src/subst.pro' -a X"$1" != X"-c"; then
+	echo 'x - skipping zsh2.00/src/subst.pro (File already exists)'
+	rm -f _shar_wnt_.tmp
+else
+> _shar_wnt_.tmp
+echo 'x - extracting zsh2.00/src/subst.pro (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/src/subst.pro' &&
+Xvoid prefork DCLPROTO((Lklist list));
+Xvoid postfork DCLPROTO((Lklist list,int doglob));
+Xvoid singsub DCLPROTO((char **s));
+Xvoid *nstrdup DCLPROTO((void *s));
+Xchar *dynread DCLPROTO((int stop));
+Xint filesub DCLPROTO((char **namptr));
+Xchar *gethome DCLPROTO((char *user,int len));
+Xvoid commsubst DCLPROTO((Lklist l,Lknode n,char *str3,char *str,int qt));
+Xvoid paramsubst DCLPROTO((Lklist l,Lknode n,char *aptr,char *bptr,int qt));
+Xvoid arithsubst DCLPROTO((void **aptr,char **bptr));
+Xvoid modify DCLPROTO((char **str,char **ptr));
+Xchar *dstackent DCLPROTO((int val));
+Xstruct alias *mkanode DCLPROTO((char *txt,int cmflag));
+SHAR_EOF
+chmod 0644 zsh2.00/src/subst.pro ||
+echo 'restore of zsh2.00/src/subst.pro failed'
+Wc_c="`wc -c < 'zsh2.00/src/subst.pro'`"
+test 622 -eq "$Wc_c" ||
+	echo 'zsh2.00/src/subst.pro: original size 622, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+# ============= zsh2.00/src/table.c ==============
+if test -f 'zsh2.00/src/table.c' -a X"$1" != X"-c"; then
+	echo 'x - skipping zsh2.00/src/table.c (File already exists)'
+	rm -f _shar_wnt_.tmp
+else
+> _shar_wnt_.tmp
+echo 'x - extracting zsh2.00/src/table.c (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/src/table.c' &&
+X/*
+X
+X	table.c - linked lists and hash tables
+X
+X	This file is part of zsh, the Z shell.
+X
+X	zsh is free software; no one can prevent you from reading the source
+X   code, or giving it to someone else.
+X
+X   This file is copyrighted under the GNU General Public License, which
+X   can be found in the file called COPYING.
+X
+X   Copyright (C) 1990, 1991 Paul Falstad
+X
+X   zsh is distributed in the hope that it will be useful, but
+X   WITHOUT ANY WARRANTY.  No author or distributor accepts
+X   responsibility to anyone for the consequences of using it or for
+X   whether it serves any particular purpose or works at all, unless he
+X   says so in writing.  Refer to the GNU General Public License
+X   for full details.
+X
+X   Everyone is granted permission to copy, modify and redistribute
+X   zsh, but only under the conditions described in the GNU General Public
+X   License.   A copy of this license is supposed to have been given to you
+X   along with zsh so you can know your rights and responsibilities.
+X   It should be in a file named COPYING.
+X
+X   Among other things, the copyright notice and this notice must be
+X   preserved on all copies.
+X
+X*/
+X
+X#define TABLE_C
+X#include "zsh.h"
+X#include "funcs.h"
+X
+X/* get an empty linked list header */
+X
+XLklist newlist() /**/
+X{
+XLklist list;
+X 
+X	list = alloc(sizeof *list);
+X	list->first = 0;
+X	list->last = (Lknode) list;
+X	return list;
+X}
+X
+X/* get an empty hash table */
+X
+XHashtab newhtable(size) /**/
+Xint size;
+X{
+XHashtab ret;
+X 
+X	ret = zcalloc(sizeof *ret);
+X	ret->hsize = size;
+X	ret->nodes = zcalloc(size*sizeof(Hashnode));
+X	return ret;
+X}
+X 
+X/* Peter Weinberger's hash function */
+X
+Xint hasher(s) /**/
+Xchar *s;
+X{
+Xunsigned hash = 0,g;
+X 
+X	for (; *s; s++)
+X		{
+X		hash = (hash << 4) + *s;
+X		if (g = hash & 0xf0000000)
+X			{
+X			hash ^= g;
+X			hash ^= g >> 24;
+X			}
+X		}
+X	return hash;
+X}
+X
+X/* add a node to a hash table */
+X
+Xvoid Addhnode(nam,dat,ht,freefunc,canfree) /**/
+Xchar *nam;void *dat;Hashtab ht;FFunc freefunc;int canfree;
+X{
+Xint hval = hasher(nam) % ht->hsize;
+Xstruct hashnode *hp = ht->nodes[hval],*hn;
+X 
+X	for (; hp; hp = hp->next)
+X		if (!strcmp(hp->nam,nam))
+X			{
+X			if (!freefunc)
+X				zerr("attempt to call NULL freefunc",NULL,0);
+X			else
+X				freefunc(hp->dat);
+X			hp->dat = dat;
+X			if (hp->canfree)
+X				{
+X				free(hp->nam);
+X				hp->nam = nam;
+X				}
+X			hp->canfree = canfree;
+X			return;
+X			}
+X	hn = (void *) zcalloc(sizeof *hn);
+X	hn->nam = nam;
+X	hn->dat = dat;
+X	hn->canfree = canfree;
+X	hn->next = ht->nodes[hval];
+X	ht->nodes[hval] = hn;
+X	if (++ht->ct == ht->hsize*4)
+X		expandhtab(ht);
+X}
+X
+X/* expand hash tables when they get too many entries */
+X
+Xvoid expandhtab(ht) /**/
+XHashtab ht;
+X{
+Xstruct hashnode *hp,**arr,**ha,*hn;
+Xint osize = ht->hsize,nsize = osize*8;
+X
+X	ht->hsize = nsize;
+X	arr = ht->nodes;
+X	ht->nodes = zcalloc(nsize*sizeof(struct hashnode *));
+X	for (ha = arr; osize; osize--,ha++)
+X		for (hn = *ha; hn; )
+X			{
+X			Addhnode(hn->nam,hn->dat,ht,NULL,hn->canfree);
+X			hp = hn->next;
+X			free(hn);
+X			hn = hp;
+X			}
+X	free(arr);
+X}
+X
+X/* get an entry in a hash table */
+X
+Xvoid *gethnode(nam,ht) /**/
+Xchar *nam;Hashtab ht;
+X{
+Xint hval = hasher(nam) % ht->hsize;
+Xstruct hashnode *hn = ht->nodes[hval];
+X 
+X	for (; hn; hn = hn->next)
+X		if (!strcmp(hn->nam,nam))
+X			return hn->dat;
+X	return NULL;
+X}
+X 
+Xvoid freehtab(ht,freefunc) /**/
+XHashtab ht;FFunc freefunc;
+X{
+Xint val;
+Xstruct hashnode *hn,**hp = &ht->nodes[0],*next;
+X 
+X	for (val = ht->hsize; val; val--,hp++)
+X		for (hn = *hp; hn; )
+X			{
+X			next = hn->next;
+X			freefunc(hn->dat);
+X			free(hn);
+X			hn = next;
+X			}
+X}
+X
+X/* remove a hash table entry and return a pointer to it */
+X
+Xvoid *remhnode(nam,ht) /**/
+Xchar *nam;Hashtab ht;
+X{
+Xint hval = hasher(nam) % ht->hsize;
+Xstruct hashnode *hn = ht->nodes[hval],*hp;
+Xvoid *dat;
+X
+X	if (!hn)
+X		return NULL;
+X	if (!strcmp(hn->nam,nam))
+X		{
+X		ht->nodes[hval] = hn->next;
+X		dat = hn->dat;
+X		if (hn->canfree)
+X			free(hn->nam);
+X		free(hn);
+X		ht->ct--;
+X		return dat;
+X		}
+X	for (hp = hn, hn = hn->next; hn; hn = (hp = hn)->next)
+X		if (!strcmp(hn->nam,nam))
+X			{
+X			hp->next = hn->next;
+X			dat = hn->dat;
+X			if (hn->canfree)
+X				free(hn->nam);
+X			free(hn);
+X			ht->ct--;
+X			return dat;
+X			}
+X	return NULL;
+X}
+X
+X/* insert a node in a linked list after 'llast' */
+X
+Xvoid insnode(list,llast,dat) /**/
+XLklist list;Lknode llast;void *dat;
+X{
+XLknode tmp;
+X 
+X	tmp = llast->next;
+X	llast->next = alloc(sizeof *tmp);
+X	llast->next->last = llast;
+X	llast->next->dat = dat;
+X	llast->next->next = tmp;
+X	if (tmp)
+X		tmp->last = llast->next;
+X	else
+X		list->last = llast->next;
+X}
+X
+X/* remove a node from a linked list */
+X
+Xvoid *remnode(list,nd) /**/
+XLklist list;Lknode nd;
+X{
+Xvoid *dat;
+X
+X	nd->last->next = nd->next;
+X	if (nd->next)
+X		nd->next->last = nd->last;
+X	else
+X		list->last = nd->last;
+X	free(nd);
+X	dat = nd->dat;
+X	return dat;
+X}
+X
+X/* remove a node from a linked list */
+X
+Xvoid *uremnode(list,nd) /**/
+XLklist list;Lknode nd;
+X{
+Xvoid *dat;
+X
+X	nd->last->next = nd->next;
+X	if (nd->next)
+X		nd->next->last = nd->last;
+X	else
+X		list->last = nd->last;
+X	dat = nd->dat;
+X	return dat;
+X}
+X
+X/* delete a character in a string */
+X
+Xvoid chuck(str) /**/
+Xchar *str;
+X{
+X	while (str[0] = str[1])
+X		str++;
+X}
+X
+X/* get top node in a linked list */
+X
+Xvoid *getnode(list) /**/
+XLklist list;
+X{
+Xvoid *dat;
+XLknode node = list->first;
+X 
+X	if (!node)
+X		return NULL;
+X	dat = node->dat;
+X	list->first = node->next;
+X	if (node->next)
+X		node->next->last = (Lknode) list;
+X	else
+X		list->last = (Lknode) list;
+X	free(node);
+X	return dat;
+X}
+X
+X/* get top node in a linked list without freeing */
+X
+Xvoid *ugetnode(list) /**/
+XLklist list;
+X{
+Xvoid *dat;
+XLknode node = list->first;
+X 
+X	if (!node)
+X		return NULL;
+X	dat = node->dat;
+X	list->first = node->next;
+X	if (node->next)
+X		node->next->last = (Lknode) list;
+X	else
+X		list->last = (Lknode) list;
+X	return dat;
+X}
+X
+Xvoid freetable(tab,freefunc) /**/
+XLklist tab;FFunc freefunc;
+X{
+XLknode node = tab->first,next;
+X 
+X	while (node)
+X		{
+X		next = node->next;
+X		if (freefunc)
+X			freefunc(node->dat);
+X		free(node);
+X		node = next;
+X		}
+X	free(tab);
+X}
+X 
+Xchar *strstr(s,t) /**/
+Xchar *s;char *t;
+X{
+Xchar *p1,*p2;
+X 
+X	for (; *s; s++)
+X		{
+X		for (p1 = s, p2 = t; *p2; p1++,p2++)
+X			if (*p1 != *p2)
+X				break;
+X		if (!*p2)
+X			 return (char *) s;
+X		}
+X	return NULL;
+X}
+X
+X/* insert a list in another list */
+X
+Xvoid inslist(l,where,x) /**/
+XLklist l;Lknode where;Lklist x;
+X{
+XLknode nx = where->next;
+X
+X	if (!l->first)
+X		return;
+X	where->next = l->first;
+X	l->last->next = nx;
+X	l->first->last = where;
+X	if (nx)
+X		nx->last = l->last;
+X	else
+X		x->last = l->last;
+X}
+X
+Xint countnodes(x) /**/
+XLklist x;
+X{
+XLknode y;
+Xint ct = 0;
+X
+X	for (y = firstnode(x); y; incnode(y),ct++);
+X	return ct;
+X}
+X
+SHAR_EOF
+chmod 0644 zsh2.00/src/table.c ||
+echo 'restore of zsh2.00/src/table.c failed'
+Wc_c="`wc -c < 'zsh2.00/src/table.c'`"
+test 6472 -eq "$Wc_c" ||
+	echo 'zsh2.00/src/table.c: original size 6472, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+# ============= zsh2.00/src/table.pro ==============
+if test -f 'zsh2.00/src/table.pro' -a X"$1" != X"-c"; then
+	echo 'x - skipping zsh2.00/src/table.pro (File already exists)'
+	rm -f _shar_wnt_.tmp
+else
+> _shar_wnt_.tmp
+echo 'x - extracting zsh2.00/src/table.pro (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/src/table.pro' &&
+XLklist newlist DCLPROTO((void));
+XHashtab newhtable DCLPROTO((int size));
+Xint hasher DCLPROTO((char *s));
+Xvoid Addhnode DCLPROTO((char *nam,void *dat,Hashtab ht,FFunc freefunc,int canfree));
+Xvoid expandhtab DCLPROTO((Hashtab ht));
+Xvoid *gethnode DCLPROTO((char *nam,Hashtab ht));
+Xvoid freehtab DCLPROTO((Hashtab ht,FFunc freefunc));
+Xvoid *remhnode DCLPROTO((char *nam,Hashtab ht));
+Xvoid insnode DCLPROTO((Lklist list,Lknode llast,void *dat));
+Xvoid *remnode DCLPROTO((Lklist list,Lknode nd));
+Xvoid *uremnode DCLPROTO((Lklist list,Lknode nd));
+Xvoid chuck DCLPROTO((char *str));
+Xvoid *getnode DCLPROTO((Lklist list));
+Xvoid *ugetnode DCLPROTO((Lklist list));
+Xvoid freetable DCLPROTO((Lklist tab,FFunc freefunc));
+Xchar *strstr DCLPROTO((char *s,char *t));
+Xvoid inslist DCLPROTO((Lklist l,Lknode where,Lklist x));
+Xint countnodes DCLPROTO((Lklist x));
+SHAR_EOF
+chmod 0644 zsh2.00/src/table.pro ||
+echo 'restore of zsh2.00/src/table.pro failed'
+Wc_c="`wc -c < 'zsh2.00/src/table.pro'`"
+test 844 -eq "$Wc_c" ||
+	echo 'zsh2.00/src/table.pro: original size 844, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+# ============= zsh2.00/src/text.c ==============
+if test -f 'zsh2.00/src/text.c' -a X"$1" != X"-c"; then
+	echo 'x - skipping zsh2.00/src/text.c (File already exists)'
+	rm -f _shar_wnt_.tmp
+else
+> _shar_wnt_.tmp
+echo 'x - extracting zsh2.00/src/text.c (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/src/text.c' &&
+X/*
+X
+X	text.c - textual representations of syntax trees
+X
+X	This file is part of zsh, the Z shell.
+X
+X	zsh is free software; no one can prevent you from reading the source
+X   code, or giving it to someone else.
+X
+X   This file is copyrighted under the GNU General Public License, which
+X   can be found in the file called COPYING.
+X
+X   Copyright (C) 1990, 1991 Paul Falstad
+X
+X   zsh is distributed in the hope that it will be useful, but
+X   WITHOUT ANY WARRANTY.  No author or distributor accepts
+X   responsibility to anyone for the consequences of using it or for
+X   whether it serves any particular purpose or works at all, unless he
+X   says so in writing.  Refer to the GNU General Public License
+X   for full details.
+X
+X   Everyone is granted permission to copy, modify and redistribute
+X   zsh, but only under the conditions described in the GNU General Public
+X   License.   A copy of this license is supposed to have been given to you
+X   along with zsh so you can know your rights and responsibilities.
+X   It should be in a file named COPYING.
+X
+X   Among other things, the copyright notice and this notice must be
+X   preserved on all copies.
+X
+X*/
+X
+X#include "zsh.h"
+X#include "funcs.h"
+X
+Xstatic char *tptr,*tbuf,*tlim;
+Xstatic int tsiz,tindent,tnewlins;
+X
+X/* add a character to the text buffer */
+X
+Xvoid taddchr(c) /**/
+Xint c;
+X{
+X	*tptr++ = c;
+X	if (tptr == tlim)
+X		{
+X		tbuf = realloc(tbuf,tsiz *= 2);
+X		tlim = tbuf+tsiz;
+X		tptr = tbuf+tsiz/2;
+X		}
+X}
+X
+X/* add a string to the text buffer */
+X
+Xvoid taddstr(s) /**/
+Xchar *s;
+X{
+Xint sl = strlen(s);
+X
+X	while (tptr+sl >= tlim)
+X		{
+X		int x = tptr-tbuf;
+X
+X		tbuf = realloc(tbuf,tsiz *= 2);
+X		tlim = tbuf+tsiz;
+X		tptr = tbuf+x;
+X		}
+X	strcpy(tptr,s);
+X	tptr += sl;
+X}
+X
+X/* add an integer to the text buffer */
+X
+Xvoid taddint(x) /**/
+Xint x;
+X{
+Xchar buf[10];
+X
+X	sprintf(buf,"%d",x);
+X	taddstr(buf);
+X}
+X
+X/* add a newline, or something equivalent, to the text buffer */
+X
+Xvoid taddnl() /**/
+X{
+Xint t0;
+X
+X	if (tnewlins)
+X		{
+X		taddchr('\n');
+X		for (t0 = 0; t0 != tindent; t0++)
+X			taddchr('\t');
+X		}
+X	else
+X		taddstr("; ");
+X}
+X
+X/* get a textual representation of n */
+X
+Xchar *gettext(n,nls) /**/
+Xstruct node *n;int nls;
+X{
+X	tnewlins = nls;
+X	tbuf = zalloc(tsiz = 32);
+X	tptr = tbuf;
+X	tlim = tbuf+tsiz;
+X	tindent = 1;
+X	gettext2(n);
+X	*tptr = '\0';
+X	untokenize(tbuf);
+X	return tbuf;
+X}
+X
+X#define gt2(X) gettext2((struct node *) (X))
+X
+X/*
+X	"gettext2" or "type checking and how to avoid it"
+X	an epic function by Paul Falstad
+X*/
+X
+X#define _Cond(X) ((Cond) (X))
+X#define _Cmd(X) ((Cmd) (X))
+X#define _Pline(X) ((Pline) (X))
+X#define _Sublist(X) ((Sublist) (X))
+X#define _List(X) ((List) (X))
+X#define _casecmd(X) ((struct casecmd *) (X))
+X#define _ifcmd(X) ((struct ifcmd *) (X))
+X#define _whilecmd(X) ((struct whilecmd *) (X))
+X
+Xvoid gettext2(n) /**/
+Xstruct node *n;
+X{
+XCmd nn;
+XCond nm;
+X
+X	if (!n)
+X		return;
+X	switch (n->type)
+X		{
+X		case N_LIST:
+X			gt2(_List(n)->left);
+X			if (_List(n)->type == ASYNC)
+X				taddstr(" &");
+X			simplifyright(_List(n));
+X			if (_List(n)->right)
+X				{
+X				if (tnewlins)
+X					taddnl();
+X				else
+X					taddstr((_List(n)->type == ASYNC) ? " " : "; ");
+X				gt2(_List(n)->right);
+X				}
+X			break;
+X		case N_SUBLIST:
+X			if (_Sublist(n)->flags & PFLAG_NOT)
+X				taddstr("! ");
+X			if (_Sublist(n)->flags & PFLAG_COPROC)
+X				taddstr("coproc ");
+X			gt2(_Sublist(n)->left);
+X			if (_Sublist(n)->right)
+X				{
+X				taddstr((_Sublist(n)->type == ORNEXT) ? " || " : " && ");
+X				gt2(_Sublist(n)->right);
+X				}
+X			break;
+X		case N_PLINE:
+X			gt2(_Pline(n)->left);
+X			if (_Pline(n)->type == PIPE)
+X				{
+X				taddstr(" | ");
+X				gt2(_Pline(n)->right);
+X				}
+X			break;
+X		case N_CMD:
+X			nn = _Cmd(n);
+X			if (nn->flags & CFLAG_EXEC)
+X				taddstr("exec ");
+X			if (nn->flags & CFLAG_COMMAND)
+X				taddstr("command ");
+X			switch (nn->type)
+X				{
+X				case SIMPLE:
+X					getsimptext(nn);
+X					break;
+X				case SUBSH:
+X					taddstr("( ");
+X					tindent++;
+X					gt2(nn->u.list);
+X					tindent--;
+X					taddstr(" )");
+X					break;
+X				case CTIME:
+X					taddstr("time ");
+X					tindent++;
+X					gt2(nn->u.pline);
+X					tindent--;
+X					break;
+X				case FUNCDEF:
+X					taddlist(nn->args);
+X					taddstr(" () {");
+X					tindent++;
+X					taddnl();
+X					gt2(nn->u.list);
+X					tindent--;
+X					taddnl();
+X					taddstr("}");
+X					break;
+X				case CURSH:
+X					taddstr("{ ");
+X					tindent++;
+X					gt2(nn->u.list);
+X					tindent--;
+X					taddstr(" }");
+X					break;
+X				case CFOR:
+X				case CSELECT:
+X					taddstr((nn->type == CFOR) ? "for " : "select ");
+X					taddstr(nn->u.forcmd->name);
+X					if (nn->u.forcmd->inflag)
+X						{
+X						taddstr(" in ");
+X						taddlist(nn->args);
+X						}
+X					taddnl();
+X					taddstr("do");
+X					tindent++;
+X					taddnl();
+X					gt2(nn->u.forcmd->list);
+X					taddnl();
+X					tindent--;
+X					taddstr("done");
+X					break;
+X				case CIF:
+X					gt2(nn->u.ifcmd);
+X					taddstr("fi");
+X					break;
+X				case CCASE:
+X					taddstr("case ");
+X					taddlist(nn->args);
+X					taddstr(" in");
+X					tindent++;
+X					taddnl();
+X					gt2(nn->u.casecmd);
+X					tindent--;
+X					if (tnewlins)
+X						taddnl();
+X					else
+X						taddchr(' ');
+X					taddstr("esac");
+X					break;
+X				case COND:
+X					taddstr("[[ ");
+X					gt2(nn->u.cond);
+X					taddstr(" ]]");
+X					break;
+X				case CREPEAT:
+X					taddstr("repeat ");
+X					taddlist(nn->args);
+X					taddnl();
+X					taddstr("do");
+X					tindent++;
+X					taddnl();
+X					gt2(nn->u.list);
+X					tindent--;
+X					taddnl();
+X					taddstr("done");
+X					break;
+X				case CWHILE:
+X					gt2(nn->u.whilecmd);
+X					break;
+X				}
+X			getredirs(nn);
+X			break;
+X		case N_COND:
+X			nm = _Cond(n);
+X			switch (nm->type)
+X				{
+X				case COND_NOT:
+X					taddstr("! ");
+X					gt2(nm->left);
+X					break;
+X				case COND_AND:
+X					taddstr("( ");
+X					gt2(nm->left);
+X					taddstr(" && ");
+X					gt2(nm->right);
+X					taddstr(" )");
+X					break;
+X				case COND_OR:
+X					taddstr("( ");
+X					gt2(nm->left);
+X					taddstr(" || ");
+X					gt2(nm->right);
+X					taddstr(" )");
+X					break;
+X				default:
+X					{
+X					static char *c1[] = {
+X						" = "," != "," < "," > "," -nt "," -ot "," -ef "," -eq ",
+X						" -ne "," -lt "," -gt "," -le "," -ge "
+X						};
+X					if (nm->right)
+X						taddstr(nm->left);
+X					if (nm->type <= COND_GE)
+X						taddstr(c1[nm->type]);
+X					else
+X						{
+X						char c2[5];
+X						c2[0] = ' '; c2[1] = '-';
+X						c2[2] = nm->type;
+X						c2[3] = ' '; c2[4] = '\0';
+X						taddstr(c2);
+X						}
+X					taddstr((nm->right) ? nm->right : nm->left);
+X					}
+X					break;
+X				}
+X			break;
+X		case N_CASE:
+X			taddstr(_casecmd(n)->pat);
+X			taddstr(") ");
+X			tindent++;
+X			gt2(_casecmd(n)->list);
+X			tindent--;
+X			gt2(_casecmd(n)->next);
+X			break;
+X		case N_IF:
+X			if (_ifcmd(n)->ifl)
+X				{
+X				taddstr("if ");
+X				tindent++;
+X				gt2(_ifcmd(n)->ifl);
+X				tindent--;
+X				taddnl();
+X				taddstr("then");
+X				}
+X			else
+X				taddchr('e');
+X			tindent++;
+X			taddnl();
+X			gt2(_ifcmd(n)->thenl);
+X			tindent--;
+X			taddnl();
+X			if (_ifcmd(n)->next)
+X				{
+X				taddstr("els");
+X				gt2(_ifcmd(n)->next);
+X				}
+X			break;
+X		case N_WHILE:
+X			taddstr((_whilecmd(n)->cond) ? "until " : "while ");
+X			tindent++;
+X			gt2(_whilecmd(n)->cont);
+X			tindent--;
+X			taddnl();
+X			taddstr("do");
+X			tindent++;
+X			taddnl();
+X			gt2(_whilecmd(n)->loop);
+X			tindent--;
+X			taddnl();
+X			taddstr("done");
+X			break;
+X		}
+X}
+X
+Xvoid getsimptext(cmd) /**/
+XCmd cmd;
+X{
+XLknode n;
+X
+X	for (n = firstnode(cmd->vars); n; incnode(n))
+X		{
+X		struct varasg *v = getdata(n);
+X
+X		taddstr(v->name);
+X		taddchr('=');
+X		if ((v->type & PMTYPE) == PMFLAG_A)
+X			{
+X			taddchr('(');
+X			taddlist(v->arr);
+X			taddstr(") ");
+X			}
+X		else
+X			{
+X			taddstr(v->str);
+X			taddchr(' ');
+X			}
+X		}
+X	taddlist(cmd->args);
+X}
+X
+Xvoid getredirs(cmd) /**/
+XCmd cmd;
+X{
+XLknode n;
+Xstatic char *fstr[] = {
+X	">",">!",">>",">>!",">&",">&!",">>&",">>&!","<","<<","<&",">&",">&-",
+X	">&-","..","..","<<<"
+X	};
+X
+X	taddchr(' ');
+X	for (n = firstnode(cmd->redir); n; incnode(n))
+X		{
+X		struct redir *f = getdata(n);
+X
+X		switch(f->type)
+X			{
+X			case WRITE: case WRITENOW: case APP: case APPNOW: case READ:
+X			case HERESTR:
+X				if (f->fd1 != ((f->type == READ) ? 0 : 1))
+X					taddchr('0'+f->fd1);
+X				taddstr(fstr[f->type]);
+X				taddchr(' ');
+X				taddstr(f->name);
+X				taddchr(' ');
+X				break;
+X			case MERGE: case MERGEOUT:
+X				if (f->fd1 != ((f->type == MERGEOUT) ? 1 : 0))
+X					taddchr('0'+f->fd1);
+X				taddstr(fstr[f->type]);
+X				taddchr(' ');
+X				taddint(f->fd2);
+X				taddchr(' ');
+X				break;
+X			case CLOSE:
+X				taddchr(f->fd1+'0');
+X				taddstr(">&- ");
+X				break;
+X			case INPIPE:
+X			case OUTPIPE:
+X				if (f->fd1 != ((f->type == INPIPE) ? 0 : 1))
+X					taddchr('0'+f->fd1);
+SHAR_EOF
+true || echo 'restore of zsh2.00/src/text.c failed'
+fi
+echo 'End of zsh2.00.00 part 9'
+echo 'File zsh2.00/src/text.c is continued in part 10'
+echo 10 > _shar_seq_.tmp
+exit 0
+--
+              Paul Falstad  pfalstad@phoenix.princeton.edu
+         And on the roads, too, vicious gangs of KEEP LEFT signs!
+     If Princeton knew my opinions, they'd have expelled me long ago.
+
+exit 0 # Just in case...
+-- 
+Kent Landfield                   INTERNET: kent@sparky.IMD.Sterling.COM
+Sterling Software, IMD           UUCP:     uunet!sparky!kent
+Phone:    (402) 291-8300         FAX:      (402) 291-4362
+Please send comp.sources.misc-related mail to kent@uunet.uu.net.

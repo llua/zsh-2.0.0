@@ -1,0 +1,1995 @@
+Path: funic!fuug!sics.se!sunic!hagbard!eru!bloom-beacon!ora!camb.com!spdcc!mintaka!think.com!rpi!crdgw1!uunet!sparky!kent
+From: pfalstad@phoenix.princeton.edu (Paul Falstad)
+Newsgroups: comp.sources.misc
+Subject: v20i024:  The Z shell, Patch03c/4
+Message-ID: <1991May29.165012.6715@sparky.IMD.Sterling.COM>
+Date: 29 May 91 16:50:12 GMT
+References: <csm-v20i022=zsh2.00.114111@sparky.IMD.Sterling.COM>
+Sender: kent@sparky.IMD.Sterling.COM (Kent Landfield)
+Organization: Sterling Software, IMD
+Lines: 1982
+Approved: kent@sparky.imd.sterling.com
+X-Md4-Signature: e12a85f810581b842b336ad32d5d79e8
+
+Submitted-by: Paul Falstad <pfalstad@phoenix.princeton.edu>
+Posting-number: Volume 20, Issue 24
+Archive-name: zsh2.00/patch03c
+Patch-To: zsh2.00: Volume 18, Issue 84-98
+
+#!/bin/sh
+# patch03c
+# This is a shell archive (produced by shar 3.49)
+# To extract the files from this archive, save it to a file, remove
+# everything above the "!/bin/sh" line above, and type "sh file_name".
+#
+# made 05/26/1991 03:48 UTC by pf@dendrite
+# Source directory /home/learning/pf/zsh/zsh2.00
+#
+# existing files will NOT be overwritten unless -c is specified
+#
+# do not concatenate these parts, unpack them in order with /bin/sh        
+#
+# This shar contains:
+# length  mode       name
+# ------ ---------- ------------------------------------------
+#  86341 -rw-r--r-- patches
+#
+if test -r _shar_seq_.tmp; then
+	echo 'Must unpack archives in sequence!'
+	echo Please unpack part `cat _shar_seq_.tmp` next
+	exit 1
+fi
+# ============= patches ==============
+if test -f 'patches' -a X"$1" != X"-c"; then
+	echo 'x - skipping patches (File already exists)'
+	rm -f _shar_wnt_.tmp
+else
+> _shar_wnt_.tmp
+echo 'x - extracting patches (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'patches' &&
+*** zshdist/zsh2.00/README	Sat May 11 01:54:55 1991
+--- zsh2.00/README	Sat May 25 23:43:29 1991
+***************
+*** 1,6 ****
+X  zsh is free software.  See the file COPYING for copying permission.
+X  
+! This is zsh 2.00.02.
+X  
+X  To get this shell running, cd into the src directory and type
+X  "buildzsh".  I tested it on the following machines, where it compiled
+--- 1,6 ----
+X  zsh is free software.  See the file COPYING for copying permission.
+X  
+! This is zsh 2.00.03.
+X  
+X  To get this shell running, cd into the src directory and type
+X  "buildzsh".  I tested it on the following machines, where it compiled
+***************
+*** 7,18 ****
+X  just by running this script:
+X  
+X  Sun SPARCServer 4/490 running SunOS 4.1.1
+- 
+- Past versions have been tested successfully on the following machines:
+- 
+X  Sun 3/60C running SunOS 4.1.1
+X  NeXTstation running Mach 2.0
+- SGI-4D/25 running IRIX 3.3.1
+X  hp9000 running BSD 4.3
+X  DECSystem-5000 running ULTRIX 4.0
+X  
+--- 7,15 ----
+X  just by running this script:
+X  
+X  Sun SPARCServer 4/490 running SunOS 4.1.1
+X  Sun 3/60C running SunOS 4.1.1
++ Sun 3/50M running SunOS 4.0
+X  NeXTstation running Mach 2.0
+X  hp9000 running BSD 4.3
+X  DECSystem-5000 running ULTRIX 4.0
+X  
+***************
+*** 25,33 ****
+X  
+X  If anyone has any questions, suggestions, comments, bugs, flames, or
+X  any other mail of any kind, send it to pfalstad@phoenix.princeton.edu.
+! I did not supply any patches or bug fixes for version 1, because I junked
+! most of it as soon as I released it.  This version will be more permanent,
+! hopefully, so I'll be able to fix bugs quickly as soon as they're found.
+X  
+X  Thanks to the following people for help, ideas, comments, patches, etc.:
+X   _
+--- 22,29 ----
+X  
+X  If anyone has any questions, suggestions, comments, bugs, flames, or
+X  any other mail of any kind, send it to pfalstad@phoenix.princeton.edu.
+! When you send mail, please put the word "zsh" somewhere in the subject line,
+! so that my mush script will automatically save it.  Thanks.
+X  
+X  Thanks to the following people for help, ideas, comments, patches, etc.:
+X   _
+***************
+*** 34,47 ****
+--- 30,48 ----
+X  Goran Larsson
+X  Paul E. Maisano
+X  Josh Diamond
++ David Dobkin
+X  Peter Moore
+X  Xev Gittler
+X  Rick Ohnemus
+X  Gary D. Kline
++ Jim Mattson
+X  Byron Rakitzis
++ Gottfried Necker
+X  Dan Bernstein
+X  Jonathan I. Kamens
+X  Bruce Varney
++ Mike Brown
++ David Wilson
+X  Greg Noel
+X  Paul Lew
+X  Kartik Subbarao
+***************
+*** 155,163 ****
+--- 156,209 ----
+X  	- <<-foo is now parsed as <<- foo, not << -foo
+X  	- fixed various errors in the documentation
+X  
++ 02-03:
++ 	- two stupid bugs that were introduced in the last patch were fixed:
++ 	  - multiple command substitution on a line failed
++ 	  - a file descriptor leak caused the shell to crash after a while
++ 	- added 'An Introduction to the Z Shell'
++ 	- behaves properly when the tty session dies suddenly
++ 	- had a serious memory leak on some systems
++ 	- the test and [ builtins have been added, although [[...]]
++ 	  is more efficient
++ 	- in your prompt, %m2 now prints foo.bar, %m3 prints foo.bar.com, etc.
++ 	- the -D and -P options to print have been added
++ 	- the NULLCMD and ZDOTDIR parameters have been added
++ 	- ${*:-foo} works
++ 	- "$@" and "$arr[@]" work like ksh
++ 	- .zprofile is sourced before .zshrc in login shells
++ 	- the CSHJUNKIEQUOTES and PUSHDMINUS options have been added
++ 	- REAL_TTY compilation switch added
++ 	- aliases beginning with a space cause the history line to be junked
++ 	  if HISTIGNORESPACE is set
++ 	- echo prints bad options instead of complaining about them
++ 	- "set -o" no longer dumps core
++ 	- "alias a=alias; date >a" no longer creates a file called "alias"
++ 	- "function foo() \n { date }" is now legal (the () and the newline
++ 	  are allowed)
++ 	- nested brace expressions work properly
++ 	- disabled commands stay disabled after a rehash (or after the shell
++ 	  finishes sourcing your .zshrc)
++ 	- corrected aliases work
++ 	- executables in the currect directory are now completed
++ 	- in "case foo", "foo" is not interpreted as a directory name with autocd
++ 	- aliases were not always interpreted properly after a completion
++ 	- bindkey '^?' didn't work
++ 	- echo ${HOST:-{bar}} didn't work
++ 	- editor update is more efficient in some cases
++ 	- menucomplete works even better
++ 	- assign to an array element "foo[1]=bar" didn't always work
++ 	- doesn't print directories like "~tmp" if HOME=/
++ 	- quotes in case statement patterns caused problems
++ 	- pressing ^C right after typing "fc" caused the editor to share
++ 	  the tty with the shell
++ 	- echo $(echo 2) produced no output, but echo $(echo x) worked fine (weird)
++ 
+X  Stuff that needs to be done
+X  	- port zsh to more places
+X  	- improve vi emulation
++ 	- re-rewrite the parser, using recursive descent (not hand-written,
++ 	  obviously.  I'd have to hack some sort of recursive descent
++ 	  parser-generator)
+X  
+X  Known Bugs
+X  	- terminal acts weird under OpenWindows cmdtool
+*** zshdist/zsh2.00/man/man1/zsh.1	Fri May 10 07:40:43 1991
+--- zsh2.00/man/man1/zsh.1	Fri May 24 06:09:03 1991
+***************
+*** 1,5 ****
+X  .\"
+! .TH ZSH 1 "1991 May 5"
+X  .SH NAME
+X  zsh \- the Z shell
+X  .SH SYNOPSIS
+--- 1,5 ----
+X  .\"
+! .TH ZSH 1 "1991 May 22"
+X  .SH NAME
+X  zsh \- the Z shell
+X  .SH SYNOPSIS
+***************
+*** 1462,1470 ****
+X  Pop the top line off the buffer stack and insert it at the
+X  cursor position.
+X  .TP
+- \fBmetafy-next\fP (^[)
+- Treat the next character typed as if it had the meta bit set.
+- .TP
+X  \fBpush-line\fP (^Q M-Q M-q)
+X  Push the current buffer onto the buffer stack and clear
+X  the buffer.
+--- 1462,1467 ----
+***************
+*** 2103,2110 ****
+X  selects the single element \fIexp\fP, where \fIexp\fP is
+X  an arithmetic expression.  The elements are numbered
+X  beginning with 1.
+! A subscript of the form \fB[*]\fP evaluates to all
+! elements of an array.
+X  A subscript of the form \fB[\fIexp1\fP,\fIexp2\fB]\fR
+X  selects all elements in the range \fIexp1\fP to \fIexp2\fP,
+X  inclusive.
+--- 2100,2110 ----
+X  selects the single element \fIexp\fP, where \fIexp\fP is
+X  an arithmetic expression.  The elements are numbered
+X  beginning with 1.
+! A subscript of the form \fB[*]\fP or \fB[@]\fP evaluates to all
+! elements of an array; there is no difference between the two
+! except when they appear within double quotes.
+! "$foo[*]" evaluates to "$foo[1] $foo[2] ...", while
+! "$foo[@]" evaluates to "$foo[1]" "$foo[2]", etc.
+X  A subscript of the form \fB[\fIexp1\fP,\fIexp2\fB]\fR
+X  selects all elements in the range \fIexp1\fP to \fIexp2\fP,
+X  inclusive.
+***************
+*** 2148,2159 ****
+X  .B *
+X  An array containing the positional parameters.
+X  .TP
+- .B @
+- Same as \fB*\fP.
+- .TP
+X  .B argv
+X  Same as \fB*\fP.
+X  .TP
+X  .B ?
+X  The exit value returned by the last command.
+X  .TP
+--- 2148,2159 ----
+X  .B *
+X  An array containing the positional parameters.
+X  .TP
+X  .B argv
+X  Same as \fB*\fP.
+X  .TP
++ .B @
++ Same as \fBargv[@]\fP.
++ .TP
+X  .B ?
+X  The exit value returned by the last command.
+X  .TP
+***************
+*** 2332,2337 ****
+--- 2332,2344 ----
+X  of the mail file.
+X  The default message is "You have new mail."
+X  .TP
++ .B NULLCMD
++ The command name to assume if a redirection is specified
++ with no command.  Defaults to \fBcat\fP.  For sh/ksh-like
++ behavior, change this to \fB:\fP.  For csh-like
++ behavior, unset this parameter; the shell will print an
++ error message if null commands are entered.
++ .TP
+X  .B path (PATH)
+X  An array (colon-separated list)
+X  of directories to search for commands.
+***************
+*** 2344,2350 ****
+X  .TP
+X  .B PROMPT
+X  The primary prompt string, printed before a command is read;
+! the default is "%M%# ".
+X  The following escape sequences are recognized:
+X  .PD
+X  .PP
+--- 2351,2357 ----
+X  .TP
+X  .B PROMPT
+X  The primary prompt string, printed before a command is read;
+! the default is "%m%# ".
+X  The following escape sequences are recognized:
+X  .PD
+X  .PP
+***************
+*** 2372,2377 ****
+--- 2379,2386 ----
+X  .TP
+X  .B %m
+X  The hostname up to the first '.'.
++ May be followed by a digit to specify
++ how many components of the hostname are desired.
+X  .TP
+X  .B %S (%s)
+X  Start (stop) standout mode.
+***************
+*** 2609,2614 ****
+--- 2618,2627 ----
+X  .B WORDCHARS
+X  A list of nonalphanumeric characters considered part of a word
+X  by the line editor.
++ .TP
++ .B ZDOTDIR
++ The directory to search for shell startup files (.zshrc, etc),
++ if not \fB$HOME\fP.
+X  .PD
+X  .RE
+X  .PP
+***************
+*** 2655,2660 ****
+--- 2668,2677 ----
+X  \fBCORRECT_ALL\fP (\-\fBO\fP)
+X  Try to correct the spelling of all arguments in a line.
+X  .TP
++ \fBCSH_JUNKIE_QUOTES\fP
++ Complain if a quoted expression runs off the end of a line;
++ prevent quoted expressions from containing newlines.
++ .TP
+X  \fBERREXIT\fP (\-\fBe\fP)
+X  If a command has a non-zero exit status, execute the \fBERR\fP
+X  trap, if set, and exit.
+***************
+*** 2767,2773 ****
+X  a prompt in the line editor.
+X  .TP
+X  \fBNO_RCS\fP (\-\fBf\fP)
+! Do not source the .zshenv, .zshrc, .zlogin, or .zlogout files.
+X  .TP
+X  \fBNOTIFY\fP (\-\fB5\fP)
+X  Report the status of background jobs immediately, rather than
+--- 2784,2790 ----
+X  a prompt in the line editor.
+X  .TP
+X  \fBNO_RCS\fP (\-\fBf\fP)
+! Do not source the .zshenv, .zshrc, .zlogin, .zlogout, or .zprofile files.
+X  .TP
+X  \fBNOTIFY\fP (\-\fB5\fP)
+X  Report the status of background jobs immediately, rather than
+***************
+*** 2790,2795 ****
+--- 2807,2815 ----
+X  \fBPRINT_EXIT_VALUE\fP (\-\fBC\fP)
+X  Print the exit value of programs with non-zero exit status.
+X  .TP
++ \fBPUSHD_MINUS\fP
++ See \fBpopd\fP below.
++ .TP
+X  \fBPUSHD_SILENT\fP (\-\fBE\fP)
+X  Do not print the directory stack after \fBpushd\fP
+X  or \fBpopd\fP.
+***************
+*** 3268,3289 ****
+X  shown by the \fBdirs\fP command, starting with zero, and change
+X  to that directory.  With an argument of the form \-\fIn\fP,
+X  remove the \fIn\fPth entry counting from the right.
+X  .TP
+! \fBprint\fP [ \-\fBRnrslz0\fP ] [ \fIarg\fP ... ]
+X  With no flags or with flag \-, the arguments are printed on
+! the standard output as described by \fBecho\fP.  With the
+! \-\fBR\fP or \-\fBr\fP flag, the escape conventions of \fBecho\fP
+! are ignored.  The \-\fBR\fP option will print all subsequent
+! arguments and options.  The \-\fBs\fP option causes the results
+! to be placed in the history list instead of on the standard output.
+! If the \-\fBn\fP flag is given, no newline is added to the output.
+! With the \-\fBl\fP flag, the arguments are printed separated
+! by newlines instead of spaces.
+! With the \-\fB0\fP flag, the arguments are separated and terminated
+! by nulls.
+! With the \-\fBz\fP flag, the arguments are pushed onto the editing buffer
+! stack, separated by spaces; no escape sequences are recognized.
+X  .TP
+X  .PD 0
+X  \fBpushd\fP [ \fIarg\fP ]
+X  .TP
+--- 3288,3332 ----
+X  shown by the \fBdirs\fP command, starting with zero, and change
+X  to that directory.  With an argument of the form \-\fIn\fP,
+X  remove the \fIn\fPth entry counting from the right.
++ If the \fBPUSHD_MINUS\fP option is set, the meanings of +
++ and \- in this context are swapped.
+X  .TP
+! \fBprint\fP [ \-\fBRnrslz0DP\fP ] [ \fIarg\fP ... ]
+X  With no flags or with flag \-, the arguments are printed on
+! the standard output as described by \fBecho\fP.
+! .RS
+! .PD 0
+X  .TP
++ \-\fBR\fP, \-\fBr\fP
++ ignore the escape conventions of \fBecho\fP.
++ The \-\fBR\fP option will print all subsequent
++ arguments and options.
++ .TP
++ \-\fBs\fP
++ place the results in the history list instead of on the standard output.
++ .TP
++ \-\fBn\fP
++ do not add a newline to the output.
++ .TP
++ \-\fBl\fP
++ print the arguments separated by newlines instead of spaces.
++ .TP
++ \-\fB0\fP
++ print the arguments separated and terminated by nulls.
++ .TP
++ \-\fBz\fP
++ push the arguments onto the editing buffer stack, separated by spaces;
++ no escape sequences are recognized.
++ .TP
++ \-\fBD\fP
++ treat the arguments as directory names, replacing prefixes with ~
++ expressions, as appropriate.
++ .TP
++ \-\fBP\fP
++ recognize the same escape sequences as in the \fBPROMPT\fP parameter.
++ .PD
++ .RE
++ .TP
+X  .PD 0
+X  \fBpushd\fP [ \fIarg\fP ]
+X  .TP
+***************
+*** 3323,3332 ****
+X  \fBr\fP
+X  Equivalent to \fBfc \-e \-\fP.
+X  .TP
+! \fBread\fP [ \-\fBr\fP ] [ \fIname\fP?\fIprompt\fP ] [ \fIname\fP ...  ]
+X  Read one line and break it into fields using the characters
+X  in \fBIFS\fP as separators.  In raw mode, \-\fBr\fP, a \e
+X  at the end of a line does not signify line continuation.
+X  The first field is assigned to the first \fIname\fP, the second field
+X  to the second \fIname\fP, etc., with leftover
+X  fields assigned to the last \fIname\fP.
+--- 3366,3376 ----
+X  \fBr\fP
+X  Equivalent to \fBfc \-e \-\fP.
+X  .TP
+! \fBread\fP [ \-\fBrz\fP ] [ \fIname\fP?\fIprompt\fP ] [ \fIname\fP ...  ]
+X  Read one line and break it into fields using the characters
+X  in \fBIFS\fP as separators.  In raw mode, \-\fBr\fP, a \e
+X  at the end of a line does not signify line continuation.
++ If the \-\fBz\fP flag is set, read from the editor buffer stack.
+X  The first field is assigned to the first \fIname\fP, the second field
+X  to the second \fIname\fP, etc., with leftover
+X  fields assigned to the last \fIname\fP.
+***************
+*** 3394,3399 ****
+--- 3438,3451 ----
+X  until it receives a \fBSIGCONT\fP.
+X  If the \-\fBf\fP option is not given, complain if this is a login shell.
+X  .TP
++ .PD 0
++ \fBtest\fP \fIarg\fP ...
++ .TP
++ \fB[\fP \fIarg\fP ... \fB]\fP
++ .PD
++ Like the system version of \fBtest\fP.  Added for compatibility;
++ use conditional expressions instead.
++ .TP
+X  \fBtimes\fP
+X  Print the accumulated user and system times for the shell
+X  and for processes run from the shell.
+***************
+*** 3575,3588 ****
+X  .RE
+X  .SH INVOCATION
+X  If the \fBNO_RCS\fP option is unset, commands are read
+! from ~/.zshenv first.
+X  Then, if the shell is interactive and
+X  the \fBNO_RCS\fP option is unset, commands are read
+! from /etc/zshrc and ~/.zshrc, in that order, if either file
+X  exists.
+X  If the first character of argument zero passed to the shell
+X  is \-, then the shell is assumed to be a login shell, and commands
+! are read from /etc/zlogin and ~/.zlogin, if either file exists.
+X  If the \-\fBs\fP flag is not present and an argument is given,
+X  the first argument is taken to be the pathname of a script to
+X  execute.  The remaining arguments are assigned to the positional
+--- 3627,3642 ----
+X  .RE
+X  .SH INVOCATION
+X  If the \fBNO_RCS\fP option is unset, commands are read
+! from $ZDOTDIR/.zshenv first.
+! (If \fBZDOTDIR\fP is unset, \fBHOME\fP is used instead).
+X  Then, if the shell is interactive and
+X  the \fBNO_RCS\fP option is unset, commands are read
+! from /etc/zshrc and $ZDOTDIR/.zshrc, in that order, if either file
+X  exists.
+X  If the first character of argument zero passed to the shell
+X  is \-, then the shell is assumed to be a login shell, and commands
+! are read from $ZDOTDIR/.zprofile before .zshrc is read,
+! then /etc/zlogin and $ZDOTDIR/.zlogin after .zshrc is read.
+X  If the \-\fBs\fP flag is not present and an argument is given,
+X  the first argument is taken to be the pathname of a script to
+X  execute.  The remaining arguments are assigned to the positional
+***************
+*** 3611,3623 ****
+X  ksh(1),
+X  clam(1).
+X  .SH FILES
+! ~/.zshenv
+X  .br
+! ~/.zshrc
+X  .br
+! ~/.zlogin
+X  .br
+! ~/.zlogout
+X  .br
+X  /tmp/zsh*
+X  .br
+--- 3665,3679 ----
+X  ksh(1),
+X  clam(1).
+X  .SH FILES
+! $ZDOTDIR/.zshenv
+X  .br
+! $ZDOTDIR/.zshrc
+X  .br
+! $ZDOTDIR/.zlogin
+X  .br
+! $ZDOTDIR/.zlogout
+! .br
+! $ZDOTDIR/.zprofile
+X  .br
+X  /tmp/zsh*
+X  .br
+*** zshdist/zsh2.00/src/buildzsh	Sun May  5 02:27:59 1991
+--- zsh2.00/src/buildzsh	Wed May 22 11:17:27 1991
+***************
+*** 40,51 ****
+X  else echo '/* #define SIGVOID */'
+X  fi
+X  echo
+- echo '/* define this if you have sigvec */'
+- if grep 'struct.*sigvec' /usr/include/signal.h /usr/include/sys/signal.h >/dev/null
+- then echo '#define SIGVEC'
+- else echo '/* #define SIGVEC */'
+- fi
+- echo
+X  echo '/* define this if signal handlers need to be reset each time */'
+X  if grep SIGTSTP /usr/include/signal.h /usr/include/sys/signal.h >/dev/null
+X  then echo '/* #define RESETHANDNEEDED */'
+--- 40,45 ----
+***************
+*** 111,116 ****
+--- 105,121 ----
+X  /* define if you like interactive comments */
+X  /*#define INTERACTIVE_COMMENTS*/
+X  
++ /*
++  * define this if you are often going to use zsh on a real tty
++  * (as opposed to a network pty), so you don't want flow control and
++  * parity bit stripping disabled.  ^Q and ^S can no longer be bound to
++  * anything in the editor if you #define this, of course.
++  */
++ 
++ /*#define REAL_TTY*/
++ 
++ /*#define setpgrp setpgid on HP-UX */
++ 
+X  #define _BSD_SIGNALS   /* this could be an iris, you never know */
+X  
+X  /* if your compiler doesn't like void *, change this to char *
+***************
+*** 127,134 ****
+X  echo `csh -fc 'kill -l'` | tr ' ' '\012' >signals.h
+X  lct=`wc -l < signals.h`
+X  cp signals.h signams.h
+! echo '1,$s/^/SIG/
+! /SIGHUP/s//hangup/
+X  /SIGINT/s//interrupt/
+X  /SIGQUIT/s//quit/
+X  /SIGILL/s//illegal instruction/
+--- 132,148 ----
+X  echo `csh -fc 'kill -l'` | tr ' ' '\012' >signals.h
+X  lct=`wc -l < signals.h`
+X  cp signals.h signams.h
+! (
+! echo '/* this file is created automatically by buildzsh */
+! /* if all this is wrong, blame csh ;-) */
+! 
+! #define SIGCOUNT '"$lct"'
+! 
+! #ifdef GLOBALS
+! 
+! char *sigmsg[SIGCOUNT+2] = {
+! 	"done",'
+! sed -e 's/^/SIG/' -e '/SIGHUP/s//hangup/
+X  /SIGINT/s//interrupt/
+X  /SIGQUIT/s//quit/
+X  /SIGILL/s//illegal instruction/
+***************
+*** 147,174 ****
+X  /SIGVTALRM/s//virtual time alarm/
+X  /SIGCONT/s//continued/
+X  /SIGXCPU/s//cpu limit exceeded/
+! /SIGXFSZ/s//filesize limit exceeded/
+! 1,$s/.*/	"&",/
+! $a
+! 	NULL
+X  };
+X  
+X  char *sigs[SIGCOUNT+4] = {
+! 	"EXIT",
+! .
+! 1i
+! /* this file is created automatically by buildzsh */
+! /* if all this is wrong, blame csh ;-) */
+! 
+! #define SIGCOUNT '"$lct"'
+! 
+! #ifdef GLOBALS
+! 
+! char *sigmsg[SIGCOUNT+2] = {
+! 	"done",
+! .
+! w
+! q' | ed signals.h >/dev/null 2>&1
+X  if grep SIGSTOP signals.h >/dev/null
+X  then ed signals.h <<'foo' >/dev/null 2>&1
+X  /SIGSTOP/c
+--- 161,173 ----
+X  /SIGVTALRM/s//virtual time alarm/
+X  /SIGCONT/s//continued/
+X  /SIGXCPU/s//cpu limit exceeded/
+! /SIGXFSZ/s//filesize limit exceeded/' -e 's/.*/	"&",/' signals.h
+! echo '	NULL
+X  };
+X  
+X  char *sigs[SIGCOUNT+4] = {
+! 	"EXIT",' ) >sigtmp.h
+! mv sigtmp.h signals.h
+X  if grep SIGSTOP signals.h >/dev/null
+X  then ed signals.h <<'foo' >/dev/null 2>&1
+X  /SIGSTOP/c
+***************
+*** 277,284 ****
+X  cat <<'foo'
+X  
+X  ZSHPATH=zsh
+- 
+- .KEEP_STATE:
+X  
+X  # redefine these to work around Sun make bogosity
+X  # if they don't work, just remove them
+--- 276,281 ----
+*** zshdist/zsh2.00/src/builtin.c	Mon May  6 06:15:10 1991
+--- zsh2.00/src/builtin.c	Thu May 23 17:17:57 1991
+***************
+*** 43,48 ****
+--- 43,49 ----
+X  #define BINF_FCOPTS		  16
+X  #define BINF_TYPEOPT      32
+X  #define BINF_TYPEOPTS	  (BINF_TYPEOPT|BINF_PLUSOPTS)
++ #define BINF_ECHOPTS      64
+X  
+X  /* builtin funcs */
+X  
+***************
+*** 67,72 ****
+--- 68,75 ----
+X  #define BIN_PUSHLINE 18
+X  #define BIN_LOGOUT 19
+X  #define BIN_BUILTIN 20
++ #define BIN_TEST 21
++ #define BIN_BRACKET 22
+X  
+X  struct bincmd {
+X  	char *name;
+***************
+*** 91,96 ****
+--- 94,100 ----
+X  static int showflag = 0,showflag2 = 0;
+X  
+X  struct bincmd builtins[] = {
++ 	"[",bin_test,0,-1,0,BIN_BRACKET,NULL,NULL,
+X  	".",bin_dot,1,-1,0,0,NULL,NULL,
+X  	":",bin_colon,0,-1,0,0,NULL,NULL,
+X  	"alias",bin_alias,0,-1,0,0,"ga",NULL,
+***************
+*** 107,113 ****
+X  	"dirs",bin_dirs,0,-1,0,0,"v",NULL,
+X  	"disable",bin_unhash,1,-1,0,0,NULL,NULL,
+X  	"disown",bin_fg,1,-1,0,BIN_DISOWN,NULL,NULL,
+! 	"echo",bin_print,0,-1,BINF_PRINTOPTS,BIN_PRINT,"n","-",
+X  	"echotc",bin_echotc,1,-1,0,0,NULL,NULL,
+X  	"enable",bin_enable,1,-1,0,0,NULL,NULL,
+X  	"eval",bin_eval,0,-1,0,BIN_EVAL,NULL,NULL,
+--- 111,117 ----
+X  	"dirs",bin_dirs,0,-1,0,0,"v",NULL,
+X  	"disable",bin_unhash,1,-1,0,0,NULL,NULL,
+X  	"disown",bin_fg,1,-1,0,BIN_DISOWN,NULL,NULL,
+! 	"echo",bin_print,0,-1,BINF_PRINTOPTS|BINF_ECHOPTS,BIN_PRINT,"n","-",
+X  	"echotc",bin_echotc,1,-1,0,0,NULL,NULL,
+X  	"enable",bin_enable,1,-1,0,0,NULL,NULL,
+X  	"eval",bin_eval,0,-1,0,BIN_EVAL,NULL,NULL,
+***************
+*** 130,136 ****
+X  	"log",bin_log,0,0,0,0,NULL,NULL,
+X  	"logout",bin_break,0,1,0,BIN_LOGOUT,NULL,NULL,
+X  	"popd",bin_cd,0,2,0,BIN_POPD,NULL,NULL,
+! 	"print",bin_print,0,-1,BINF_PRINTOPTS,BIN_PRINT,"Rnrslz0-",NULL,
+X  	"pushd",bin_cd,0,2,0,BIN_PUSHD,NULL,NULL,
+X  	"pushln",bin_print,0,-1,BINF_PRINTOPTS,BIN_PRINT,NULL,"-nz",
+X  	"pwd",bin_pwd,0,0,0,0,NULL,NULL,
+--- 134,140 ----
+X  	"log",bin_log,0,0,0,0,NULL,NULL,
+X  	"logout",bin_break,0,1,0,BIN_LOGOUT,NULL,NULL,
+X  	"popd",bin_cd,0,2,0,BIN_POPD,NULL,NULL,
+! 	"print",bin_print,0,-1,BINF_PRINTOPTS,BIN_PRINT,"RDPnrslz0-",NULL,
+X  	"pushd",bin_cd,0,2,0,BIN_PUSHD,NULL,NULL,
+X  	"pushln",bin_print,0,-1,BINF_PRINTOPTS,BIN_PRINT,NULL,"-nz",
+X  	"pwd",bin_pwd,0,0,0,0,NULL,NULL,
+***************
+*** 145,150 ****
+--- 149,155 ----
+X  	"shift",bin_break,0,1,0,BIN_SHIFT,NULL,NULL,
+X  	"source",bin_dot,1,-1,0,0,NULL,NULL,
+X  	"suspend",bin_suspend,0,0,0,0,"f",NULL,
++ 	"test",bin_test,0,-1,0,BIN_TEST,NULL,NULL,
+X  	"times",bin_times,0,0,0,0,NULL,NULL,
+X  	"trap",bin_trap,0,-1,0,0,NULL,NULL,
+X  	"true",bin_colon,0,0,0,0,NULL,NULL,
+***************
+*** 231,237 ****
+X  		num = matheval(*argv);
+X  	if ((func == BIN_BREAK || func == BIN_CONTINUE) && !loops)
+X  		{
+! 		zerrnam(name,"not in loop",NULL,0);
+X  		return 1;
+X  		}
+X  	switch (func)
+--- 236,243 ----
+X  		num = matheval(*argv);
+X  	if ((func == BIN_BREAK || func == BIN_CONTINUE) && !loops)
+X  		{
+! 		if (func == BIN_CONTINUE)
+! 			zerrnam(name,"not in loop",NULL,0);
+X  		return 1;
+X  		}
+X  	switch (func)
+***************
+*** 372,378 ****
+X  					attachtty(jobtab[job].gleader);
+X  					}
+X  				if (stopped)
+! 					killpg(jobtab[job].gleader,SIGCONT);
+X  				if (func == BIN_FG)
+X  					waitjobs();
+X  				break;
+--- 378,384 ----
+X  					attachtty(jobtab[job].gleader);
+X  					}
+X  				if (stopped)
+! 					kill(-jobtab[job].gleader,SIGCONT);
+X  				if (func == BIN_FG)
+X  					waitjobs();
+X  				break;
+***************
+*** 719,725 ****
+X  		else
+X  			dest = getnode(dirstack);
+X  	else if (!argv[1])
+! 		if (argv[0][0] == '+')
+X  			{
+X  			dd = atoi(argv[0]+1)-1;
+X  			if (dd < 0)
+--- 725,731 ----
+X  		else
+X  			dest = getnode(dirstack);
+X  	else if (!argv[1])
+! 		if (argv[0][1] && argv[0][0] == (isset(PUSHDMINUS) ? '-' : '+'))
+X  			{
+X  			dd = atoi(argv[0]+1)-1;
+X  			if (dd < 0)
+***************
+*** 735,741 ****
+X  				}
+X  			dest = remnode(dirstack,n);
+X  			}
+! 		else if (argv[0][0] == '-' && argv[0][1])
+X  			{
+X  			dd = atoi(argv[0]+1);
+X  			for (n = lastnode(dirstack); n != (Lknode) dirstack && dd;
+--- 741,747 ----
+X  				}
+X  			dest = remnode(dirstack,n);
+X  			}
+! 		else if (argv[0][1] && argv[0][0] == (isset(PUSHDMINUS) ? '+' : '-'))
+X  			{
+X  			dd = atoi(argv[0]+1);
+X  			for (n = lastnode(dirstack); n != (Lknode) dirstack && dd;
+***************
+*** 1017,1022 ****
+--- 1023,1032 ----
+X  int bin_limit(nam,argv,ops,func) /**/
+X  char *nam;char **argv;char *ops;int func;
+X  {
++ #ifndef RLIM_INFINITY
++ 	zerrnam(nam,"not available on this system",NULL,0);
++ 	return 1;
++ #else
+X  char *s;
+X  int hard = ops['h'],t0,lim;
+X  long val;
+***************
+*** 1112,1127 ****
+X  				limits[lim].rlim_cur = val;
+X  		}
+X  	return 0;
+X  }
+X  
+X  int bin_unlimit(nam,argv,ops,func) /**/
+X  char *nam;char **argv;char *ops;int func;
+X  {
+X  int hard = ops['h'],t0,lim;
+X  
+X  	if (hard && geteuid())
+X  		{
+! 		zerrnam("unlimit","can't remove hard limits",NULL,0);
+X  		return 1;
+X  		}
+X  	if (!*argv)
+--- 1122,1142 ----
+X  				limits[lim].rlim_cur = val;
+X  		}
+X  	return 0;
++ #endif
+X  }
+X  
+X  int bin_unlimit(nam,argv,ops,func) /**/
+X  char *nam;char **argv;char *ops;int func;
+X  {
++ #ifndef RLIM_INFINITY
++ 	zerrnam(nam,"not available on this system",NULL,0);
++ 	return 1;
++ #else
+X  int hard = ops['h'],t0,lim;
+X  
+X  	if (hard && geteuid())
+X  		{
+! 		zerrnam(nam,"can't remove hard limits",NULL,0);
+X  		return 1;
+X  		}
+X  	if (!*argv)
+***************
+*** 1147,1153 ****
+X  				}
+X  		if (lim < 0)
+X  			{
+! 			zerrnam("unlimit",
+X  				(lim == -2) ? "ambiguous resource specification: %s"
+X  								: "no such resource: %s",*argv,0);
+X  			return 1;
+--- 1162,1168 ----
+X  				}
+X  		if (lim < 0)
+X  			{
+! 			zerrnam(nam,
+X  				(lim == -2) ? "ambiguous resource specification: %s"
+X  								: "no such resource: %s",*argv,0);
+X  			return 1;
+***************
+*** 1158,1163 ****
+--- 1173,1179 ----
+X  			limits[lim].rlim_cur = limits[lim].rlim_max;
+X  		}
+X  	return 0;
++ #endif
+X  }
+X  
+X  void showlimits(hard,lim) /**/
+***************
+*** 1166,1171 ****
+--- 1182,1188 ----
+X  int t0;
+X  long val;
+X  
++ #ifdef RLIM_INFINITY
+X  	for (t0 = 0; t0 != RLIM_NLIMITS; t0++)
+X  		if (t0 == lim || lim == -1)
+X  			{
+***************
+*** 1185,1190 ****
+--- 1202,1208 ----
+X  			else
+X  				printf("%ldKb\n",val/1024L);
+X  			}
++ #endif
+X  }
+X  
+X  int bin_sched(nam,argv,ops,func) /**/
+***************
+*** 1779,1785 ****
+X  		ops['r'] = 1;
+X  	for (; *args; args++)
+X  		{
+! 		if (ops['r'])
+X  			fputs(*args,stdout);
+X  		else
+X  			nnl |= escputs(*args);
+--- 1797,1810 ----
+X  		ops['r'] = 1;
+X  	for (; *args; args++)
+X  		{
+! 		if (ops['D'])
+! 			printdir(*args);
+! 		else if (ops['P'])
+! 			{
+! 			int junk;
+! 			fputs(putprompt(*args,&junk),stdout);
+! 			}
+! 		else if (ops['r'])
+X  			fputs(*args,stdout);
+X  		else
+X  			nnl |= escputs(*args);
+***************
+*** 1852,1870 ****
+X  int bin_unhash(name,argv,ops,func) /**/
+X  char *name;char **argv;char *ops;int func;
+X  {
+- int retval = 0;
+X  vptr dat;
+X  
+X  	while (*argv)
+X  		{
+X  		if (!strncmp(*argv,"TRAP",4))
+X  			unsettrap(getsignum(*argv+4));
+! 		if (dat = remhnode(*argv++,cmdnamtab))
+! 			freecmdnam(dat);
+! 		else
+! 			retval = 1;
+X  		}
+! 	return retval;
+X  }
+X  
+X  int bin_unset(name,argv,ops,func) /**/
+--- 1877,1894 ----
+X  int bin_unhash(name,argv,ops,func) /**/
+X  char *name;char **argv;char *ops;int func;
+X  {
+X  vptr dat;
++ Cmdnam chn;
+X  
+X  	while (*argv)
+X  		{
+X  		if (!strncmp(*argv,"TRAP",4))
+X  			unsettrap(getsignum(*argv+4));
+! 		chn = zalloc(sizeof *chn);
+! 		chn->type = DISABLED;
+! 		addhnode(ztrdup(*argv++),chn,cmdnamtab,freecmdnam);
+X  		}
+! 	return 0;
+X  }
+X  
+X  int bin_unset(name,argv,ops,func) /**/
+***************
+*** 1901,1907 ****
+X  int bsiz,c,gotnl = 0;
+X  char *buf,*bptr;
+X  
+! 	attachtty(mypgrp);
+X  	if (*args)
+X  		reply = *args++;
+X  	else
+--- 1925,1931 ----
+X  int bsiz,c,gotnl = 0;
+X  char *buf,*bptr;
+X  
+! 	attachtty((jobtab[thisjob].gleader) ? jobtab[thisjob].gleader : mypgrp);
+X  	if (*args)
+X  		reply = *args++;
+X  	else
+***************
+*** 2008,2014 ****
+X  Lklist args;Cmdnam cnode;
+X  {
+X  struct bincmd *b;
+! char ops[128],*arg,*pp,*name,**argv,**oargv;
+X  int t0,flags,sense,argc = 0,retval,op;
+X  Lknode n;
+X  
+--- 2032,2038 ----
+X  Lklist args;Cmdnam cnode;
+X  {
+X  struct bincmd *b;
+! char ops[128],*arg,*pp,*name,**argv,**oargv,*optstr;
+X  int t0,flags,sense,argc = 0,retval,op;
+X  Lknode n;
+X  
+***************
+*** 2039,2045 ****
+X  		}
+X  	flags = b->flags;
+X  	arg = ugetnode(args);
+! 	if (b->optstr)
+X  		while (arg &&
+X  				((sense = *arg == '-') || fset(BINF_PLUSOPTS) && *arg == '+') &&
+X  				(fset(BINF_PLUSOPTS) || !atoi(arg)))
+--- 2063,2072 ----
+X  		}
+X  	flags = b->flags;
+X  	arg = ugetnode(args);
+! 	optstr = b->optstr;
+! 	if (flags & BINF_ECHOPTS && arg && strcmp(arg,"-n"))
+! 		optstr = NULL;
+! 	if (optstr)
+X  		while (arg &&
+X  				((sense = *arg == '-') || fset(BINF_PLUSOPTS) && *arg == '+') &&
+X  				(fset(BINF_PLUSOPTS) || !atoi(arg)))
+***************
+*** 2068,2075 ****
+X  			arg = ugetnode(args);
+X  			if (fset(BINF_SETOPTS) && op == 'o')
+X  				{
+! 				int c = optlookup(arg);
+! 
+X  				if (c == -1)
+X  					{
+X  					zerr("bad option: %s",arg,0);
+--- 2095,2108 ----
+X  			arg = ugetnode(args);
+X  			if (fset(BINF_SETOPTS) && op == 'o')
+X  				{
+! 				int c;
+! 				
+! 				if (!arg)
+! 					{
+! 					zerr("option name expected after -o",NULL,0);
+! 					return 1;
+! 					}
+! 				c = optlookup(arg);
+X  				if (c == -1)
+X  					{
+X  					zerr("bad option: %s",arg,0);
+***************
+*** 2415,2420 ****
+--- 2448,2454 ----
+X  {
+X  long t0;
+X  
++ #ifdef RLIM_INFINITY
+X  	t0 = (hard) ? limits[lim].rlim_max : limits[lim].rlim_cur;
+X  	switch (lim)
+X  		{
+***************
+*** 2429,2434 ****
+--- 2463,2469 ----
+X  #endif
+X  		}
+X  	printf("%ld\n",t0);
++ #endif
+X  }
+X  
+X  int bin_ulimit(name,argv,ops,func) /**/
+***************
+*** 2436,2441 ****
+--- 2471,2480 ----
+X  {
+X  int res,hard;
+X  
++ #ifndef RLIM_INFINITY
++ 	zerrnam(name,"not available on this system",NULL,0);
++ 	return 1;
++ #else
+X  	hard = ops['H'];
+X  	if (ops['a'] || !ops['@'])
+X  		res = -1;
+***************
+*** 2526,2531 ****
+--- 2565,2571 ----
+X  			limits[res].rlim_cur = limits[res].rlim_max;
+X  		}
+X  	return 0;
++ #endif
+X  }
+X  
+X  int putraw(c) /**/
+***************
+*** 2584,2588 ****
+--- 2624,2772 ----
+X  {
+X  	printf("%s\n",cwd);
+X  	return 0;
++ }
++ 
++ #define TEST_END 0
++ #define TEST_INPAR 1
++ #define TEST_OUTPAR 2
++ #define TEST_STR 3
++ #define TEST_AND 4
++ #define TEST_OR 5
++ #define TEST_NOT 6
++ 
++ static char **tsp;
++ static int *tip;
++ 
++ int bin_test(name,argv,ops,func) /**/
++ char *name;char **argv;char *ops;int func;
++ {
++ char **s;
++ int cnt,*arr,*ap;
++ Cond c;
++ 
++ 	if (func == BIN_BRACKET)
++ 		{
++ 		for (s = argv; *s; s++);
++ 		if (s == argv || strcmp(s[-1],"]"))
++ 			{
++ 			zerrnam(name,"']' expected",NULL,0);
++ 			return 1;
++ 			}
++ 		s[-1] = NULL;
++ 		}
++ 	for (s = argv, cnt = 0; *s; s++,cnt++);
++ 	ap = arr = alloc((cnt+1)*sizeof *arr);
++ 	for (s = argv; *s; s++,ap++)
++ 		if (!strcmp(*s,"("))
++ 			*ap = TEST_INPAR;
++ 		else if (!strcmp(*s,")"))
++ 			*ap = TEST_OUTPAR;
++ 		else if (!strcmp(*s,"-a"))
++ 			*ap = TEST_AND;
++ 		else if (!strcmp(*s,"-o"))
++ 			*ap = TEST_OR;
++ 		else if (!strcmp(*s,"!"))
++ 			*ap = TEST_NOT;
++ 		else
++ 			*ap = TEST_STR;
++ 	*ap = TEST_END;
++ 	tsp = argv;
++ 	tip = arr;
++ 	c = partest(0);
++ 	if (*tip != TEST_END || errflag)
++ 		{
++ 		zerrnam(name,"parse error",NULL,0);
++ 		return 1;
++ 		}
++ 	return (c) ? !evalcond(c) : 1;
++ }
++ 
++ Cond partest(level) /**/
++ int level;
++ {
++ Cond a,b;
++ 
++ 	switch (level)
++ 		{
++ 		case 0:
++ 			a = partest(1);
++ 			if (*tip == TEST_OR)
++ 				{
++ 				tip++,tsp++;
++ 				b = makecond();
++ 				b->left = a;
++ 				b->right = partest(0);
++ 				b->type = COND_OR;
++ 				return b;
++ 				}
++ 			return a;
++ 		case 1:
++ 			a = partest(2);
++ 			if (*tip == TEST_AND)
++ 				{
++ 				tip++,tsp++;
++ 				b = makecond();
++ 				b->left = a;
++ 				b->right = partest(1);
++ 				b->type = COND_AND;
++ 				return b;
++ 				}
++ 			return a;
++ 		case 2:
++ 			if (*tip == TEST_NOT)
++ 				{
++ 				tip++,tsp++;
++ 				b = makecond();
++ 				b->left = partest(2);
++ 				b->type = COND_NOT;
++ 				return b;
++ 				}
++ 		case 3:
++ 			if (*tip == TEST_INPAR)
++ 				{
++ 				tip++,tsp++;
++ 				b = partest(0);
++ 				if (*tip != TEST_OUTPAR)
++ 					{
++ 					zerrnam("test","parse error",NULL,0);
++ 					return NULL;
++ 					}
++ 				tip++,tsp++;
++ 				return b;
++ 				}
++ 			if (tip[0] != TEST_STR)
++ 				{
++ 				zerrnam("test","parse error",NULL,0);
++ 				return NULL;
++ 				}
++ 			else if (tip[1] != TEST_STR)
++ 				{
++ 				b = makecond();
++ 				if (!strcmp(*tsp,"-t"))
++ 					{
++ 					b->left = strdup("1");
++ 					b->type = 't';
++ 					}
++ 				else
++ 					{
++ 					b->left = tsp[0];
++ 					b->type = 'n';
++ 					}
++ 				tip++,tsp++;
++ 				return b;
++ 				}
++ 			else if (tip[2] != TEST_STR)
++ 				{
++ 				parcond2(tsp[0],tsp[1],b = makecond());
++ 				tip += 2,tsp += 2;
++ 				return b;
++ 				}
++ 			else
++ 				{
++ 				parcond3(tsp[0],tsp[1],tsp[2],b = makecond());
++ 				tip += 3,tsp += 3;
++ 				return b;
++ 				}
++ 		}
+X  }
+X  
+*** zshdist/zsh2.00/src/builtin.pro	Tue May  7 22:53:25 1991
+--- zsh2.00/src/builtin.pro	Wed May 22 11:13:06 1991
+***************
+*** 57,59 ****
+--- 57,61 ----
+X  int putraw DCLPROTO((int c));
+X  int bin_echotc DCLPROTO((char *name,char **argv,char *ops,int func));
+X  int bin_pwd DCLPROTO((char *name,char **argv,char *ops,int func));
++ int bin_test DCLPROTO((char *name,char **argv,char *ops,int func));
++ Cond partest DCLPROTO((int level));
+*** zshdist/zsh2.00/src/exec.c	Fri May 10 06:55:08 1991
+--- zsh2.00/src/exec.c	Fri May 24 06:42:57 1991
+***************
+*** 91,99 ****
+--- 91,101 ----
+X  		zerr("fork failed: %e",NULL,errno);
+X  		return -1;
+X  		}
++ #ifdef RLIM_INFINITY
+X  	if (!pid)
+X  		for (t0 = 0; t0 != RLIM_NLIMITS; t0++)
+X  			setrlimit(t0,limits+t0);
++ #endif
+X  	return pid;
+X  }
+X  
+***************
+*** 176,182 ****
+X  							break;
+X  					if (t0 == ct)
+X  						{
+! 						argv[-1] = "/bin/sh";
+X  						execve("/bin/sh",argv-1,environ);
+X  						}
+X  					}
+--- 178,184 ----
+X  							break;
+X  					if (t0 == ct)
+X  						{
+! 						argv[-1] = "sh";
+X  						execve("/bin/sh",argv-1,environ);
+X  						}
+X  					}
+***************
+*** 208,213 ****
+--- 210,217 ----
+X  int tl,ee = 0;
+X  
+X  	cn = (Cmdnam) gethnode(peekfirst(args),cmdnamtab);
++ 	if (cn && cn->type == DISABLED)
++ 		cn = NULL;
+X  	if (s = zgetenv("STTY"))
+X  		zyztem("stty",s);
+X  	arg0 = peekfirst(args);
+***************
+*** 223,229 ****
+X  		}
+X  	argv = makecline(args);
+X  	fixsigs();
+! 	if (cn && (cn->type != BUILTIN && cn->type != SHFUNC))
+X  		{
+X  		if (cn->type == EXCMD_POSTDOT)
+X  			zexecve(arg0,argv,&ee,buf2,buf);
+--- 227,233 ----
+X  		}
+X  	argv = makecline(args);
+X  	fixsigs();
+! 	if (cn && ISEXCMD(cn->type))
+X  		{
+X  		if (cn->type == EXCMD_POSTDOT)
+X  			zexecve(arg0,argv,&ee,buf2,buf);
+***************
+*** 277,283 ****
+X  struct cmdnam *cn = (Cmdnam) gethnode(arg0,cmdnamtab);
+X  char **pp = path;
+X  
+! 	if (cn && (cn->type == EXCMD_POSTDOT || cn->type == EXCMD_PREDOT))
+X  		{
+X  		if (cn->type == EXCMD_POSTDOT)
+X  			{
+--- 281,289 ----
+X  struct cmdnam *cn = (Cmdnam) gethnode(arg0,cmdnamtab);
+X  char **pp = path;
+X  
+! 	if (cn && cn->type == DISABLED)
+! 		cn = NULL;
+! 	if (cn && ISEXCMD(cn->type))
+X  		{
+X  		if (cn->type == EXCMD_POSTDOT)
+X  			{
+***************
+*** 427,433 ****
+X  			if (!(pid = fork()))
+X  				{
+X  				close(pipes[1]);
+! 				entersubsh(1);
+X  				exiting = 1;
+X  				execpline2(pline->right,ASYNC,pipes[0],output,1);
+X  				_exit(lastval);
+--- 433,439 ----
+X  			if (!(pid = fork()))
+X  				{
+X  				close(pipes[1]);
+! 				entersubsh(how==ASYNC);
+X  				exiting = 1;
+X  				execpline2(pline->right,ASYNC,pipes[0],output,1);
+X  				_exit(lastval);
+***************
+*** 511,519 ****
+X  	for (node = firstnode(l); node; node = next)
+X  		{
+X  		next = nextnode(node);
+- 		untokenize(getdata(node));
+X  		if (!*(char *) getdata(node))
+X  			uremnode(l,node);
+X  		}
+X  }
+X  
+--- 517,526 ----
+X  	for (node = firstnode(l); node; node = next)
+X  		{
+X  		next = nextnode(node);
+X  		if (!*(char *) getdata(node))
+X  			uremnode(l,node);
++ 		else
++ 			untokenize(getdata(node));
+X  		}
+X  }
+X  
+***************
+*** 693,700 ****
+X  		if (full(cmd->redir))
+X  			if (cmd->flags & CFLAG_EXEC)
+X  				nullexec = 1;
+X  			else
+! 				addnode(args,strdup("cat"));
+X  		else
+X  			{
+X  			addvars(cmd->vars,0);
+--- 700,713 ----
+X  		if (full(cmd->redir))
+X  			if (cmd->flags & CFLAG_EXEC)
+X  				nullexec = 1;
++ 			else if (!*nullcmd)
++ 				{
++ 				zerr("redirection with no command",NULL,0);
++ 				errflag = lastval = 1;
++ 				return;
++ 				}
+X  			else
+! 				addnode(args,strdup(nullcmd));
+X  		else
+X  			{
+X  			addvars(cmd->vars,0);
+***************
+*** 706,712 ****
+X  		bkg = 0;
+X  		}
+X  	if (isset(AUTORESUME) && !bkg && !full(cmd->redir) && full(args) &&
+! 			type == SIMPLE && !nextnode(firstnode(args)) &&
+X  			findjobnam(peekfirst(args)) != -1)
+X  		pushnode(args,strdup("fg"));
+X  	if (unset(RMSTARSILENT) && interact && isset(SHINSTDIN) &&
+--- 719,725 ----
+X  		bkg = 0;
+X  		}
+X  	if (isset(AUTORESUME) && !bkg && !full(cmd->redir) && full(args) &&
+! 			!input && type == SIMPLE && !nextnode(firstnode(args)) &&
+X  			findjobnam(peekfirst(args)) != -1)
+X  		pushnode(args,strdup("fg"));
+X  	if (unset(RMSTARSILENT) && interact && isset(SHINSTDIN) &&
+***************
+*** 731,740 ****
+X  		lastval = 1;
+X  		return;
+X  		}
+X  	if (full(args) && !(cmd->flags & CFLAG_COMMAND))
+X  		chn = (Cmdnam) gethnode(peekfirst(args),cmdnamtab);
+! 	if (!pathsuppress && !chn && isset(AUTOCD) && full(args) &&
+! 			!full(cmd->redir) &&
+X  			!nextnode(firstnode(args)) && cancd(peekfirst(args)))
+X  		{
+X  		pushnode(args,strdup("cd"));
+--- 744,756 ----
+X  		lastval = 1;
+X  		return;
+X  		}
++ 	if (full(args) && ((char*)peekfirst(args))[0] == Inbrack &&
++ 			((char*)peekfirst(args))[1] == '\0')
++ 		((char*)peekfirst(args))[0] = '[';
+X  	if (full(args) && !(cmd->flags & CFLAG_COMMAND))
+X  		chn = (Cmdnam) gethnode(peekfirst(args),cmdnamtab);
+! 	if (type == SIMPLE && !pathsuppress && !chn && isset(AUTOCD) &&
+! 			full(args) && !full(cmd->redir) &&
+X  			!nextnode(firstnode(args)) && cancd(peekfirst(args)))
+X  		{
+X  		pushnode(args,strdup("cd"));
+***************
+*** 769,774 ****
+--- 785,791 ----
+X  			{
+X  			close(synch[1]);
+X  			read(synch[0],"foo",1);
++ 			close(synch[0]);
+X  			if (pid == -1)
+X  				zerr("%e",NULL,errno);
+X  			else
+***************
+*** 1685,1694 ****
+X  	free(argzero);
+X  	argzero = oargv0;
+X  	pparams = tab;
+- 	if (sigtrapped[SIGEXIT])
+- 		dotrap(SIGEXIT);
+X  	if (sigfuncs[SIGEXIT] && sigfuncs[SIGEXIT] != xexitfn)
+X  		freestruct(sigfuncs[SIGEXIT]);
+X  	sigtrapped[SIGEXIT] = xexittr;
+X  	sigfuncs[SIGEXIT] = xexitfn;
+X  	opts[XTRACE] = oxtr;
+--- 1702,1712 ----
+X  	free(argzero);
+X  	argzero = oargv0;
+X  	pparams = tab;
+X  	if (sigfuncs[SIGEXIT] && sigfuncs[SIGEXIT] != xexitfn)
++ 		{
++ 		dotrap(SIGEXIT);
+X  		freestruct(sigfuncs[SIGEXIT]);
++ 		}
+X  	sigtrapped[SIGEXIT] = xexittr;
+X  	sigfuncs[SIGEXIT] = xexitfn;
+X  	opts[XTRACE] = oxtr;
+*** zshdist/zsh2.00/src/glob.c	Fri May 10 07:16:44 1991
+--- zsh2.00/src/glob.c	Fri May 24 05:09:30 1991
+***************
+*** 221,229 ****
+X  char **a;char **b;
+X  {
+X  char *c = *b,*d = *a;
+X  
+X  	for (; *c == *d && *c; c++,d++);
+! 	return ((int) (unsigned char) *c-(int) (unsigned char) *d);
+X  }
+X  
+X  int forstrcmp(a,b) /**/
+--- 221,233 ----
+X  char **a;char **b;
+X  {
+X  char *c = *b,*d = *a;
++ int x1,x2;
+X  
+X  	for (; *c == *d && *c; c++,d++);
+! 	x1 = atoi(c); x2 = atoi(d);
+! 	if (x1==x2)
+! 		return ((int) (unsigned char) *c-(int) (unsigned char) *d);
+! 	return x1-x2;
+X  }
+X  
+X  int forstrcmp(a,b) /**/
+***************
+*** 283,290 ****
+X  
+X  /* check to see if str is eligible for brace expansion */
+X  
+! int hasbraces(str) /**/
+! char *str;
+X  {
+X  int mb,bc,cmct1,cmct2;
+X  char *lbr = NULL;
+--- 287,294 ----
+X  
+X  /* check to see if str is eligible for brace expansion */
+X  
+! int hasbraces(str,fst) /**/
+! char *str;int fst;
+X  {
+X  int mb,bc,cmct1,cmct2;
+X  char *lbr = NULL;
+***************
+*** 308,319 ****
+X  		else if (*str == Outbrace)
+X  			{
+X  			bc--;
+! 			if (!bc && !cmct2)
+X  				{
+! 				*lbr = '{';
+! 				*str = '}';
+X  				}
+- 			cmct2 = 0;
+X  			}
+X  		else if (*str == Comma && bc)
+X  			{
+--- 312,326 ----
+X  		else if (*str == Outbrace)
+X  			{
+X  			bc--;
+! 			if (!bc)
+X  				{
+! 				if (!cmct2)
+! 					{
+! 					*lbr = '{';
+! 					*str = '}';
+! 					}
+! 				cmct2 = 0;
+X  				}
+X  			}
+X  		else if (*str == Comma && bc)
+X  			{
+***************
+*** 494,499 ****
+--- 501,507 ----
+X  int val,len;
+X  char *b2;
+X  
++ 	remnulargs(b);
+X  	len = strlen(b);
+X  	b2 = alloc(len+3);
+X  	strcpy(b2+1,b);
+***************
+*** 519,524 ****
+--- 527,533 ----
+X  Comp c;
+X  char *t,*lng = NULL,cc,*s = *sp;
+X  
++ 	remnulargs(pat);
+X  	c = parsereg(pat);
+X  	if (!c)
+X  		{
+***************
+*** 559,565 ****
+--- 568,577 ----
+X  				{
+X  				if (!(dd & 1))
+X  					{
++ 					cc = *t;
+X  					*t = '\0';
++ 					*sp = strdup(*sp);
++ 					*t = cc;
+X  					return;
+X  					}
+X  				lng = t;
+***************
+*** 567,573 ****
+--- 579,588 ----
+X  			}
+X  		if (lng)
+X  			{
++ 			cc = *lng;
+X  			*lng = '\0';
++ 			*sp = strdup(*sp);
++ 			*lng = cc;
+X  			return;
+X  			}
+X  		}
+***************
+*** 800,807 ****
+X  		if (*pat == Hat)
+X  			return 1-doesmatch(c->next);
+X  		if (*pat == Inbrack)
+! 			if (pat[1] == Hat)
+X  				{
+X  				for (pat += 2; *pat != Outbrack && *pat; pat++)
+X  					if (*pat == '-' && pat[-1] != Hat && pat[1] != Outbrack)
+X  						{
+--- 815,823 ----
+X  		if (*pat == Hat)
+X  			return 1-doesmatch(c->next);
+X  		if (*pat == Inbrack)
+! 			if (pat[1] == Hat || pat[1] == '^')
+X  				{
++ 				pat[1] = Hat;
+X  				for (pat += 2; *pat != Outbrack && *pat; pat++)
+X  					if (*pat == '-' && pat[-1] != Hat && pat[1] != Outbrack)
+X  						{
+*** zshdist/zsh2.00/src/glob.pro	Tue May  7 22:53:26 1991
+--- zsh2.00/src/glob.pro	Wed May 22 11:13:07 1991
+***************
+*** 4,10 ****
+X  int forstrcmp DCLPROTO((char **a,char **b));
+X  void insert DCLPROTO((char *s));
+X  int haswilds DCLPROTO((char *str));
+! int hasbraces DCLPROTO((char *str));
+X  int xpandredir DCLPROTO((struct redir *fn,Lklist tab));
+X  char *dyncat DCLPROTO((char *s1,char *s2));
+X  char *tricat DCLPROTO((char *s1,char *s2,char *s3));
+--- 4,10 ----
+X  int forstrcmp DCLPROTO((char **a,char **b));
+X  void insert DCLPROTO((char *s));
+X  int haswilds DCLPROTO((char *str));
+! int hasbraces DCLPROTO((char *str,int fst));
+X  int xpandredir DCLPROTO((struct redir *fn,Lklist tab));
+X  char *dyncat DCLPROTO((char *s1,char *s2));
+X  char *tricat DCLPROTO((char *s1,char *s2,char *s3));
+*** zshdist/zsh2.00/src/hist.c	Fri May 10 06:37:00 1991
+--- zsh2.00/src/hist.c	Tue May 21 23:50:43 1991
+***************
+*** 368,373 ****
+--- 368,386 ----
+X  	goto tailrec;
+X  }
+X  
++ /* reset the alias stack for lexrestore () */
++ 
++ void clearalstack() /**/
++ {
++ Alias ix;
++ 
++ 	while (alstackind)
++ 		{
++ 		ix = alstack[--alstackind];
++ 		ix->inuse = 0;
++ 		}
++ }
++ 
+X  /* get a character without history expansion */
+X  
+X  int hgetch() /**/
+***************
+*** 562,567 ****
+--- 575,581 ----
+X  {
+X  	strin = 1;
+X  	hbegin();
++ 	lexinit();
+X  }
+X  
+X  /* done reading a string */
+***************
+*** 688,704 ****
+X  				(isset(HISTIGNORESPACE) && spaceflag) )
+X  			save = 0;
+X  		}
+- 	if (!save)
+- 		{
+- 		free(hline);
+- 		if (!histremmed)
+- 			{
+- 			remnode(histlist,lastnode(histlist));
+- 			free(remnode(lithistlist,lastnode(lithistlist)));
+- 			curhist--;
+- 			}
+- 		flag = 0;
+- 		}
+X  	if (flag)
+X  		{
+X  		char *ptr,*p;
+--- 702,707 ----
+***************
+*** 711,716 ****
+--- 714,730 ----
+X  		fflush(stderr);
+X  		free(ptr);
+X  		}
++ 	if (!save)
++ 		{
++ 		free(hline);
++ 		if (!histremmed)
++ 			{
++ 			remnode(histlist,lastnode(histlist));
++ 			free(remnode(lithistlist,lastnode(lithistlist)));
++ 			curhist--;
++ 			}
++ 		flag = 0;
++ 		}
+X  	hline = NULL;
+X  	return !(flag & 2 || errflag);
+X  }
+***************
+*** 1122,1128 ****
+X  }
+X  
+X  static char *bp;
+! static int lensb;
+X  
+X  void stradd(d) /**/
+X  char *d;
+--- 1136,1142 ----
+X  }
+X  
+X  static char *bp;
+! static int lensb,countp;
+X  
+X  void stradd(d) /**/
+X  char *d;
+***************
+*** 1135,1141 ****
+X  int d;
+X  {
+X  	*bp++ = d;
+! 	lensb++; return 0;
+X  }
+X  
+X  #define tstradd(X) \
+--- 1149,1157 ----
+X  int d;
+X  {
+X  	*bp++ = d;
+! 	if (countp)
+! 		lensb++;
+! 	return 0;
+X  }
+X  
+X  #define tstradd(X) \
+***************
+*** 1157,1163 ****
+X  struct tm *tm = NULL;
+X  time_t timet;
+X  
+! 	lensb = 0;
+X  	if (!fm)
+X  		{
+X  		*lenp = 0;
+--- 1173,1179 ----
+X  struct tm *tm = NULL;
+X  time_t timet;
+X  
+! 	lensb = 0; countp = 1;
+X  	if (!fm)
+X  		{
+X  		*lenp = 0;
+***************
+*** 1185,1191 ****
+X  						stradd(cwd+strlen(userdirs[t0]));
+X  						break;
+X  						}
+! 					if (!strncmp(cwd,home,t0 = strlen(home)))
+X  						{
+X  						*bp++ = '~';
+X  						stradd(cwd+t0);
+--- 1201,1207 ----
+X  						stradd(cwd+strlen(userdirs[t0]));
+X  						break;
+X  						}
+! 					if (!strncmp(cwd,home,t0 = strlen(home)) && t0 > 1)
+X  						{
+X  						*bp++ = '~';
+X  						stradd(cwd+t0);
+***************
+*** 1205,1212 ****
+X  					sprintf(bp,"%d",curhist);
+X  					bp += strlen(bp);
+X  					break;
+! 				case 'M': stradd(hostM); break;
+! 				case 'm': stradd(hostm); break;
+X  				case 'S': tstradd("so"); /* <- this is a macro */
+X  				case 's': tstradd("se");
+X  				case 'B': tstradd("md");
+--- 1221,1240 ----
+X  					sprintf(bp,"%d",curhist);
+X  					bp += strlen(bp);
+X  					break;
+! 				case 'M': stradd(hostnam); break;
+! 				case 'm':
+! 					if (idigit(fm[1]))
+! 						t0 = (*++fm)-'0';
+! 					else
+! 						t0 = 1;
+! 					for (ss = hostnam; *ss; ss++)
+! 						if (*ss == '.' && !--t0)
+! 							break;
+! 					t0 = *ss;
+! 					*ss = '\0';
+! 					stradd(hostnam);
+! 					*ss = t0;
+! 					break;
+X  				case 'S': tstradd("so"); /* <- this is a macro */
+X  				case 's': tstradd("se");
+X  				case 'B': tstradd("md");
+***************
+*** 1213,1220 ****
+X  				case 'b': tstradd("me");
+X  				case 'U': tstradd("us");
+X  				case 'u': tstradd("ue");
+! 				case '{': bracepos = bp-buf; break;
+! 				case '}': lensb += (bp-buf)-bracepos; break;
+X  				case 't': case '@':
+X  					timet = time(NULL);
+X  					tm = localtime(&timet);
+--- 1241,1248 ----
+X  				case 'b': tstradd("me");
+X  				case 'U': tstradd("us");
+X  				case 'u': tstradd("ue");
+! 				case '{': bracepos = bp-buf; countp = 0; break;
+! 				case '}': lensb += (bp-buf)-bracepos; countp = 1; break;
+X  				case 't': case '@':
+X  					timet = time(NULL);
+X  					tm = localtime(&timet);
+*** zshdist/zsh2.00/src/hist.pro	Tue May  7 22:53:26 1991
+--- zsh2.00/src/hist.pro	Wed May 22 11:13:07 1991
+***************
+*** 1,5 ****
+--- 1,6 ----
+X  void hwaddc DCLPROTO((int c));
+X  int hgetc DCLPROTO((void));
++ void clearalstack DCLPROTO((void));
+X  int hgetch DCLPROTO((void));
+X  void hungets DCLPROTO((char *str));
+X  void hungetc DCLPROTO((int c));
+*** zshdist/zsh2.00/src/init.c	Fri May 10 06:46:07 1991
+--- zsh2.00/src/init.c	Fri May 24 04:58:52 1991
+***************
+*** 230,239 ****
+--- 230,251 ----
+X  
+X  void setmoreflags() /**/
+X  {
++ int t0;
++ 
+X  	/* stdout,stderr fully buffered */
++ #ifdef _IOFBF
++ 	setvbuf(stdout,malloc(BUFSIZ),_IOFBF,BUFSIZ);
++ 	setvbuf(stderr,malloc(BUFSIZ),_IOFBF,BUFSIZ);
++ #else
+X  	setbuffer(stdout,malloc(BUFSIZ),BUFSIZ);
+X  	setbuffer(stderr,malloc(BUFSIZ),BUFSIZ);
++ #endif
+X  	subsh = 0;
++ #ifndef NOCLOSEFUNNYFDS
++ 	/* this works around a bug in some versions of in.rshd */
++ 	for (t0 = 3; t0 != 10; t0++)
++ 		close(t0);
++ #endif
+X  #ifdef JOB_CONTROL
+X  	opts[MONITOR] = (interact) ? OPT_SET : OPT_UNSET;
+X  	if (jobbing)
+***************
+*** 289,294 ****
+--- 301,307 ----
+X  	paramtab = newhtable(151);
+X  	cmdnamtab = newhtable(13);
+X  	initxbindtab();
++ 	nullcmd = ztrdup("cat");
+X  	prompt = ztrdup("%m%# ");
+X  	prompt2 = ztrdup("> ");
+X  	prompt3 = ztrdup("?# ");
+***************
+*** 325,331 ****
+X  		}
+X  	timefmt = ztrdup(DEFTIMEFMT);
+X  	watchfmt = ztrdup(DEFWATCHFMT);
+! 	ttystrname = ztrdup(ttyname(SHTTY));
+X  	wordchars = ztrdup(DEFWORDCHARS);
+X  	fceditparam = ztrdup(DEFFCEDIT);
+X  	if (ispwd(home))
+--- 338,345 ----
+X  		}
+X  	timefmt = ztrdup(DEFTIMEFMT);
+X  	watchfmt = ztrdup(DEFWATCHFMT);
+! 	if (!(ttystrname = ztrdup(ttyname(SHTTY))))
+! 		ttystrname = ztrdup("");
+X  	wordchars = ztrdup(DEFWORDCHARS);
+X  	fceditparam = ztrdup(DEFFCEDIT);
+X  	if (ispwd(home))
+***************
+*** 335,345 ****
+X  	else
+X  		cwd = zgetwd();
+X  	oldpwd = ztrdup(cwd);
+! 	hostM = zalloc(512);	/* get hostname, with and without .podunk.edu */
+! 	hostm = hostM+256;
+X  	underscore = ztrdup("");
+! 	gethostname(hostm,256);
+! 	gethostname(hostM,256);
+X  	mypid = getpid();
+X  	cdpath = mkarray(ztrdup("."));
+X  	fignore = mkarray(NULL);
+--- 349,357 ----
+X  	else
+X  		cwd = zgetwd();
+X  	oldpwd = ztrdup(cwd);
+! 	hostnam = zalloc(256);
+X  	underscore = ztrdup("");
+! 	gethostname(hostnam,256);
+X  	mypid = getpid();
+X  	cdpath = mkarray(ztrdup("."));
+X  	fignore = mkarray(NULL);
+***************
+*** 356,363 ****
+X  	path = (char **) zalloc(4*sizeof *path);
+X  	path[0] = ztrdup("/bin"); path[1] = ztrdup("/usr/bin");
+X  	path[2] = ztrdup("/usr/ucb"); path[3] = NULL;
+- 	for (ptr = hostm; *ptr && *ptr != '.'; ptr++);
+- 	*ptr = '\0';
+X  	inittyptab();
+X  	initlextabs();
+X  	setupparams();
+--- 368,373 ----
+***************
+*** 383,390 ****
+--- 393,402 ----
+X  	inbufptr = inbuf+inbufsz;
+X  	inbufct = 0;
+X  	signal(SIGQUIT,SIG_IGN);
++ #ifdef RLIM_INFINITY
+X  	for (t0 = 0; t0 != RLIM_NLIMITS; t0++)
+X  		getrlimit(t0,limits+t0);
++ #endif
+X  	hsubl = hsubr = NULL;
+X  	lastpid = 0;
+X  	bshin = fdopen(SHIN,"r");
+***************
+*** 400,406 ****
+--- 412,420 ----
+X  	if (interact)
+X  		{
+X  		signal(SIGTERM,SIG_IGN);
++ #ifdef SIGWINCH
+X  		signal(SIGWINCH,handler);
++ #endif
+X  		signal(SIGALRM,handler);
+X  		intr();
+X  		}
+***************
+*** 426,431 ****
+--- 440,447 ----
+X  	sourcehome(".zshenv");
+X  	if (interact)
+X  		{
++ 		if (islogin)
++ 			sourcehome(".zprofile");
+X  #ifdef GLOBALZSHRC
+X  		source(GLOBALZSHRC);
+X  #endif
+*** zshdist/zsh2.00/src/jobs.c	Wed May  8 22:36:12 1991
+--- zsh2.00/src/jobs.c	Wed May 22 10:52:24 1991
+***************
+*** 33,40 ****
+X  #include "zsh.h"
+X  #include <sys/errno.h>
+X  
+- #define WCOREDUMPED(x) ((x)&0x80)
+- 
+X  /* != 0 means the handler is active */
+X  
+X  static int handling = 0;
+--- 33,38 ----
+***************
+*** 71,78 ****
+--- 69,78 ----
+X  			errflag = 1;
+SHAR_EOF
+true || echo 'restore of patches failed'
+fi
+echo 'End of  part 1'
+echo 'File patches is continued in part 2'
+echo 2 > _shar_seq_.tmp
+exit 0
+exit 0 # Just in case...
+-- 
+Kent Landfield                   INTERNET: kent@sparky.IMD.Sterling.COM
+Sterling Software, IMD           UUCP:     uunet!sparky!kent
+Phone:    (402) 291-8300         FAX:      (402) 291-4362
+Please send comp.sources.misc-related mail to kent@uunet.uu.net.

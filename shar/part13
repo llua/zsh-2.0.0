@@ -1,0 +1,1724 @@
+Path: funic!news.funet.fi!sunic!hagbard!eru!bloom-beacon!mintaka!think.com!sdd.hp.com!samsung!uunet!sparky!kent
+From: pfalstad@phoenix.princeton.edu (Paul Falstad)
+Newsgroups: comp.sources.misc
+Subject: v18i096:  zsh2.00 - The Z shell, Part13/15
+Message-ID: <1991Apr24.194605.19559@sparky.IMD.Sterling.COM>
+Date: 24 Apr 91 19:46:05 GMT
+Sender: kent@sparky.IMD.Sterling.COM (Kent Landfield)
+Organization: League For Fighting Chartered Accountancy
+Lines: 1712
+Approved: kent@sparky.imd.sterling.com
+X-Checksum-Snefru: a11e2a9e 678e4c84 74b16444 2ef6e40c
+
+Submitted-by: Paul Falstad <pfalstad@phoenix.princeton.edu>
+Posting-number: Volume 18, Issue 96
+Archive-name: zsh2.00/part13
+
+#!/bin/sh
+# this is zsh2.00.00.shar.13 (part 13 of zsh2.00.00)
+# do not concatenate these parts, unpack them in order with /bin/sh
+# file zsh2.00/src/zle_vi.c continued
+#
+if test ! -r _shar_seq_.tmp; then
+	echo 'Please unpack part 1 first!'
+	exit 1
+fi
+(read Scheck
+ if test "$Scheck" != 13; then
+	echo Please unpack part "$Scheck" next!
+	exit 1
+ else
+	exit 0
+ fi
+) < _shar_seq_.tmp || exit 1
+if test ! -f _shar_wnt_.tmp; then
+	echo 'x - still skipping zsh2.00/src/zle_vi.c'
+else
+echo 'x - continuing file zsh2.00/src/zle_vi.c'
+sed 's/^X//' << 'SHAR_EOF' >> 'zsh2.00/src/zle_vi.c' &&
+X		if (sptr != 79)
+X			{
+X			sbuf[sptr++] = c;
+X			sbuf[sptr] = '\0';
+X			}
+X		}
+X	return 0;
+X}
+X
+Xvoid vihistorysearchforward() /**/
+X{
+X	visrchsense = 1;
+X	if (getvisrchstr())
+X		virepeatsearch();
+X}
+X
+Xvoid vihistorysearchbackward() /**/
+X{
+X	visrchsense = -1;
+X	if (getvisrchstr())
+X		virepeatsearch();
+X}
+X
+Xvoid virepeatsearch() /**/
+X{
+Xint ohistline = histline,t0;
+Xchar *s;
+X
+X	if (!visrchstr)
+X		{
+X		feep();
+X		return;
+X		}
+X	t0 = strlen(visrchstr);
+X	if (histline == curhist)
+X		{
+X		if (curhistline)
+X			free(curhistline);
+X		curhistline = ztrdup(line);
+X		}
+X	for (;;)
+X		{
+X		histline += visrchsense;
+X		if (!(s = qgetevent(histline)))
+X			{
+X			feep();
+X			histline = ohistline;
+X			return;
+X			}
+X		if (*visrchstr == '^')
+X			{
+X			if (!hstrncmp(s,visrchstr+1,t0-1))
+X				break;
+X			}
+X		else
+X			if (hstrnstr(s,visrchstr,t0))
+X				break;
+X		}
+X	sethistline(s);
+X}
+X
+Xvoid virevrepeatsearch() /**/
+X{
+X	visrchsense = -visrchsense;
+X	virepeatsearch();
+X	visrchsense = -visrchsense;
+X}
+X
+Xvoid vicapslockpanic() /**/
+X{
+Xchar ch;
+X
+X	statusline = "press a lowercase key to continue";
+X	refresh();
+X	do
+X		ch = getkey(0);
+X	while (!(ch >= 'a' && ch <= 'z'));
+X}
+X
+SHAR_EOF
+echo 'File zsh2.00/src/zle_vi.c is complete' &&
+chmod 0644 zsh2.00/src/zle_vi.c ||
+echo 'restore of zsh2.00/src/zle_vi.c failed'
+Wc_c="`wc -c < 'zsh2.00/src/zle_vi.c'`"
+test 7561 -eq "$Wc_c" ||
+	echo 'zsh2.00/src/zle_vi.c: original size 7561, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+# ============= zsh2.00/src/zle_vi.pro ==============
+if test -f 'zsh2.00/src/zle_vi.pro' -a X"$1" != X"-c"; then
+	echo 'x - skipping zsh2.00/src/zle_vi.pro (File already exists)'
+	rm -f _shar_wnt_.tmp
+else
+> _shar_wnt_.tmp
+echo 'x - extracting zsh2.00/src/zle_vi.pro (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/src/zle_vi.pro' &&
+Xint vigetkey DCLPROTO((void));
+Xint getvirange DCLPROTO((void));
+Xvoid viaddnext DCLPROTO((void));
+Xvoid viaddeol DCLPROTO((void));
+Xvoid viinsert DCLPROTO((void));
+Xvoid viinsertbol DCLPROTO((void));
+Xvoid videlete DCLPROTO((void));
+Xvoid vichange DCLPROTO((void));
+Xvoid vichangeeol DCLPROTO((void));
+Xvoid vichangewholeline DCLPROTO((void));
+Xvoid viyank DCLPROTO((void));
+Xvoid viyankeol DCLPROTO((void));
+Xvoid vigotocolumn DCLPROTO((void));
+Xvoid vireplace DCLPROTO((void));
+Xvoid vireplacechars DCLPROTO((void));
+Xvoid vifindnextchar DCLPROTO((void));
+Xvoid vifindprevchar DCLPROTO((void));
+Xvoid vifindnextcharskip DCLPROTO((void));
+Xvoid vifindprevcharskip DCLPROTO((void));
+Xvoid virepeatfind DCLPROTO((void));
+Xvoid virevrepeatfind DCLPROTO((void));
+Xvoid vifirstnonblank DCLPROTO((void));
+Xvoid vifetchhistory DCLPROTO((void));
+Xvoid vicmdmode DCLPROTO((void));
+Xvoid viputafter DCLPROTO((void));
+Xvoid vimatchbracket DCLPROTO((void));
+Xvoid viopenlinebelow DCLPROTO((void));
+Xvoid viopenlineabove DCLPROTO((void));
+Xvoid vijoin DCLPROTO((void));
+Xvoid viswapcase DCLPROTO((void));
+Xvoid vioperswapcase DCLPROTO((void));
+Xint getvisrchstr DCLPROTO((void));
+Xvoid vihistorysearchforward DCLPROTO((void));
+Xvoid vihistorysearchbackward DCLPROTO((void));
+Xvoid virepeatsearch DCLPROTO((void));
+Xvoid virevrepeatsearch DCLPROTO((void));
+Xvoid vicapslockpanic DCLPROTO((void));
+SHAR_EOF
+chmod 0644 zsh2.00/src/zle_vi.pro ||
+echo 'restore of zsh2.00/src/zle_vi.pro failed'
+Wc_c="`wc -c < 'zsh2.00/src/zle_vi.pro'`"
+test 1349 -eq "$Wc_c" ||
+	echo 'zsh2.00/src/zle_vi.pro: original size 1349, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+# ============= zsh2.00/src/zsh.1 ==============
+if test -f 'zsh2.00/src/zsh.1' -a X"$1" != X"-c"; then
+	echo 'x - skipping zsh2.00/src/zsh.1 (File already exists)'
+	rm -f _shar_wnt_.tmp
+else
+> _shar_wnt_.tmp
+echo 'x - extracting zsh2.00/src/zsh.1 (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/src/zsh.1' &&
+X.\"
+X.TH ZSH 1 "1991 April 14"
+X.SH NAME
+Xzsh \- the Z shell
+X.SH SYNOPSIS
+X\fBzsh\fP [ \(+-\fIoptions\fP ] [ \(+-\fBo\fP \fIoption\fP ] ...  [ \-\fBc\fP \fIstring\fP ] [ \fIarg\fP ... ]
+X.SH "SHELL GRAMMAR"
+XA \fIsimple command\fP is a sequence of optional parameter
+Xassignments followed by blank-separated words,
+Xwith optional redirections interspersed.
+XThe first word is the command to be executed, and the remaining
+Xwords, if any, are arguments to the command.
+XIf a command name is given, the parameter assignments modify
+Xthe environment of the command when it is executed.
+XThe value of a simple command is its exit status,
+Xor 128 plus the signal number if terminated by a signal.
+X.PP
+XIf a simple command is preceded by the word \fBexec\fP,
+Xit is executed in the parent shell without forking.
+XIf preceded by \fBcommand\fP, the command word is taken
+Xto be the name of an external command, rather than a
+Xshell function or builtin.
+XIf preceded by \fBnoglob\fP, filename generation is not performed
+Xon any of the words.  If preceded by a \-, the command
+Xis executed with a \- prepended to its \fBargv[0]\fP string.
+X.PP
+XA \fIpipeline\fP is a sequence of one or more commands
+Xseparated by \fB|\fP or \fB|&\fP.  \fB|&\fP is shorthand
+Xfor \fB2>&1 |\fP.  The standard output of each command is
+Xconnected to the standard input of the next command in the
+Xpipeline.
+X.PP
+XThe value of a pipeline is the value of the last command.
+XIf a pipeline is preceded by a \fB!\fP, the value
+Xof that pipeline is the logical NOT of the value of the last
+Xcommand.
+X.PP
+XIf a pipeline is preceded by \fBcoproc\fP, it is
+Xexecuted as a coprocess; a two-way pipe is established
+Xbetween it and the parent shell.  The shell can read from or write to
+Xthe coprocess by means of the \fB>&p\fP and \fB<&p\fP
+Xredirection operators.
+X.PP
+XA \fIsublist\fP is a sequence of one or more pipelines
+Xseparated by \fB&&\fP or \fB||\fP.  If two pipelines
+Xare separated by \fB&&\fP, the second pipeline is executed
+Xonly if the first is successful (returns a zero value).
+XIf two pipelines are separated by \fB||\fP, the second is executed
+Xonly if the first is unsuccessful (returns a nonzero value).
+X.PP
+XA \fIlist\fP is a sequence of one or more sublists
+Xseparated by, and optionally terminated by, \fB;\fP, \fB&\fP,
+Xor a newline.
+XNormally the shell waits for each list to finish before executing
+Xthe next one.
+XIf a list is terminated by a \fB&\fP, the shell executes
+Xit in the background, and does not wait for it to finish.
+X.PP
+XA \fIcomplex command\fP is one of the following:
+X.PP
+X.RS
+X.PD 0
+X.TP
+X\fBfor\fP \fIname\fP [ \fBin\fP \fIword\fP ... ]
+X.TP
+X\fBdo\fP \fIlist\fP
+X.TP
+X\fBdone\fP
+X.PD
+XExpand the list of \fIword\fPs, and set the parameter
+X\fIname\fP to each of them in turn, executing
+X\fIlist\fP each time.  If the \fBin\fP \fIword\fP is omitted,
+Xuse the positional parameters instead of the \fIword\fPs.
+X.TP
+X\fBfor\fP \fIname\fP [ \fBin\fP \fIword\fP ] ; \fIsublist\fP
+XThis is a shorthand for \fBfor\fP.
+XThough it may cause confusion, it is included for convenience;
+Xits use in scripts is discouraged,
+Xunless \fIsublist\fP is a command of the form { \fIlist\fP }.
+X.PP
+X.PD 0
+X.TP
+X\fBselect\fP \fIname\fP [ \fBin\fP \fIword\fP ... ]
+X.TP
+X\fBdo\fP \fIlist\fP
+X.TP
+X\fBdone\fP
+X.PD
+XPrint the set of \fIword\fPs, each preceded by a number.
+XIf the \fBin\fP \fIword\fP is omitted, use the positional parameters.
+XThe \fBPROMPT3\fP prompt is printed and a line is read from standard
+Xinput.  If this line consists of the number of one of the listed
+X\fIword\fPs, then the parameter \fIname\fP
+Xis set to the \fIword\fP corresponding to this number.
+XIf this line is empty, the selection list is printed again.
+XOtherwise, the value of the parameter \fIname\fP is set to null.
+XThe contents of the line read from standard input is saved
+Xin the parameter \fBREPLY\fP.  \fIlist\fP is executed
+Xfor each selection until a break or end-of-file is encountered.
+X.TP
+X\fBselect\fP \fIname\fP [ \fBin\fP \fIword\fP ] ; \fIsublist\fP
+XA short form of \fBselect\fP.
+X.TP
+X\fBcase\fP \fIword\fP \fBin\fP [ \fIpattern\fP ) \fIlist\fP ;; ] ...  \fBesac\fP
+XExecute the \fIlist\fP associated with the first \fIpattern\fP
+Xthat matches \fIword\fP, if any.  The form of the patterns
+Xis the same as that used for filename generation.  See
+X\fIFilename Generation\fP below.
+X.TP
+X.PD 0
+X\fBif\fP \fIlist\fP
+X.TP
+X\fBthen\fP \fIlist\fP
+X.TP
+X[ \fBelif\fP \fIlist\fP ; \fBthen\fP \fIlist\fP ] ...
+X.TP
+X[ \fBelse\fP \fIlist\fP ]
+X.TP
+X\fBfi\fP
+X.PD
+XThe \fBif\fP \fIlist\fP is executed, and,
+Xif it returns a zero exit status,
+Xthe \fBthen\fP \fIlist\fP is executed.
+XOtherwise, the \fBelif\fP \fIlist\fP is
+Xexecuted and, if its value is zero,
+Xthe \fBthen\fP \fIlist\fP is executed.
+XIf each \fBelif\fP \fIlist\fP returns
+Xnonzero, the \fBelse\fP \fIlist\fP is executed.
+X.TP
+X.PD 0
+X\fBwhile\fP \fIlist\fP
+X.TP
+X\fBdo\fP \fIlist\fP
+X.TP
+X\fBdone\fP
+X.PD
+XExecute the \fBdo\fP \fIlist\fP as long as the \fBwhile\fP \fIlist\fP
+Xreturns a zero exit status.
+X.TP
+X.PD 0
+X\fBuntil\fP \fIlist\fP
+X.TP
+X\fBdo\fP \fIlist\fP
+X.TP
+X\fBdone\fP
+X.PD
+XExecute the \fBdo\fP \fIlist\fP as long as \fBuntil\fP \fIlist\fP
+Xreturns a nonzero exit status.
+X.TP
+X.PD 0
+X\fBrepeat\fP \fIword\fP
+X.TP
+X\fBdo\fP \fIlist\fP
+X.TP
+X\fBdone\fP
+X.PD
+X\fIword\fP is expanded and treated as an arithmetic expression,
+Xwhich must evaluate to a number \fIn\fP.
+X\fIlist\fP is then executed \fBn\fP times.
+X.TP
+X\fBrepeat\fP \fIword\fP \fIsublist\fP
+XThis is a short form of \fBrepeat\fP.
+X.TP
+X( \fIlist\fP )
+XExecute \fIlist\fP in a subshell.
+X.TP
+X{ \fIlist\fP }
+XExecute \fIlist\fP.
+X.TP
+X.PD 0
+X\fBfunction\fP \fIword\fP ... { \fIlist\fP }
+X.TP
+X\fIword\fP ... (\|) { \fIlist\fP }
+X.PD
+XDefine a function which is referenced by any one of \fIword\fP.
+XNormally, only one \fIword\fP is provided; multiple \fIword\fPs
+Xare usually only useful for setting traps.
+XThe body of the function is the \fIlist\fP between
+Xthe { and }.
+XSee \fBFUNCTIONS\fP below.
+X.TP
+X\fBtime\fP \fIpipeline\fP
+XThe \fIpipeline\fP is executed, and timing statistics are
+Xreported on the standard error in the form specified
+Xby the \fBTIMEFMT\fP parameter.
+X.TP
+X[[ \fIexp\fP ]]
+XEvaluates the conditional expression \fIexp\fP
+Xand return a zero exit status if it is true.
+XSee \fBConditional Expressions\fP below for a description
+Xof \fIexp\fP.
+X.SH "RESERVED WORDS"
+XThe following words are recognized as the first word of a command
+Xunless quoted or removed using the \fBunalias\fP builtin:
+X.RS
+X.PP
+X\fBdo done esac then elif else fi for case
+Xif while function repeat time until exec command
+Xselect coproc noglob \-\fP
+X.RE
+X.SH COMMENTS
+XIn noninteractive shells, or in interactive shells with the
+X\fBINTERACTIVE_COMMENTS\fP option set, a word beginning
+Xwith the third character of the \fBHISTCHARS\fP parameter
+X(`#' by default) causes that word and all the following
+Xcharacters up to a newline to be ignored.
+X.SH ALIASING
+XEvery token in the shell input is checked to see if there
+Xis an alias defined for it.
+XIf so, it is replaced by the text of the alias if it is in command
+Xposition (if it could be the first word of a simple command),
+Xor if the alias is global.
+XIf the text ends with a space, the next word in the shell input
+Xis treated as though it were in command position for purposes of alias
+Xexpansion.
+XAn alias is defined using the \fBalias\fP builtin; global aliases
+Xmay be defined using the \-\fBg\fP option to that bulitin.
+X.PP
+XAlias substitution is done on the shell input before any
+Xother substitution except history substitution.  Therefore,
+Xif an alias is defined for the word \fBfoo\fP, alias substitution
+Xmay be avoided by quoting part of the word, e.g. \fB\efoo\fP.
+XBut there is nothing to prevent an alias being defined
+Xfor \fB\efoo\fP as well.
+X.SH QUOTING
+XA character may be \fIquoted\fP (that is, made
+Xto stand for itself) by preceding it with a \e\|.
+X\e followed by a newline is ignored.
+XAll characters enclosed between a pair of single quotes ('')
+Xare ignored.
+XA single quote cannot appear within single quotes.
+XInside double quotes (""), parameter and command substitution
+Xoccurs, and \e quotes the characters \e\|, `, ", and $.
+X.SH EXPANSION
+XExpansion is performed on the command line after it has been
+Xparsed.  The types of expansions performed are
+X\fIfilename expansion\fP, 
+X\fIprocess substitution\fP,
+X\fIparameter expansion\fP,
+X\fIcommand substitution\fP,
+X\fIarithmetic expansion\fP,
+X\fIbrace expansion\fP,
+Xand \fIfilename generation\fP.
+X.SS Filename Expansion
+XEach word is checked to see if it begins with an unquoted ~.
+XIf it does, then the word up to a / is checked to see if it matches
+Xthe name of a named directory.  If so, then the ~ and the matched portion
+Xare replaced with the value of the named directory.
+XA ~ by itself or followed by a / is replaced by the value of the
+X\fBHOME\fP parameter.
+XA ~ followed by a + or a \- is replaced by the value of 
+X\fBPWD\fP or \fBOLDPWD\fP, respectively.
+X.PP
+XNamed directories are typically login directories for users on the system.
+XThey may also be defined if the text after the ~ is the name
+Xof a shell parameter whose value begins with a /.
+XIn certain circumstances (in prompts, for instance), when the shell
+Xprints a path, the path is checked to see if it has a named
+Xdirectory as its prefix.  If so, then the prefix portion
+Xis replaced with a ~ followed by the name of the directory.
+XThe longest match is preferred.
+X.PP
+XIf a word begins with an unquoted \fB=\fP,
+Xthe remainder of the word is taken as the
+Xname of a command or alias.  If a command
+Xexists by that name, the word is replaced
+Xby the full pathname of the command.
+XIf an alias exists by that name, the word
+Xis replaced with the text of the alias.
+XOtherwise the word is checked up to a /
+Xto see if it is a number or a \-.  If so,
+Xthe matched portion is replaced with
+Xthe \fIn\fPth directory in the directory stack,
+Xwhere \fIn\fP is the number matched, or
+Xthe last directory in the directory stack
+Xif a \- is matched.
+X.SS Process Substitution
+XEach command argument of the form
+X\fB<(\fIlist\^\fB)\fR
+Xor
+X\fB>(\fIlist\^\fB)\fR
+Xor
+X\fB=(\fIlist\^\fB)\fR
+Xis subject to process substitution.
+XIn the case of the
+X.B <
+Xor
+X.B >
+Xforms, the shell will run process
+X.I list
+Xasynchronously connected to a named pipe (FIFO).
+XThe name of this pipe will become the argument to the command.
+XIf the form with
+X.B >
+Xis selected then writing on this file will provide input for
+X.IR list .
+XIf
+X.B <
+Xis used,
+Xthen the file passed as an argument will
+Xbe a named pipe connected to the output of the
+X.I list
+Xprocess.
+XFor example,
+X.RS
+X.PP
+X\fBpaste <(cut \-f1\fP \fIfile1\fB) <(cut \-f3\fP \fIfile2\fB) | tee >(\fIprocess1\fB) >(\fIprocess2\fB)\fR >/dev/null
+X.RE
+X.PP
+X.BR cut s
+Xfields 1 and 3 from
+Xthe files
+X.I file1
+Xand
+X.I file2
+Xrespectively,
+X.BR paste s
+Xthe results together, and sends it to the processes
+X.I process1
+Xand
+X.IR process2 .
+XNote that the file, which is passed as an argument to the command,
+Xis a system
+Xpipe 
+Xso programs that expect to
+X.BR lseek (2)
+Xon the file will not work.
+XAlso note that the previous example can be more compactly and
+Xefficiently written as:
+X.RS
+X.PP
+X\fBpaste <(cut \-f1\fP \fIfile1\fB) <(cut \-f3\fP \fIfile2\fB) > >(\fIprocess1\fB) > >(\fIprocess2\fB)\fR
+X.RE
+X.PP
+Xthe shell uses pipes instead of a FIFOs to implement the latter
+Xtwo process substitutions in the above example.
+X.PP
+XIf
+X.B =
+Xis used,
+Xthen the file passed as an argument will be the name
+Xof a temporary file containing
+Xthe output of the
+X.I list
+Xprocess.  This may be used instead of the
+X.B <
+Xform for a program that expects to \fBlseek\fP(2) on the input file.
+X.SS Parameter Expansion
+XThe character \fB$\fP is used to introduce parameter expansions.
+XSee \fBPARAMETERS\fP below for a description of parameters.
+X.PD
+X.RS
+X.TP
+X\fB${\fIname\fB}\fR
+XThe value, if any, of the parameter \fIname\fP is substituted.
+XThe braces are required with \fIname\fP is followed by
+Xa letter, digit, or underscore that is not to be interpreted
+Xas part of its name.
+XIf \fIname\fP is an array parameter, then the values of each
+Xelement of \fIname\fP is substituted, one element per word.
+XOtherwise, the expansion results in one word only; no
+Xword splitting is done on the result.
+X.TP
+X\fB${\fIname\fB:\-\fIword\fB}\fR
+XIf \fIname\fP is set and is non-null then substitute its
+Xvalue; otherwise substitute \fIword\fP.
+X.TP
+X\fB${\fIname\fB:=\fIword\fB}\fR
+XIf \fIname\fP is unset and is null then
+Xset it to \fIword\fP; the value of the parameter is then
+Xsubstituted.
+X.TP
+X\fB${\fIname\fB:?\fIword\fB}\fR
+XIf \fIname\fP is set and is non-null, then substitute
+Xits value; otherwise, print \fIword\fP and exit from the shell.
+XIf \fIword\fP is omitted, then a standard message is printed.
+X.TP
+X\fB${\fIname\fB:+\fIword\fB}\fR
+XIf \fIname\fP is set and is non-null then substitute
+X\fIword\fP; otherwise substitute nothing.
+X.PD 0
+X.TP
+X\fB${\fIname\fB#\fIpattern\fB}\fR
+X.TP
+X\fB${\fIname\fB##\fIpattern\fB}\fR
+X.PD
+XIf the \fIpattern\fP matches the beginning of the value of
+X\fIname\fP, then substitute the value of \fIname\fP with
+Xthe matched portion deleted; otherwise, just
+Xsubstitute the value of \fIname\fP.  In the first
+Xform, the smallest matching pattern is preferred;
+Xin the second form, the largest matching pattern is preferred.
+X.PD 0
+X.TP
+X${\fIname\fB%\fIpattern\fR}
+X.TP
+X${\fIname\fB%%\fIpattern\fR}
+X.PD
+XIf the \fIpattern\fP matches the end of the value of
+X\fIname\fP, then substitute the value of \fIname\fP with
+Xthe matched portion deleted; otherwise, just
+Xsubstitute the value of \fIname\fP.  In the first
+Xform, the smallest matching pattern is preferred;
+Xin the second form, the largest matching pattern is preferred.
+X.TP
+X${\fB#\fIspec\fR}
+XIf \fIspec\fP is one of the above substitutions, substitute
+Xthe length in characters of the result instead of
+Xthe result itself.  If \fIspec\fP is an array expression,
+Xsubstitute the number of elements of the result.
+X.TP
+X${\fB^\fIspec\fR}
+XToggle the value of the \fBRC_EXPAND_PARAM\fP option for the
+Xevaluation of \fIspec\fP.
+XWhen this option is set, array expansions of the form
+X\fIfoo\fB${\fIxx\fB}\fIbar\fR, where the parameter
+X\fIxx\fP is set to (\fIa b c\fP), are substituted with
+X\fIfooabar foobbar foocbar\fP instead of the default
+X\fIfooa b cbar\fP.
+X.TP
+X${\fB=\fIspec\fR}
+XToggle the value of the \fBSH_WORD_SPLIT\fP option for the
+Xevaluation of \fIspec\fP.
+XWhen this option is set, parameter values are split into
+Xseparate words using \fBIFS\fP as a delimiter
+Xbefore substitution.
+XThis is done by default in most other shells.
+X.PD
+X.RE
+X.PP
+XIf the colon is omitted from one of the above expressions
+Xcontaining a colon, then the shell only checks whether
+X\fIname\fP is set or not, not whether it is null.
+X.SS Command Substitution
+XA command enclosed in parentheses
+Xpreceded by a dollar sign, like so: $(...) or quoted with grave
+Xaccents: `...` is replaced with its standard output.
+XIf the substitution is not enclosed in double quotes, the
+Xoutput is broken into words using the \fBIFS\fP parameter.
+XThe substitution \fB$(cat foo)\fP may be replaced
+Xby the equivalent but faster \fB$(<foo)\fP.
+X.SS Arithmetic Expansion
+XA string of the form \fB$[\fIexp\fB]\fR is substituted
+Xwith the value of the arithmetic expression \fIexp\fP.
+X\fIexp\fP is treated as if it were within single quotes.
+XSee \fBARITHMETIC EVALUATION\fP below.
+X.SS Brace Expansion
+XA string of the form
+X\fIfoo\fB{\fIxx\fB,\fIyy\fB,\fIzz\fB}\fIbar\fR
+Xis expanded to the individual words
+X\fIfooxxbar\fP, \fIfooyybar\fP, and \fIfoozzbar\fP.
+XLeft-to-right order is preserved.  This construct
+Xmay be nested.  Malformed brace expansion expressions,
+Xincluding expressions without a comma, are left unchanged
+Xby the shell.
+X.SS Filename Generation
+XIf a word contains an unquoted instance of one of the characters
+X#, ^, *, |, <, [, or ?, or the string "..../", it is regarded
+Xas a pattern for filename generation, unless the \fBNOGLOB\fP option is set.
+XThe word is replaced with a list of sorted filenames that match
+Xthe pattern.  If no matching pattern is found, the shell gives
+Xan error message, unless the \fBNULLGLOB\fP option is set,
+Xin which case the word is deleted; or unless the \fBNO_NOMATCH\fP
+Xoption is set, in which case the word is left unchanged.
+XIn filename generation,
+Xthe character / must be matched explicitly; also, a . must be matched
+Xexplicitly at the beginning of a pattern or after a /, unless the
+X\fBGLOBDOTS\fP option is set.  No filename generation pattern
+Xmatches the files "." or "..".  In other instances of pattern
+Xmatching, the / and . are not treated specially.
+X.PP
+X.RS
+X.PD 0
+X.TP
+X.B *
+Xmatches any string, including the null string.
+X.TP
+X.B ?
+Xmatches any character.
+X.TP
+X\fB[ ... ]\fP
+Xmatches any of the enclosed characters.
+X.TP
+X\fB[^ ... ]\fP
+Xmatches any character except the enclosed characters.
+X.TP
+X\fB<x\-y>\fP
+Xmatches any number in the range x to y, inclusive.
+XIf x is omitted, the number must be less than or equal to y.
+XIf y is omitted, the number must be greater than or equal to x.
+XA pattern of the form \fB<\->\fP or
+Xsimply \fB<>\fP matches any number.
+X.TP
+X\fB^x\fP
+Xmatches anything except the pattern x.
+X.TP
+X\fBx|y\fP
+Xmatches either x or y.
+X.TP
+X\fBx#\fP
+Xmatches zero or more occurences of the pattern x.
+X.TP
+X\fBx##\fP
+Xmatches one or more occurences of the pattern x.
+X.RE
+X.PD
+X.PP
+XParentheses may be used for grouping.  Note that the \fB|\fP character
+Xmust be within parentheses, so that the lexical analyzer does
+Xnot think it is a pipe character.  Also note that "/" has a
+Xhigher precedence than "^"; that is:
+X.RS
+X.PP
+Xls
+X.BI ^ foo / bar
+X.RE
+X.PP
+Xwill search directories in "." except "./foo" for a file named bar.
+X.PP
+XA pathname component of the form
+X.BI ( foo /)#
+Xmatches a path consisting of zero or more directories
+Xmatching the pattern foo.
+XAs a shorthand,
+X.B ..../
+Xis equivalent to
+X.BR (*/)# .
+XThus:
+X.RS
+X.PP
+Xls
+X.BI (*/)# bar
+X.RE
+X.PP
+Xor
+X.RS
+X.PP
+Xls
+X.BI ..../ bar
+X.RE
+X.PP
+Xdoes a recursive directory search for files named bar.
+X.PP
+XIf used for filename generation, a pattern may end in a
+Xlist of qualifiers enclosed in parentheses.
+XThe qualifiers
+Xspecify which filenames that otherwise match the given pattern
+Xwill be inserted in the argument list.
+XA qualifier may be any one of the following:
+X.PD 0
+X.RS
+X.TP
+X.B /
+Xdirectories
+X.TP
+X.B .
+Xplain files
+X.TP
+X.B @
+Xsymbolic links
+X.TP
+X.B =
+Xsockets
+X.TP
+X.B p
+Xnamed pipes (FIFOs)
+X.TP
+X.B *
+Xexecutable files (0100)
+X.TP
+X.B %
+Xdevice files (character or block special)
+X.TP
+X.B r
+Xreadable files (0400)
+X.TP
+X.B w
+Xwriteable files (0200)
+X.TP
+X.B x
+Xexecutable files (0100, same as *)
+X.TP
+X.B R
+Xworld-readable files (0004)
+X.TP
+X.B W
+Xworld-writeable files (0002)
+X.TP
+X.B X
+Xworld-executable files (0001)
+X.TP
+X.B s
+Xsetuid files (04000)
+X.TP
+X.B S
+Xsetgid files (02000)
+X.TP
+X\fBd\fIdev\fR
+Xfiles on the device \fIdev\fP
+X.TP
+X\fBl\fIct\fR
+Xfiles having a link count of \fIct\fP
+X.TP
+X\fBU\fP
+Xfiles owned by the effective user id
+X.TP
+X\fBG\fP
+Xfiles owned by the effective group id
+X.TP
+X\fBu\fInum\fR
+Xfiles owned by user id \fInum\fP
+X.TP
+X\fBg\fInum\fR
+Xfiles owned by group id \fInum\fP
+X.TP
+X\fB^\fP
+Xnegates all qualifiers following it
+X.PD
+X.RE
+X.PP
+XThus:
+X.RS
+X.PP
+Xls
+X.B
+X*(%W)
+X.RE
+X.PP
+Xlists all world-writeable device files in the current directory,
+Xand
+X.RS
+X.PP
+Xls
+X.B /tmp/foo*(u0^@)
+X.RE
+X.PP
+Xlists all root-owned files beginning with the string
+X"foo" in /tmp, ignoring symlinks.  A "/" at the end of a pattern
+Xis equivalent to "(\|/\|)".
+X.SH REDIRECTION
+XBefore a command is executed, its input and output
+Xmay be redirected.
+XThe following may appear anywhere in a simple-command
+Xor may precede or follow a complex command.
+XSubstitution occurs before
+X.I word
+Xis used except as noted below.
+XIf the result of substitution on
+X.I word
+Xproduces more than one filename,
+Xredirection occurs for each
+Xseparate filename in turn.
+X.TP
+X.BI < word
+XOpen file
+X.I word
+Xas standard input.
+X.TP
+X.BI > word
+XOpen file
+X.I word
+Xas standard output.
+XIf the file does not exist then it is created.
+XIf the file exists, and the
+X.B NOCLOBBER
+Xoption is set,
+Xthis causes an error;
+Xotherwise, it is truncated to zero length.
+X.TP
+X.BI >! " word"
+XSame as
+X.BR > ,
+Xexcept that the file is truncated to zero length
+Xif it exists, even if
+X.B NOCLOBBER
+Xis set.
+X.TP
+X.BI >> word
+XOpen file
+X.I word
+Xas standard output.
+XIf the file exists then output is appended to it.
+XIf the file does not exist, and the
+X.B NOCLOBBER
+Xoption is set,
+Xthis causes an error;
+Xotherwise, the file is created.
+X.TP
+X.BI >>! " word"
+XSame as
+X.BR >> ,
+Xexcept that the file is created if it does not
+Xexist, even if
+X.B NOCLOBBER
+Xis set.
+X.TP
+X\fB<<\fP [\-]\fIword\fP
+XThe shell input is read up to a line that is the same as
+X.IR word ,
+Xor to an end-of-file.
+XNo parameter substitution, command substitution or
+Xfilename generation is performed on
+X.IR word .
+XThe resulting document,
+Xcalled a
+X.IR here-document ,
+Xbecomes
+Xthe standard input.
+XIf any character of \fIword\fP is quoted with
+Xsingle or double quotes (a \e alone is \fInot\fP sufficient),
+Xno interpretation
+Xis placed upon the characters of the document.
+XOtherwise, parameter and command substitution
+Xoccurs, \e followed by a newline is removed,
+Xand \e must be used to quote the characters
+X\e, $, `, and the first character of \fIword\fP.
+XIf \- is prepended to \fIword\fP, then all leading
+Xtabs are stripped from \fIword\fP and from the document.
+X.TP
+X.BI <<< word
+XOpen a file containing \fIword\fP, after expansion,
+Xas standard input.
+X.TP
+X.BI <& digit
+XThe standard input
+Xis duplicated from file descriptor
+X.I digit
+X(see
+X.IR dup (2)).
+XSimilarly for standard output using
+X\fB>&\fIdigit\fP.
+X.TP
+X.BI >& word
+XSame as
+X.BI > word
+X\fB2>&\fP1.
+X.TP
+X.BI >>& word
+XSame as
+X.BI >> word
+X\fB2>&\fP1.
+X.TP
+X.BI <&\-
+XClose the standard input.
+X.TP
+X.BI >&\-
+XClose the standard output.
+X.TP
+X.BI <&p
+XThe input from the coprocess is moved to the standard input.
+X.TP
+X.BI >&p
+XThe output to the coprocess is moved to the standard output.
+X.PP
+XIf one of the above is preceded by a digit, then the file
+Xdescriptor referred to is that specified by the digit
+X(instead of the default 0 or 1).
+XThe order in which redirections are specified is significant.
+Xthe shell evaluates each redirection in terms of the
+X.RI ( "file descriptor" ", " file )
+Xassociation at the time of evaluation.
+XFor example:
+X.RS
+X.PP
+X\&.\|.\|. \|1>\fIfname\^\fP 2>&1
+X.RE
+X.PP
+Xfirst associates file descriptor 1 with file
+X.IR fname .
+XIt then associates file descriptor 2 with the file associated with file
+Xdescriptor 1 (that is,
+X.IR fname ).
+XIf the order of redirections were reversed, file descriptor 2 would be associated
+Xwith the terminal (assuming file descriptor 1 had been) and then file descriptor
+X1 would be associated with file
+X.IR fname .
+X.PP
+XIf the user tries to open a file descriptor for writing more than once,
+Xthe shell opens the file descriptor as a pipe to a process that copies
+Xits input to all the specified outputs, similar to tee(1).  Thus:
+X.RS
+X.PP
+X.B date >foo >bar
+X.RE
+X.PP
+Xwrites the date to two files, named "foo" and "bar".
+XNote that a pipe is an implicit indirection; thus
+X.RS
+X.PP
+X.B date >foo | cat
+X.RE
+X.PP
+Xwrites the date to the file "foo", and also pipes it to cat.
+X.PP
+XIf the user tries to open a file descriptor for reading more than once,
+Xthe shell opens the file descriptor as a pipe to a process that copies
+Xall the specified inputs to its output in the order
+Xspecified, similar to cat(1).  Thus
+X.RS
+X.PP
+X.B sort <foo <fubar
+X.RE
+X.PP
+Xor even
+X.RS
+X.PP
+X.B sort <f{oo,ubar}
+X.RE
+X.PP
+Xis equivalent to "cat foo bar | sort".  Note that
+Xa pipe is in implicit indirection; thus
+X.RS
+X.PP
+X.B cat bar | sort <foo
+X.RE
+X.PP
+Xis equivalent to "cat bar foo | sort" (note the order of the inputs).
+X.PP
+XIf a simple command consists of one or more redirection operators
+Xand zero or more parameter assignments, but no command name,
+Xthe command \fBcat\fP is assumed.  Thus
+X.RS
+X.PP
+X.B < file
+X.RE
+X.PP
+Xprints the contents of \fBfile\fP.
+X.PP
+XIf a command is followed by
+X.B &
+Xand job control is not active,
+Xthen the default standard input
+Xfor the command
+Xis the empty file
+X.BR /dev/null .
+XOtherwise, the environment for the execution of a command contains the
+Xfile descriptors of the invoking shell as modified by
+Xinput/output specifications.
+X.SH "COMMAND EXECUTION"
+XIf a command name contains no slashes, the shell attempts to locate
+Xit.  If there exists a shell function by that name, the function
+Xis invoked as described below in \fBFUNCTIONS\fP.  If there exists
+Xa shell builtin by that name, the builtin is invoked.
+X.PP
+XOtherwise, the shell searches each element of \fBpath\fP for a
+Xdirectory containing an executable file by that name.  If the
+Xsearch is unsuccessful, the shell prints an error message and returns
+Xa nonzero exit status.
+X.PP
+XIf execution fails because the file is not in executable format,
+Xand the file is not a directory, it is assumed to be a shell
+Xscript.  /bin/sh is spawned to execute it.  If the program
+Xis a file beginning with \fB#!\fP, the remainder of the first line
+Xspecifies an interpreter for the program.  The shell will
+Xexecute the specified interpreter on operating systems that do
+Xnot handle this executable format in the kernel.
+X.PP
+XWhenever the shell executes an external command, it gives
+Xcontrol of the tty to the command.  If the command
+Xcompletes with a zero return code, the shell does not reset
+Xthe tty; otherwise, the tty modes are reset to what they were
+Xbefore the command was executed.  If a process is suspended,
+Xthe shell saves the state of the tty and resets the tty modes;
+Xif the process is later restarted, the tty modes are restored
+Xto what they were when the process was suspended.
+X.SH FUNCTIONS
+X.PP
+XThe
+X.B function
+Xreserved word is used to define shell functions.
+XShell functions are read in and stored internally.
+XAlias names are resolved when the function is read.
+XFunctions are executed like commands with the arguments
+Xpassed as positional parameters.
+X(See
+X.I Execution
+Xbelow).
+X.PP
+XFunctions execute in the same process as the caller and
+Xshare all files
+Xand present working directory with the
+Xcaller.
+XA trap on
+X.B EXIT
+Xset inside a function
+Xis executed after the function completes in the environment
+Xof the caller.
+X.PP
+XThe builtin
+X.B return
+Xis used to return
+Xfrom function calls.
+X.PP
+XFunction identifiers
+Xcan be listed with the
+X.B function
+Xbuiltin.
+XFunctions can be undefined with the
+X.B unfunction
+Xbuiltin.
+X.PP
+XThe following functions, if defined, have special meaning to
+Xthe shell:
+X.PP
+X.PD 0
+X.TP
+X\fBchpwd\fP
+XExecuted whenever the current working directory is changed.
+X.TP
+X\fBprecmd\fP
+XExecuted before each prompt.
+X.TP
+X\fBperiodic\fP
+XIf the parameter
+X.B PERIOD
+Xis set, this function is executed every
+X.B PERIOD
+Xseconds, just before a prompt.
+X.TP
+X\fBTRAPxxx\fP
+XIf defined and non-null,
+Xthis function will be executed whenever the shell
+Xcatches a signal \fBSIGxxx\fP, where \fBxxx\fP is a signal
+Xname as specified for the \fBkill\fP builtin (see below).
+XIn addition, \fBTRAPERR\fP is executed whenever a command has a non-zero
+Xexit status, \fBTRAPDEBUG\fP is executed after each command, and
+X\fBTRAPEXIT\fP
+Xis executed when the shell exits,
+Xor when the current function exits if defined
+Xinside a function.
+XIf a function of this form is defined and null,
+Xthe shell and processes spawned by it will ignore \fBSIGxxx\fP.
+X.PD
+X.SH JOBS
+X.PP
+XIf the
+X.B MONITOR
+Xoption is set,
+Xan interactive shell associates a \fIjob\fR with each pipeline.
+XIt keeps
+Xa table of current jobs, printed by the
+X.B jobs
+Xcommand, and assigns them small integer numbers.
+XWhen a job is started asynchronously with
+X.BR & ,
+Xthe shell prints a line which looks
+Xlike:
+X.PP
+X.DT
+X	[1] 1234
+X.PP
+Xindicating that the job which was started asynchronously was job number
+X1 and had one (top-level) process, whose process id was 1234.
+X.PP
+XIf you are running a job and wish to do something else you may hit the key
+X\fB^Z\fR (control-Z) which sends a STOP signal to the current job.
+Xthe shell will then normally indicate that the job has been `suspended',
+Xand print another prompt.
+XYou can then manipulate the state of this job,
+Xputting it in the background with the
+X.B bg
+Xcommand, or run some other
+Xcommands and then eventually bring the job back into the foreground with
+Xthe foreground command
+X.BR fg .
+XA \fB^Z\fR takes effect immediately and
+Xis like an interrupt in that pending output and unread input are discarded
+Xwhen it is typed.
+X.PP
+XA job being run in the background will suspend if it tries to read
+Xfrom the terminal.
+XBackground jobs are normally allowed to produce output,
+Xbut this can be disabled by giving the command ``stty tostop''.
+XIf you set this
+Xtty option, then background jobs will suspend when they try to produce
+Xoutput like they do when they try to read input.
+X.PP
+XThere are several ways to refer to jobs in the shell.
+XA job can be referred to by the process id of any process of the job
+Xor by one of the following:
+X.PD 0
+X.TP
+X.BI % number
+XThe job with the given number.
+X.TP
+X.BI % string
+XAny job whose command line begins with
+X.IR string .
+X.TP
+X.BI %? string
+XAny job whose command line contains
+X.IR string .
+X.TP
+X.BI %%
+XCurrent job.
+X.TP
+X.BI %+
+XEquivalent to
+X.BR %% .
+X.TP
+X.BI %\-
+XPrevious job.
+X.PD
+X.PP
+XThe shell learns immediately whenever a process changes state.
+XIt normally informs you whenever a job becomes blocked so that
+Xno further progress is possible.  If
+X.B notify
+Xis not set, it waits until
+Xjust before it prints
+Xa prompt before it informs you.
+X.PP
+XWhen the monitor mode is on, each background job that completes
+Xtriggers any trap set for
+X.BR CHLD .
+X.PP
+XWhen you try to leave the shell while jobs are running or suspended, you will
+Xbe warned that `You have suspended (running) jobs.'
+XYou may use the
+X.B jobs
+Xcommand to see what they are.
+XIf you do this or immediately try to
+Xexit again, the shell will not warn you a second time; the suspended
+Xjobs will be terminated, and the running jobs will be sent
+Xa \fBSIGHUP\fP signal.
+XTo avoid having the shell terminate the running jobs, either
+Xuse the \fBnohup\fP(1) command or the \fBdisown\fP builtin (see below).
+X.SH SIGNALS
+XThe INT and QUIT signals for an invoked
+Xcommand are ignored if the command is followed by
+X.B &
+Xand job
+X.B monitor
+Xoption is not active.
+XOtherwise, signals have the values
+Xinherited by the shell from its parent
+X(but see the \fBTRAPxxx\fP special function above).
+X.SH "ZSH LINE EDITOR"
+XIf the \fBUSE_ZLE\fP option is set (it is by default)
+Xand the shell input is attached to the terminal, the user
+Xis allowed to edit command lines.
+X.PP
+XThere are two display modes.  The first, multiline mode, is the default.
+XIt only works if the \fBTERM\fP parameter is set to a valid
+Xterminal type that can move the cursor up.  The second,
+Xsingle line mode, is used if \fBTERM\fP is invalid or incapable
+Xof moving the cursor up, or if the \fBSINGLE_LINE_ZLE\fP
+Xoption is set.  This mode is similar to ksh, and uses no
+Xtermcap sequences.
+X.SS Bindings
+XCommand bindings may be set using the \fBbindkey\fP builtin.
+XThere are two keymaps\-the main keymap and the alternate keymap.
+XThe main keymap is bound to emacs mode by default.
+XThe alternate keymap is bound to vi command mode.
+XTo bind the main keymap to vi insert mode, use 
+X\fBbindkey \-v\fP.
+X.PP
+XThe following is a list of all the key commands
+Xand their default bindings in emacs and vi command mode.
+X.SS Movement
+X.TP
+X\fBbackward-char\fP (^B M-[D) (h)
+XMove backward one character.
+X.TP
+X\fBbackward-word\fP (M-B M-b) (b)
+XMove to the beginning of the previous word.
+X.TP
+X\fBbeginning-of-line\fP (^A) (0)
+XMove to the beginning of the line.  If already at the beginning
+Xof the line, move to the beginning of the previous line, if any.
+X.TP
+X\fBend-of-line\fP (^E) ($)
+XMove to the end of the line.  If already at the end 
+Xof the line, move to the end of the next line, if any.
+X.TP
+X\fBforward-char\fP (^F M-[C) (space l)
+XMove forward one character.
+X.TP
+X\fBforward-word\fP (M-F M-f) (w)
+XMove to the beginning of the next word.
+XThe editor's idea of a word is specified with the \fBWORDCHARS\fP
+Xparameter.
+X.TP
+X\fBvi-find-next-char\fP (^X^F) (f)
+XRead a character from the keyboard, and move to
+Xthe next occurrence of it in the line.
+X.TP
+X\fBvi-find-next-char-skip\fP (unbound) (t)
+XRead a character from the keyboard, and move to
+Xthe position just before the next occurrence of it in the line.
+X.TP
+X\fBvi-find-prev-char\fP (unbound) (F)
+XRead a character from the keyboard, and move to
+Xthe previous occurrence of it in the line.
+X.TP
+X\fBvi-find-prev-char-skip\fP (unbound) (T)
+XRead a character from the keyboard, and move to
+Xthe position just after the previous occurrence of it in the line.
+X.TP
+X\fBvi-first-non-blank\fP (unbound) (^)
+XMove to the first non-blank character in the line.
+X.TP
+X\fBvi-forward-word-end\fP (unbound) (e)
+XMove to the end of the next word.
+X.TP
+X\fBvi-goto-column\fP (M-|) (|)
+XMove to the column specified by the numeric argument.
+X.TP
+X\fBvi-repeat-find\fP (unbound) (;)
+XRepeat the last \fBvi-find\fP command.
+X.TP
+X\fBvi-rev-repeat-find\fP (unbound) (,)
+XRepeat the last \fBvi-find\fP command in the opposite direction.
+X.SS History
+X.TP
+X\fBbeginning-of-buffer-or-history\fP (M-<)
+XMove to the beginning of the buffer, or if already there,
+Xmove to the first event in the history list.
+X.TP
+X\fBbeginning-of-history\fP
+XMove to the first event in the history list.
+X.TP
+X\fBdown-line-or-history\fP (^N M-[B) (+ j)
+XMove down a line in the buffer, or if already at the bottom line,
+Xmove to the next event in the history list.
+X\fBdown-history\fP (unbound) (^N)
+XMove to the next event in the history list.
+X.TP
+X\fBend-of-buffer-or-history\fP (M->)
+XMove to the end of the buffer, or if already there,
+Xmove to the last event in the history list.
+X.TP
+X\fBend-of-history\fP
+XMove to the last event in the history list.
+X.TP
+X\fBvi-fetch-history\fP (unbound) (G)
+XFetch the history line specified by the numeric argument.
+X.TP
+X\fBhistory-incremental-search-backward\fP (^R)
+XSearch backward incrementally for a specified string.
+XThe string may begin with `^' to anchor the search to the
+Xbeginning of the line.
+X.TP
+X\fBhistory-incremental-search-forward\fP (^S)
+XSearch forward incrementally for a specified string.
+XThe string may begin with `^' to anchor the search to the
+Xbeginning of the line.
+X.TP
+X\fBhistory-search-backward\fP (M-P M-p)
+XSearch backward in the history for a line beginning with the first
+Xword in the buffer.
+X.TP
+X\fBvi-history-search-backward\fP (unbound) (/)
+XSearch backward in the history for a specified string.
+XThe string may begin with `^' to anchor the search to the
+Xbeginning of the line.
+X.TP
+X\fBhistory-search-forward\fP (M-N M-n)
+XSearch forward in the history for a line beginning with the first
+Xword in the buffer.
+X.TP
+X\fBvi-history-search-forward\fP (unbound) (?)
+XSearch forward in the history for a specified string.
+XThe string may begin with `^' to anchor the search to the
+Xbeginning of the line.
+X.TP
+X\fBinfer-next-history\fP (^X^N)
+XSearch in the history list for a line matching the current one and
+Xfetch the event following it.
+X.TP
+X\fBinsert-last-word\fP (M-_)
+XInsert the last word from the previous history event at the
+Xcursor position.
+X.TP
+X\fBvi-repeat-search\fP (unbound) (n)
+XRepeat the last vi history search.
+X.TP
+X\fBvi-rev-repeat-search\fP (unbound) (N)
+XRepeat the last vi history search, but in reverse.
+X.TP
+X\fBtoggle-literal-history\fP (M-R M-r)
+XToggle between literal and lexical history.  The default is
+Xlexical history unless the \fBHISTLIT\fP option is set.
+X.TP
+X\fBup-line-or-history\fP (^P M-[A) (- k)
+XMove up a line in the buffer, or if already at the top line,
+Xmove to the previous event in the history list.
+X.TP
+X\fBup-history\fP (unbound) (^P)
+XMove to the previous event in the history list.
+X.SS Modifying Text
+X.TP
+X\fBvi-add-eol\fP (unbound) (A)
+XMove to the end of the line and enter insert mode.
+X.TP
+X\fBvi-add-next\fP (unbound) (a)
+XMove forward one character and enter insert mode.
+X.TP
+X\fBbackward-delete-char\fP (^H ^?) (X ^?)
+XDelete the character behind the cursor.
+X.TP
+X\fBbackward-delete-word\fP
+XDelete the word behind the cursor.
+X.TP
+X\fBbackward-kill-line\fP
+XKill from the beginning of the line to the cursor position.
+X.TP
+X\fBbackward-kill-word\fP (^W M-^H M-^?)
+XKill the word behind the cursor.
+X.TP
+X\fBcapitalize-word\fP (M-C M-c)
+XCapitalize the current word and move past it.
+X.TP
+X\fBvi-change\fP (unbound) (c)
+XRead a movement command from the keyboard, and kill
+Xfrom the cursor position to the endpoint of the movement.
+XThen enter insert mode.
+XIf the command is \fBvi-change\fP, kill the current line.
+X.TP
+X\fBvi-change-eol\fP (unbound) (C)
+XKill to the end of the line and enter insert mode.
+X.TP
+X\fBvi-change-whole-line\fP (unbound) (S s)
+XKill the current line and enter insert mode.
+X.TP
+X\fBcopy-region-as-kill\fP (M-W M-w)
+XCopy the area from the cursor to the mark to the kill buffer.
+X.TP
+X\fBcopy-prev-word\fP (M-^_)
+XDuplicate the word behind the cursor.
+X.TP
+X\fBvi-delete\fP (unbound) (d)
+XRead a movement command from the keyboard, and kill 
+Xfrom the cursor position to the endpoint of the movement.
+XIf the command is \fBvi-delete\fP, kill the current line.
+X.TP
+X\fBdelete-char\fP (unbound) (x)
+XDelete the character under the cursor.
+X.TP
+X\fBdelete-word\fP (M-D M-d)
+XDelete the current word.
+X.TP
+X\fBdown-case-word\fP (M-L M-l)
+XConvert the current word to all lowercase and move past it.
+X.TP
+X\fBgosmacs-transpose-chars\fP
+XExchange the two characters behind the cursor.
+X.TP
+X\fBvi-insert\fP (unbound) (i)
+XEnter insert mode.
+X.TP
+X\fBvi-insert-bol\fP (unbound) (I)
+XMove to the beginning of the line and enter insert mode.\fP
+X.TP
+X\fBvi-join\fP (^X^J) (J)
+XJoin the current line with the next one.
+X.TP
+X\fBkill-line\fP (^K) (D)
+XKill from the cursor to the end of the line.
+X.TP
+X\fBkill-region\fP
+XKill from the cursor to the mark.
+X.TP
+X\fBkill-buffer\fP (^X^U) (^U)
+XKill the entire buffer.
+X.TP
+X\fBkill-whole-line\fP (^U) (unbound)
+XKill the current line.
+X.TP
+X\fBvi-match-bracket\fP (^X^B) (%)
+XMove to the bracket character (one of {\|}, (\|), or [\|]) that
+Xmatches the one under the cursor.
+X.TP
+X\fBvi-open-line-above\fP (unbound) (O)
+XOpen a line above the cursor and enter insert mode.
+X.TP
+X\fBvi-open-line-below\fP (unbound) (o)
+XOpen a line below the cursor and enter insert mode.
+X.TP
+X\fBvi-oper-swap-case\fP
+XRead a movement command from the keyboard, and swap
+Xthe case of all characters
+Xfrom the cursor position to the endpoint of the movement.
+XIf the command is \fBvi-oper-swap-case\fP,
+Xswap the case of all characters on the current line.
+X.TP
+X\fBoverwrite-mode\fP (^X^O)
+XToggle between overwrite mode and insert mode.
+X.TP
+X\fBvi-put-after\fP (unbound) (p)
+XInsert the contents of the kill buffer after the cursor.
+X.TP
+X\fBquoted-insert\fP (^V)
+XInsert the next character typed into the buffer literally.
+X.TP
+X\fBquote-line\fP (M-')
+XQuote the current line; that is, put a ' character at the
+Xbeginning and the end, and convert all ' characters
+Xto '\e''.
+X.TP
+X\fBquote-region\fP (M-")
+XQuote the region from the cursor to the mark.
+X.TP
+X\fBvi-replace\fP (unbound) (R)
+XEnter overwrite mode.
+X.TP
+X\fBvi-replace-chars\fP (unbound) (r)
+XReplace the character under the cursor with a character
+Xread from the keyboard.
+X.TP
+X\fBself-insert\fP (printable characters)
+XPut a character in the buffer at the cursor position.
+X.TP
+X\fBself-insert-unmeta\fP (M-^I M-^J M-^M)
+XPut a character in the buffer after stripping the meta bit
+Xand converting \fB^M\fP to \fB^J\fP.
+X.TP
+X\fBvi-swap-case\fP (unbound) (~)
+XSwap the case of the character under the cursor and move past it.
+X.TP
+X\fBtranspose-chars\fP (^T)
+XExchange the two characters to the left of the
+Xcursor if at end of line, else exchange the
+Xcharacter under the cursor with the character
+Xto the left.
+X.TP
+X\fBtranspose-words\fP (M-T M-t)
+XExchange the current word with the one before it.
+X.TP
+X\fBup-case-word\fP (M-U M-u)
+XConvert the current word to all caps and move past it.
+X.TP
+X\fByank\fP (^Y) (P)
+XInsert the contents of the kill buffer at the cursor position.
+X.TP
+X\fByank-pop\fP (M-y) (unbound)
+XRemove the text just yanked, rotate the kill\-ring,
+Xand yank the new top.  Only works following
+X\fByank\fP or \fByank-pop\fP.
+X.TP
+X\fBvi-yank\fP (unbound) (y)
+XRead a movement command from the keyboard, and copy the region
+Xfrom the cursor position to the endpoint of the movement
+Xinto the kill buffer.
+XIf the command is \fBvi-yank\fP, copy the current line.
+X.TP
+X\fBvi-yank-eol\fP (unbound) (Y)
+XCopy the region from the cursor position to the end of the line
+Xinto the kill buffer.
+X.SS Arguments
+X.TP
+X\fBdigit-argument\fP (M-0..M-9) (0-9)
+XStart a new numeric argument, or add to the current one.
+X.TP
+X\fBuniversal-argument\fP
+XMultiply the argument of the next command by 4.
+X.SS Completion
+X.TP
+X\fBcomplete-word\fP (unbound) (\|\e\|)
+XAttempt completion on the current word.
+X.TP
+X\fBdelete-char-or-list\fP (^D)
+XDelete the character under the cursor.  If the cursor
+Xis at the end of the line, list possible completions for the
+Xcurrent word.
+X.TP
+X\fBexpand-or-complete\fP (TAB) (^X)
+XAttempt shell expansion on the current word.
+XIf that fails,
+Xattempt completion.
+X.TP
+X\fBexpand-history\fP (M-space M-!)
+XPerform history expansion on the edit buffer.
+X.TP
+X\fBexpand-word\fP (^X*)
+XAttempt shell expansion on the current word.
+X.TP
+X\fBlist-choices\fP (M-^D) (^D =)
+XList possible completions for the current word.
+X.TP
+X\fBlist-expand\fP (^Xg ^XG) (^G)
+XList the expansion of the current word.
+X.TP
+X\fBmagic-space\fP
+XPerform history expansion and insert a space into the
+Xbuffer.  This is intended to be bound to space.
+X.TP
+X\fBreverse-menu-complete\fP
+XSee the \fBMENU_COMPLETE\fP option below.
+X.SS Miscellaneous
+X.TP
+X\fBaccept-and-hold\fP (M-A M-a)
+XPush the contents of the buffer on the buffer stack
+Xand execute it.
+X.TP
+X\fBaccept-and-infer-next-history\fP
+XExecute the contents of the buffer.
+XThen search the history list for a line matching the current one
+Xand push the event following onto the buffer stack.
+X.TP
+X\fBaccept-line\fP (^J ^M)
+XExecute the contents of the buffer.
+X.TP
+X\fBaccept-line-and-down-history\fP (^O)
+XExecute the current line, and push the next history
+Xevent on the the buffer stack.
+X.TP
+X\fBvi-cmd-mode\fP (^X^V) (^[)
+XEnter command mode; that is, use the alternate keymap.
+XYes, this is bound by default in emacs mode.
+X.TP
+X\fBvi-caps-lock-panic\fP (unbound) (H K)
+XHang until any lowercase key is pressed.
+XThis is for vi users without the mental capacity to keep
+Xtrack of their caps lock key (like the author).
+X.TP
+X\fBclear-screen\fP (^L M-^L)
+XClear the screen and redraw the prompt.
+X.TP
+X\fBexchange-point-and-mark\fP (^X^X)
+XExchange the cursor position with the position of the mark.
+X.TP
+X\fBget-line\fP (M-G M-g)
+XPop the top line off the buffer stack and insert it at the
+Xcursor position.
+X.TP
+X\fBmetafy-next\fP (^[)
+XTreat the next character typed as if it had the meta bit set.
+X.TP
+X\fBpush-line\fP (^Q M-Q M-q)
+XPush the current buffer onto the buffer stack and clear
+Xthe buffer.
+XNext time the editor starts up, the buffer will be popped
+Xoff the top of the buffer stack and loaded into the editing
+Xbuffer.
+X.TP
+X\fBredisplay\fP (unbound) (^R)
+XRedisplays the edit buffer.
+X.TP
+X\fBrun-help\fP (M-H M-h)
+XPush the buffer onto the buffer stack, and execute the
+Xcommand "\fBrun-help\fP \fIcmd\fP", where \fIcmd\fP is the current
+Xcommand.  \fBrun-help\fP is normally aliased to \fBman\fP.
+X.TP
+X\fBsend-break\fP (^C)
+XAbort the parsing of the current line.
+X.TP
+X\fBset-mark-command\fP (^@)
+XSet the mark at the cursor position.
+X.TP
+X\fBspell-word\fP (M-$ M-S M-s)
+XAttempt spelling correction on the current word.
+X.TP
+X\fBundefined-key\fP
+XBeep.
+X.TP
+X\fBundo\fP (^_ ^X^U) (u)
+XIncrementally undo the last text modification.
+X.TP
+X\fBwhich-command\fP (M-?)
+XPush the buffer onto the buffer stack, and execute the
+Xcommand "\fBwhich-command\fP \fIcmd\fP", where \fIcmd\fP is the current
+Xcommand.  \fBwhich-command\fP is normally aliased to \fBwhence\fP.
+X.SH HISTORY
+XHistory substitution allows you to use words from previous command
+Xlines in the command line you are typing.  This simplifies spelling
+Xcorrections and the repetition of complicated commands or arguments.
+XCommand lines are saved in the history list, the size of which
+Xis controlled by the
+X.B HISTSIZE
+Xvariable.  The most recent command is retained in any case.
+XA history substitution begins with a
+X.B !
+Xand may occur anywhere on the command line; history
+Xsubstitutions do not nest.  The
+X.B !
+Xcan be escaped with
+X.B \e
+Xto suppress its special meaning.
+XSingle or double quotes will \fInot\fP work for this.
+X.PP
+XInput lines containing history substitutions are echoed on the
+Xterminal after being expanded, but before any other
+Xsubstitutions take place or the command gets executed.
+X.SS Event Designators
+X.PP
+XAn event designator is a reference to a command-line entry in
+Xthe history list.
+X.RS
+X.PD 0
+X.TP
+X.B !
+XStart a history substitution, except when followed by a blank, newline,
+X.BR = ,
+Xor
+X.BR ( .
+X.TP
+X.B !!
+XRefer to the previous command. 
+XBy itself, this substitution
+Xrepeats the previous command.
+X.TP
+X.BI ! n
+XRefer to command-line
+X.IR n .
+X.TP
+X.BI ! \-n
+XRefer to the current command-line minus
+X.IR n .
+X.TP
+X.BI  ! str
+XRefer to the most recent command starting with
+X.IR str .
+X.TP
+X.BI  !? str\fR[\fP ? \fR]\fP
+XRefer to the most recent command containing
+X.IR str .
+X.TP
+X.B !#
+SHAR_EOF
+true || echo 'restore of zsh2.00/src/zsh.1 failed'
+fi
+echo 'End of zsh2.00.00 part 13'
+echo 'File zsh2.00/src/zsh.1 is continued in part 14'
+echo 14 > _shar_seq_.tmp
+exit 0
+--
+              Paul Falstad  pfalstad@phoenix.princeton.edu
+         And on the roads, too, vicious gangs of KEEP LEFT signs!
+     If Princeton knew my opinions, they'd have expelled me long ago.
+
+exit 0 # Just in case...
+-- 
+Kent Landfield                   INTERNET: kent@sparky.IMD.Sterling.COM
+Sterling Software, IMD           UUCP:     uunet!sparky!kent
+Phone:    (402) 291-8300         FAX:      (402) 291-4362
+Please send comp.sources.misc-related mail to kent@uunet.uu.net.

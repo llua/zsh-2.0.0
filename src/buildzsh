@@ -1,0 +1,315 @@
+#! /bin/sh
+echo please wait
+exec >config.h
+cat <<'foo'
+/* this file is created automatically by buildzsh */
+
+foo
+echo '/* define this if you have struct termios */'
+if test -f /usr/include/sys/termios.h
+then echo '#define TERMIOS'
+else echo '/* #define TERMIOS */'
+fi
+echo
+echo '/* define this if you have struct termio */'
+if test -f /usr/include/sys/termio.h
+then echo '#define TERMIO'
+else echo '/* #define TERMIO */'
+fi
+echo
+echo '/* define this if you have a host field in utmp */'
+if grep ut_host /usr/include/utmp.h >/dev/null
+then echo '#define UTMP_HOST'
+else echo '/* #define UTMP_HOST */'
+fi
+echo
+echo '/* define this if you have WAITPID */'
+if man 2 wait | sed 's/_//g' | grep waitpid >/dev/null
+then echo '#define WAITPID'
+else echo '/* #define WAITPID */'
+fi
+echo
+echo '/* define this if your signal handlers return void */'
+if grep SIG_DFL /usr/include/signal.h /usr/include/sys/signal.h |
+	grep void >/dev/null
+then echo '#define SIGVOID'
+else echo '/* #define SIGVOID */'
+fi
+echo
+echo '/* define this if you have sigvec */'
+if grep 'struct.*sigvec' /usr/include/signal.h /usr/include/sys/signal.h >/dev/null
+then echo '#define SIGVEC'
+else echo '/* #define SIGVEC */'
+fi
+echo
+echo '/* define this if signal handlers need to be reset each time */'
+if grep SIGTSTP /usr/include/signal.h /usr/include/sys/signal.h >/dev/null
+then echo '/* #define RESETHANDNEEDED */'
+else echo '#define RESETHANDNEEDED'
+fi
+echo
+cat <<'foo'
+#ifdef SIGVOID
+#define HANDTYPE void
+#else
+#define HANDTYPE int
+#define INTHANDTYPE
+#endif
+
+/* a string corresponding to the host type */
+foo
+echo '#define HOSTTYPE "' | tr -d '\012'
+( tcsh -c 'echo $HOSTTYPE' || arch || echo unknown ) 2>/dev/null |
+	tr -d '\012'
+echo '"'
+echo
+echo '/* the default editor for the fc builtin */'
+echo '#define DEFFCEDIT "' | tr -d '\012'
+which vi | tr -d '\012'
+echo '"'
+echo
+if grep UTMP_FILE /usr/include/utmp.h >/dev/null
+then :
+else 
+echo '/* the path of wtmp */'
+echo '#define WTMP_FILE "' | tr -d '\012'
+if test -f /etc/wtmp
+then echo /etc/wtmp
+elif test -f /usr/etc/wtmp
+then echo /usr/etc/wtmp
+elif test -f /var/adm/wtmp
+then echo /var/adm/wtmp
+elif test -f /usr/adm/wtmp
+then echo /usr/adm/wtmp
+else echo /dev/null
+fi | tr -d '\012'
+echo '"
+
+/* the path of utmp */
+#define UTMP_FILE "/etc/utmp"
+'
+fi
+cat <<'foo'
+/* the path of zsh in the file system */
+#define MYSELF "/usr/local/bin/zsh"
+
+/* define if you prefer "suspended" to "stopped" */
+#define USE_SUSPENDED
+
+/* the file to source whenever zsh is run; if undefined, don't source
+	anything */
+#define GLOBALZSHRC "/etc/zshrc"
+
+/* the file to source whenever zsh is run as a login shell; if
+	undefined, don't source anything */
+#define GLOBALZLOGIN "/etc/zlogin"
+
+/* the default HISTSIZE */
+#define DEFAULT_HISTSIZE 128
+
+/* define if you like interactive comments */
+/*#define INTERACTIVE_COMMENTS*/
+
+#define _BSD_SIGNALS   /* this could be an iris, you never know */
+foo
+exec 1>&2
+echo `csh -c 'kill -l'` | tr ' ' '\012' >signals.h
+lct=`wc -l < signals.h`
+cp signals.h signams.h
+echo '1,$s/^/SIG/
+/SIGHUP/s//hangup/
+/SIGINT/s//interrupt/
+/SIGQUIT/s//quit/
+/SIGILL/s//illegal instruction/
+/SIGTRAP/s//trace trap/
+/SIGIOT/s//IOT instruction/
+/SIGABRT/s//abort/
+/SIGEMT/s//EMT instruction/
+/SIGFPE/s//floating point exception/
+/SIGKILL/s//killed/
+/SIGBUS/s//bus error/
+/SIGSEGV/s//segmentation fault/
+/SIGSYS/s//bad system call/
+/SIGPIPE/s//broken pipe/
+/SIGTERM/s//terminated/
+/SIGPWR/s//power fail/
+/SIGVTALRM/s//virtual time alarm/
+/SIGCONT/s//continued/
+/SIGXCPU/s//cpu limit exceeded/
+/SIGXFSZ/s//filesize limit exceeded/
+1,$s/.*/	"&",/
+$a
+	NULL
+};
+
+char *sigs[SIGCOUNT+4] = {
+	"EXIT",
+.
+1i
+/* this file is created automatically by buildzsh */
+/* if all this is wrong, blame csh ;-) */
+
+#define SIGCOUNT '"$lct"'
+
+#ifdef GLOBALS
+
+char *sigmsg[SIGCOUNT+2] = {
+	"done",
+.
+w
+q' | ed signals.h
+if grep SIGSTOP signals.h >/dev/null
+then ed signals.h <<'foo'
+/SIGSTOP/c
+#ifdef USE_SUSPENDED
+	"suspended (signal)",
+#else
+	"stopped (signal)",
+#endif
+.
+/SIGTSTP/c
+#ifdef USE_SUSPENDED
+	"suspended",
+#else
+	"stopped",
+#endif
+.
+/SIGTTIN/c
+#ifdef USE_SUSPENDED
+	"suspended (tty input)",
+#else
+	"stopped (tty input)",
+#endif
+.
+/SIGTTOU/c
+#ifdef USE_SUSPENDED
+	"suspended (tty output)",
+#else
+	"stopped (tty output)",
+#endif
+.
+w
+q
+foo
+fi
+(sed 's/.*/	"&",/' signams.h
+echo '	"ERR",
+	"DEBUG",
+	NULL
+};
+
+#else
+
+extern char *sigs[SIGCOUNT+4],*sigmsg[SIGCOUNT+2];
+
+#endif') >>signals.h
+rm signams.h
+exec >Makefile
+cat <<'foo'
+#! /bin/make -f
+#
+# Makefile - rather obvious isn't it
+#
+# This file is part of zsh, the Z shell.
+#
+# zsh is free software; no one can prevent you from reading the source
+# code, or giving it to someone else.
+# 
+# This file is copyrighted under the GNU General Public License, which
+# can be found in the file called COPYING.
+# 
+# Copyright (C) 1990, 1991 Paul Falstad
+#
+# zsh is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY.  No author or distributor accepts
+# responsibility to anyone for the consequences of using it or for
+# whether it serves any particular purpose or works at all, unless he
+# says so in writing.  Refer to the GNU General Public License
+# for full details.
+# 
+# Everyone is granted permission to copy, modify and redistribute
+# zsh, but only under the conditions described in the GNU General Public
+# License.   A copy of this license is supposed to have been given to you
+# along with zsh so you can know your rights and responsibilities.
+# It should be in a file named COPYING.
+# 
+# Among other things, the copyright notice and this notice must be
+# preserved on all copies.
+#
+OBJS=hist.o glob.o table.o subst.o builtin.o loop.o mem.o cond.o \
+parse.o lex.o init.o jobs.o exec.o utils.o math.o params.o watch.o \
+text.o zle_main.o zle_utils.o zle_emacs.o zle_refresh.o zle_bindings.o \
+zle_tricky.o zle_vi.o
+BINDIR=/usr/local/bin
+MANDIR=/usr/local/man/man1
+
+# debugging flags
+#CFLAGS=-g -DYYDEBUG -Wreturn-type -Wunused -Wpointer-arith
+#CC=gcc -traditional
+#YFLAGS=-d -v
+
+foo
+if test -f "`which gcc`" >/dev/null
+then echo 'CC=gcc -traditional
+CFLAGS= -O'
+else echo 'CC=cc
+CFLAGS= -O'
+fi
+if test -f /usr/lib/libbsd.a
+then
+if grep '+' /etc/passwd >/dev/null
+then echo 'LIBS= -lcurses -lsun -lbsd -lmalloc'
+else echo 'LIBS= -lcurses -lbsd -lmalloc'
+fi
+elif test -f /usr/lib/libtermcap.a
+then echo 'LIBS= -ltermcap'
+else echo 'LIBS= -lcurses'
+fi
+cat <<'foo'
+
+ZSHPATH=zsh
+
+# redefine these to work around Sun make bogosity
+
+.c.o:
+	$(CC) $(CFLAGS) -c -o $*.o $<
+
+.y.o:
+	yacc $(YFLAGS) $<
+	$(CC) $(CFLAGS) -c -o $@ y.tab.c
+	rm y.tab.c
+
+all: $(ZSHPATH)
+
+$(ZSHPATH): $(OBJS)
+	cc -o $(ZSHPATH) $(OBJS) $(LIBS) $(LFLAGS)
+	
+tags: /tmp
+	ctags *.[cy]
+
+$(OBJS): config.h zsh.h zle.h
+
+clean:
+	rm -f *.o zsh core 
+
+install: zsh
+	install -s -m 755 zsh $(BINDIR)
+	install -m 444 zsh.1 $(MANDIR)
+
+zsh.h: y.tab.h
+foo
+exec 1>&2
+cat <<'foo'
+
+You may want to look at the files I just created (config.h, Makefile,
+and signals.h) to make sure they are correct.  Or you may just want
+to go ahead and try running make now to see what happens.
+
+foo
+echo 'Shall I execute make now?' | tr -d '\012' 
+read reply
+echo
+case "$reply" in
+[yY]*) exec make ;;
+esac
+

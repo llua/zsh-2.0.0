@@ -1,0 +1,15 @@
+void meminit DCLPROTO((void));
+void heapalloc DCLPROTO((void));
+void permalloc DCLPROTO((void));
+void lastalloc DCLPROTO((void));
+void pushheap DCLPROTO((void));
+void freeheap DCLPROTO((void));
+void popheap DCLPROTO((void));
+void freeh DCLPROTO((Heap h));
+void *halloc DCLPROTO((int size));
+void *hcalloc DCLPROTO((int size));
+void *hrealloc DCLPROTO((char *p,int old,int new));
+void *zalloc DCLPROTO((int l));
+void *zcalloc DCLPROTO((int size));
+char *strdup DCLPROTO((char *s));
+char *ztrdup DCLPROTO((char *s));

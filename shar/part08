@@ -1,0 +1,2335 @@
+Path: funic!news.funet.fi!sunic!mcsun!uunet!sparky!kent
+From: pfalstad@phoenix.princeton.edu (Paul Falstad)
+Newsgroups: comp.sources.misc
+Subject: v18i091:  zsh2.00 - The Z shell, Part08/15
+Message-ID: <1991Apr24.030439.5351@sparky.IMD.Sterling.COM>
+Date: 24 Apr 91 03:04:39 GMT
+Sender: kent@sparky.IMD.Sterling.COM (Kent Landfield)
+Organization: League For Fighting Chartered Accountancy
+Lines: 2323
+Approved: kent@sparky.imd.sterling.com
+X-Checksum-Snefru: 7b002f1d 1b1b3b17 54936e19 f1de89ff
+
+Submitted-by: Paul Falstad <pfalstad@phoenix.princeton.edu>
+Posting-number: Volume 18, Issue 91
+Archive-name: zsh2.00/part08
+
+#!/bin/sh
+# this is zsh2.00.00.shar.08 (part 8 of zsh2.00.00)
+# do not concatenate these parts, unpack them in order with /bin/sh
+# file zsh2.00/src/math.c continued
+#
+if test ! -r _shar_seq_.tmp; then
+	echo 'Please unpack part 1 first!'
+	exit 1
+fi
+(read Scheck
+ if test "$Scheck" != 8; then
+	echo Please unpack part "$Scheck" next!
+	exit 1
+ else
+	exit 0
+ fi
+) < _shar_seq_.tmp || exit 1
+if test ! -f _shar_wnt_.tmp; then
+	echo 'x - still skipping zsh2.00/src/math.c'
+else
+echo 'x - continuing file zsh2.00/src/math.c'
+sed 's/^X//' << 'SHAR_EOF' >> 'zsh2.00/src/math.c' &&
+X   code, or giving it to someone else.
+X
+X   This file is copyrighted under the GNU General Public License, which
+X   can be found in the file called COPYING.
+X
+X   Copyright (C) 1990, 1991 Paul Falstad
+X
+X   zsh is distributed in the hope that it will be useful, but
+X   WITHOUT ANY WARRANTY.  No author or distributor accepts
+X   responsibility to anyone for the consequences of using it or for
+X   whether it serves any particular purpose or works at all, unless he
+X   says so in writing.  Refer to the GNU General Public License
+X   for full details.
+X
+X   Everyone is granted permission to copy, modify and redistribute
+X   zsh, but only under the conditions described in the GNU General Public
+X   License.   A copy of this license is supposed to have been given to you
+X   along with zsh so you can know your rights and responsibilities.
+X   It should be in a file named COPYING.
+X
+X   Among other things, the copyright notice and this notice must be
+X   preserved on all copies.
+X
+X*/
+X
+X#include "zsh.h"
+X#include "funcs.h"
+X
+Xstatic char *ptr;
+X
+Xtypedef int LV;
+X
+Xstatic long yyval;
+Xstatic LV yylval;
+X
+X/* nonzero means we are not evaluating, just parsing */
+X
+Xstatic int noeval = 0;
+X
+X/* != 0 means recognize unary plus, minus, etc. */
+X
+Xstatic int unary = 1;
+X
+Xvoid mathparse DCLPROTO((int));
+X
+X/* LR = left-to-right associativity
+X	RL = right-to-left associativity
+X	BOO = short-circuiting boolean */
+X
+Xenum xtyp { LR,RL,BOOL };
+X
+Xenum xtok {
+X	INPAR, OUTPAR, NOT, COMP, POSTPLUS,
+X	POSTMINUS, UPLUS, UMINUS, AND, XOR,
+X	OR, MUL, DIV, MOD, PLUS,
+X	MINUS, SHLEFT, SHRIGHT, LES, LEQ,
+X	GRE, GEQ, DEQ, NEQ, DAND,
+X	DOR, DXOR, QUEST, COLON, EQ,
+X	PLUSEQ, MINUSEQ, MULEQ, DIVEQ, MODEQ,
+X	ANDEQ, XOREQ, OREQ, SHLEFTEQ, SHRIGHTEQ,
+X	DANDEQ, DOREQ, DXOREQ, COMMA, EOI,
+X	PREPLUS, PREMINUS, NUM, ID, TOKCOUNT
+X};
+X
+X/* precedences */
+X
+Xstatic int prec[TOKCOUNT] = {
+X	1,137,2,2,2,
+X	2,2,2,4,5,
+X	6,7,7,7,8,
+X	8,3,3,9,9,
+X	9,9,10,10,11,
+X	12,12,13,13,14,
+X	14,14,14,14,14,
+X	14,14,14,14,14,
+X	14,14,14,15,200,
+X	2,2,0,0,
+X};
+X
+X#define TOPPREC 15
+X#define ARGPREC (15-1)
+X
+Xstatic int type[TOKCOUNT] = {
+X	LR,LR,RL,RL,RL,
+X	RL,RL,RL,LR,LR,
+X	LR,LR,LR,LR,LR,
+X	LR,LR,LR,LR,LR,
+X	LR,LR,LR,LR,BOOL,
+X	BOOL,LR,RL,RL,RL,
+X	RL,RL,RL,RL,RL,
+X	RL,RL,RL,RL,RL,
+X	BOOL,BOOL,RL,RL,RL,
+X	RL,RL,LR,LR,
+X};
+X
+X#define LVCOUNT 32
+X
+X/* list of lvalues (variables) */
+X
+Xstatic int lvc;
+Xstatic char *lvals[LVCOUNT];
+X
+Xint zzlex() /**/
+X{
+X	for(;;)
+X		switch (*ptr++)
+X			{
+X			case '+':
+X				if (*ptr == '+' && (unary || !ialnum(*ptr)))
+X					{
+X					ptr++;
+X					return (unary) ? PREPLUS : POSTPLUS;
+X					}
+X				if (*ptr == '=') { unary = 1; ptr++; return PLUSEQ; }
+X				return (unary) ? UPLUS : PLUS;
+X			case '-':
+X				if (*ptr == '-' && (unary || !ialnum(*ptr)))
+X					{
+X					ptr++;
+X					return (unary) ? PREMINUS : POSTMINUS;
+X					}
+X				if (*ptr == '=') { unary = 1; ptr++; return MINUSEQ; }
+X				return (unary) ? UMINUS : MINUS;
+X			case '(': unary = 1; return INPAR;
+X			case ')': return OUTPAR;
+X			case '!': if (*ptr == '=')
+X						{ unary = 1; ptr++; return NEQ; }
+X						return NOT;
+X			case '~': return COMP;
+X			case '&': unary = 1;
+X				if (*ptr == '&') { if (*++ptr == '=')
+X				{ ptr++; return DANDEQ; } return DAND; }
+X				else if (*ptr == '=') { ptr++; return ANDEQ; } return AND;
+X			case '|': unary = 1;
+X				if (*ptr == '|') { if (*++ptr == '=')
+X				{ ptr++; return DOREQ; } return DOR; }
+X				else if (*ptr == '=') { ptr++; return OREQ; } return OR;
+X			case '^': unary = 1;
+X				if (*ptr == '^') { if (*++ptr == '=')
+X				{ ptr++; return DXOREQ; } return DXOR; }
+X				else if (*ptr == '=') { ptr++; return XOREQ; } return XOR;
+X			case '*': unary = 1;
+X				if (*ptr == '=') { ptr++; return MULEQ; } return MUL;
+X			case '/': unary = 1;
+X				if (*ptr == '=') { ptr++; return DIVEQ; } return DIV;
+X			case '%': unary = 1;
+X				if (*ptr == '=') { ptr++; return MODEQ; } return MOD;
+X			case '<': unary = 1; if (*ptr == '<')
+X				{ if (*++ptr == '=') { ptr++; return SHLEFTEQ; } return SHLEFT; }
+X				else if (*ptr == '=') { ptr++; return LEQ; } return LES;
+X			case '>': unary = 1; if (*ptr == '>')
+X				{ if (*++ptr == '=') { ptr++; return SHRIGHTEQ; } return SHRIGHT; }
+X				else if (*ptr == '=') { ptr++; return GEQ; } return GRE;
+X			case '=': unary = 1; if (*ptr == '=') { ptr++; return DEQ; }
+X				return EQ;
+X			case '?': unary = 1; return QUEST;
+X			case ':': unary = 1; return COLON;
+X			case ',': unary = 1; return COMMA;
+X			case '\0': unary = 1; ptr--; return EOI;
+X			case '[': unary = 0;
+X				{ int base = zstrtol(ptr,&ptr,10);
+X					yyval = zstrtol(ptr+1,&ptr,lastbase = base); return NUM; }
+X			case ' ': case '\t':
+X				break;
+X			default:
+X				if (idigit(*--ptr))
+X					{ unary = 0; yyval = zstrtol(ptr,&ptr,10); return NUM; }
+X				if (ialpha(*ptr) || *ptr == '$')
+X					{
+X					char *p,q;
+X
+X					if (*ptr == '$')
+X						ptr++;
+X					p = ptr;
+X					if (lvc == LVCOUNT)
+X						{
+X						zerr("too many identifiers in expression",NULL,0);
+X						return EOI;
+X						}
+X					unary = 0;
+X					while(ialpha(*++ptr));
+X					q = *ptr;
+X					*ptr = '\0';
+X					lvals[yylval = lvc++] = ztrdup(p);
+X					*ptr = q;
+X					return ID;
+X					}
+X				return EOI;
+X			}
+X}
+X
+X/* the value stack */
+X
+X#define STACKSZ 100
+Xint tok;			/* last token */
+Xint sp = -1;	/* stack pointer */
+Xstruct mathvalue {
+X	LV lval;
+X	long val;
+X	} stack[STACKSZ];
+X
+Xvoid push(val,lval) /**/
+Xlong val;LV lval;
+X{
+X	if (sp == STACKSZ-1)
+X		zerr("stack overflow",NULL,0);
+X	else
+X		sp++;
+X	stack[sp].val = val;
+X	stack[sp].lval = lval;
+X}
+X
+Xlong getvar(s) /**/
+XLV s;
+X{
+Xlong t;
+X
+X	if (!(t = getiparam(lvals[s])))
+X		return 0;
+X	return t;
+X}
+X
+Xlong setvar(s,v) /**/
+XLV s;long v;
+X{
+X	if (s == -1)
+X		{
+X		zerr("lvalue required",NULL,0);
+X		return 0;
+X		}
+X	if (noeval)
+X		return v;
+X	setiparam(lvals[s],v);
+X	return v;
+X}
+X
+Xint notzero(a) /**/
+Xint a;
+X{
+X	if (a == 0)
+X		{
+X		zerr("division by zero",NULL,0);
+X		return 0;
+X		}
+X	return 1;
+X}
+X
+X#define pop2() { b = stack[sp--].val; a = stack[sp--].val; }
+X#define pop3() {c=stack[sp--].val;b=stack[sp--].val;a=stack[sp--].val;}
+X#define nolval() {stack[sp].lval= -1;}
+X#define pushv(X) { push(X,-1); }
+X#define pop2lv() { pop2() lv = stack[sp+1].lval; }
+X#define set(X) { push(setvar(lv,X),lv); }
+X
+Xvoid op(what) /**/
+Xint what;
+X{
+Xlong a,b,c;
+XLV lv;
+X
+X	if (sp < 0)
+X		{
+X		zerr("stack empty",NULL,0);
+X		return;
+X		}
+X	switch(what) {
+X		case NOT: stack[sp].val = !stack[sp].val; nolval(); break;
+X		case COMP: stack[sp].val = ~stack[sp].val; nolval(); break;
+X		case POSTPLUS: ( void ) setvar(stack[sp].lval,stack[sp].val+1); break;
+X		case POSTMINUS: ( void ) setvar(stack[sp].lval,stack[sp].val-1); break;
+X		case UPLUS: nolval(); break;
+X		case UMINUS: stack[sp].val = -stack[sp].val; nolval(); break;
+X		case AND: pop2(); pushv(a&b); break;
+X		case XOR: pop2(); pushv(a^b); break;
+X		case OR: pop2(); pushv(a|b); break;
+X		case MUL: pop2(); pushv(a*b); break;
+X		case DIV: pop2(); if (notzero(b)) pushv(a/b); break;
+X		case MOD: pop2(); if (notzero(b)) pushv(a%b); break;
+X		case PLUS: pop2(); pushv(a+b); break;
+X		case MINUS: pop2(); pushv(a-b); break;
+X		case SHLEFT: pop2(); pushv(a<<b); break;
+X		case SHRIGHT: pop2(); pushv(a>>b); break;
+X		case LES: pop2(); pushv(a<b); break;
+X		case LEQ: pop2(); pushv(a<=b); break;
+X		case GRE: pop2(); pushv(a>b); break;
+X		case GEQ: pop2(); pushv(a>=b); break;
+X		case DEQ: pop2(); pushv(a==b); break;
+X		case NEQ: pop2(); pushv(a!=b); break;
+X		case DAND: pop2(); pushv(a&&b); break;
+X		case DOR: pop2(); pushv(a||b); break;
+X		case DXOR: pop2(); pushv(a&&!b||!a&&b); break;
+X		case QUEST: pop3(); pushv((a)?b:c); break;
+X		case COLON: break;
+X		case EQ: pop2lv(); set(b); break;
+X		case PLUSEQ: pop2lv(); set(a+b); break;
+X		case MINUSEQ: pop2lv(); set(a-b); break;
+X		case MULEQ: pop2lv(); set(a*b); break;
+X		case DIVEQ: pop2lv(); if (notzero(b)) set(a/b); break;
+X		case MODEQ: pop2lv(); if (notzero(b)) set(a%b); break;
+X		case ANDEQ: pop2lv(); set(a&b); break;
+X		case XOREQ: pop2lv(); set(a^b); break;
+X		case OREQ: pop2lv(); set(a|b); break;
+X		case SHLEFTEQ: pop2lv(); set(a<<b); break;
+X		case SHRIGHTEQ: pop2lv(); set(a>>b); break;
+X		case DANDEQ: pop2lv(); set(a&&b); break;
+X		case DOREQ: pop2lv(); set(a||b); break;
+X		case DXOREQ: pop2lv(); set(a&&!b||!a&&b); break;
+X		case COMMA: pop2(); pushv(b); break;
+X		case PREPLUS: stack[sp].val = setvar(stack[sp].lval,
+X			stack[sp].val+1); break;
+X		case PREMINUS: stack[sp].val = setvar(stack[sp].lval,
+X			stack[sp].val-1); break;
+X		default: zerr("out of integers",NULL,0); exit(1);
+X	}
+X}
+X
+Xvoid bop(tk) /**/
+Xint tk;
+X{
+X	switch (tk) {
+X		case DAND: case DANDEQ: if (!stack[sp].val) noeval++; break;
+X		case DOR: case DOREQ: if (stack[sp].val) noeval++; break;
+X		};
+X}
+X
+Xlong mathevall(s,prek,ep) /**/
+Xchar *s;int prek;char **ep;
+X{
+Xint t0;
+X
+X	lastbase = -1;
+X	for (t0 = 0; t0 != LVCOUNT; t0++)
+X		lvals[t0] = NULL;
+X	lvc = 0;
+X	ptr = s;
+X	sp = -1;
+X	unary = 1;
+X	mathparse(prek);
+X	*ep = ptr;
+X	if (sp)
+X		zerr("unbalanced stack",NULL,0);
+X	for (t0 = 0; t0 != lvc; t0++)
+X		free(lvals[t0]);
+X	return stack[0].val;
+X}
+X
+Xlong matheval(s) /**/
+Xchar *s;
+X{
+Xchar *junk;
+Xlong x;
+X
+X	if (!*s)
+X		return 0;
+X	x = mathevall(s,TOPPREC,&junk);
+X	if (*junk)
+X		zerr("illegal character: %c",NULL,*junk);
+X	return x;
+X}
+X
+Xlong mathevalarg(s,ss) /**/
+Xchar *s;char **ss;
+X{
+Xlong x;
+X
+X	x = mathevall(s,ARGPREC,ss);
+X	if (tok == COMMA)
+X		(*ss)--;
+X	return x;
+X}
+X
+X/* operator-precedence parse the string and execute */
+X
+Xvoid mathparse(pc) /**/
+Xint pc;
+X{
+X	if (errflag)
+X		return;
+X	tok = zzlex();
+X	while (prec[tok] <= pc)
+X		{
+X		if (errflag)
+X			return;
+X		if (tok == NUM)
+X			push(yyval,-1);
+X		else if (tok == ID)
+X			push(getvar(yylval),yylval);
+X		else if (tok == INPAR)
+X			{
+X			mathparse(TOPPREC);
+X			if (tok != OUTPAR)
+X				exit(1);
+X			}
+X		else if (tok == QUEST)
+X			{
+X			int q = stack[sp].val;
+X			if (!q) noeval++;
+X			mathparse(prec[QUEST]-1);
+X			if (!q) noeval--; else noeval++;
+X			mathparse(prec[QUEST]);
+X			if (q) noeval--;
+X			op(QUEST);
+X			continue;
+X			}
+X		else
+X			{
+X			int otok = tok,onoeval = noeval;
+X
+X			if (type[otok] == BOOL)
+X				bop(otok);
+X			mathparse(prec[otok]-(type[otok] != RL));
+X			noeval = onoeval;
+X			op(otok);
+X			continue;
+X			}
+X		tok = zzlex();
+X		}
+X}
+X
+SHAR_EOF
+echo 'File zsh2.00/src/math.c is complete' &&
+chmod 0644 zsh2.00/src/math.c ||
+echo 'restore of zsh2.00/src/math.c failed'
+Wc_c="`wc -c < 'zsh2.00/src/math.c'`"
+test 10042 -eq "$Wc_c" ||
+	echo 'zsh2.00/src/math.c: original size 10042, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+# ============= zsh2.00/src/math.pro ==============
+if test -f 'zsh2.00/src/math.pro' -a X"$1" != X"-c"; then
+	echo 'x - skipping zsh2.00/src/math.pro (File already exists)'
+	rm -f _shar_wnt_.tmp
+else
+> _shar_wnt_.tmp
+echo 'x - extracting zsh2.00/src/math.pro (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/src/math.pro' &&
+Xint zzlex DCLPROTO((void));
+Xvoid push DCLPROTO((long val,LV lval));
+Xlong getvar DCLPROTO((LV s));
+Xlong setvar DCLPROTO((LV s,long v));
+Xint notzero DCLPROTO((int a));
+Xvoid op DCLPROTO((int what));
+Xvoid bop DCLPROTO((int tk));
+Xlong mathevall DCLPROTO((char *s,int prek,char **ep));
+Xlong matheval DCLPROTO((char *s));
+Xlong mathevalarg DCLPROTO((char *s,char **ss));
+Xvoid mathparse DCLPROTO((int pc));
+SHAR_EOF
+chmod 0644 zsh2.00/src/math.pro ||
+echo 'restore of zsh2.00/src/math.pro failed'
+Wc_c="`wc -c < 'zsh2.00/src/math.pro'`"
+test 398 -eq "$Wc_c" ||
+	echo 'zsh2.00/src/math.pro: original size 398, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+# ============= zsh2.00/src/mem.c ==============
+if test -f 'zsh2.00/src/mem.c' -a X"$1" != X"-c"; then
+	echo 'x - skipping zsh2.00/src/mem.c (File already exists)'
+	rm -f _shar_wnt_.tmp
+else
+> _shar_wnt_.tmp
+echo 'x - extracting zsh2.00/src/mem.c (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/src/mem.c' &&
+X/*
+X
+X	mem.c - memory management
+X
+X	This file is part of zsh, the Z shell.
+X
+X	zsh is free software; no one can prevent you from reading the source
+X   code, or giving it to someone else.
+X
+X   This file is copyrighted under the GNU General Public License, which
+X   can be found in the file called COPYING.
+X
+X   Copyright (C) 1990, 1991 Paul Falstad
+X
+X   zsh is distributed in the hope that it will be useful, but
+X   WITHOUT ANY WARRANTY.  No author or distributor accepts
+X   responsibility to anyone for the consequences of using it or for
+X   whether it serves any particular purpose or works at all, unless he
+X   says so in writing.  Refer to the GNU General Public License
+X   for full details.
+X
+X   Everyone is granted permission to copy, modify and redistribute
+X   zsh, but only under the conditions described in the GNU General Public
+X   License.   A copy of this license is supposed to have been given to you
+X   along with zsh so you can know your rights and responsibilities.
+X   It should be in a file named COPYING.
+X
+X   Among other things, the copyright notice and this notice must be
+X   preserved on all copies.
+X
+X*/
+X
+X#include "zsh.h"
+X#include "funcs.h"
+X#define HEAPSIZE 8192
+X
+X/*
+X
+X	There are two ways to allocate memory in zsh.  The first way is
+X	to call zalloc/zcalloc, which call malloc/calloc directly.  It
+X	is legal to call realloc() or free() on memory allocated this way.
+X	The second way is to call halloc/hcalloc, which allocates memory
+X	from one of the memory pools on the heap stack.  A pool can be
+X	created by calling pushheap(), and destroyed by calling popheap().
+X	To free the memory in the pool without destroying it, call
+X	freeheap(); this is equivalent to { popheap(); pushheap(); }
+X	Memory allocated in this way does not have to be freed explicitly;
+X	it will all be freed when the pool is destroyed.  In fact,
+X	attempting to free this memory may result in a core dump.
+X	The pair of pointers ncalloc and alloc may point to either
+X	zalloc & zcalloc or halloc & hcalloc; permalloc() sets them to the
+X	former, and heapalloc() sets them to the latter. This can be useful.
+X	For example, the dupstruct() routine duplicates a syntax tree,
+X	allocating the new memory for the tree using alloc().  If you want
+X	to duplicate a structure for a one-time use (i.e. to execute the list
+X	in a for loop), call heapalloc(), then dupstruct().  If you want
+X	to duplicate a structure in order to preserve it (i.e. a function
+X	definition), call permalloc(), then dupstruct().
+X
+X*/
+X
+X/* initialize heap stack */
+X
+Xvoid meminit() /**/
+X{
+X	permalloc();
+X	heaplist = newlist();
+X	pushheap();
+X}
+X
+X/* set default allocation to heap stack */
+X
+Xvoid heapalloc() /**/
+X{
+X	alloc = hcalloc;
+X	ncalloc = halloc;
+X	useheap = 1;
+X}
+X
+Xstatic void *(*lastcalloc) DCLPROTO((int));
+Xstatic void *(*lastncalloc) DCLPROTO((int));
+X
+X/* set default allocation to malloc() */
+X
+Xvoid permalloc() /**/
+X{
+X	lastcalloc = alloc;
+X	lastncalloc = ncalloc;
+X	alloc = zcalloc;
+X	ncalloc = zalloc;
+X	useheap = 0;
+X}
+X
+X/* reset previous default allocation */
+X
+Xvoid lastalloc() /**/
+X{
+X	alloc = lastcalloc;
+X	ncalloc = lastncalloc;
+X}
+X
+Xstruct heap {
+X	char *pool,*ptr;
+X	int free;
+X	struct heap *next;
+X	};
+X
+X/* create a memory pool */
+X
+Xvoid pushheap() /**/
+X{
+XHeap h;
+X
+X	h = zalloc(sizeof *h);
+X	h->pool = h->ptr = zalloc(HEAPSIZE);
+X	h->free = HEAPSIZE;
+X	h->next = NULL;
+X	permalloc();
+X	pushnode(heaplist,h);
+X	lastalloc();
+X}
+X
+X/* reset a memory pool */
+X
+Xvoid freeheap() /**/
+X{
+XHeap h = peekfirst(heaplist);
+X
+X	freeh(h->next);
+X	h->free += (h->ptr-h->pool);
+X	h->ptr = h->pool;
+X}
+X
+X/* destroy a memory pool */
+X
+Xvoid popheap() /**/
+X{
+XHeap h = getnode(heaplist);
+X
+X	freeh(h);
+X}
+X
+Xvoid freeh(h) /**/
+XHeap h;
+X{
+X	if (h)
+X		{
+X		freeh(h->next);
+X		free(h->pool);
+X		free(h);
+X		}
+X}
+X
+X/* allocate memory from the current memory pool */
+X
+Xvoid *halloc(size) /**/
+Xint size;
+X{
+XHeap h = peekfirst(heaplist),h2;
+Xchar *ret;
+X
+X	size = (size|7)+1;
+X	while (h && h->free-size < 0)
+X		h = h->next;
+X	if (!h)
+X		{
+X		h2 = zalloc(sizeof *h2);
+X		h2->pool = h2->ptr = zalloc(h2->free = 
+X			(size < HEAPSIZE) ? HEAPSIZE : (size|(HEAPSIZE-1))+1);
+X		h2->next = h;
+X		setdata(firstnode(heaplist),h2);
+X		h = h2;
+X		}
+X	h->free -= size;
+X	ret = h->ptr;
+X	h->ptr += size;
+X	return ret;
+X}
+X
+X/* allocate memory from the current memory pool and clear it */
+X
+Xvoid *hcalloc(size) /**/
+Xint size;
+X{
+Xvoid *ptr;
+X
+X	ptr = halloc(size);
+X	bzero(ptr,size);
+X	return ptr;
+X}
+X
+Xvoid *hrealloc(p,old,new) /**/
+Xchar *p;int old;int new;
+X{
+Xchar *ptr;
+X
+X	ptr = halloc(new);
+X	memcpy(ptr,p,old);
+X	return ptr;
+X}
+X
+X/* allocate permanent memory */
+X
+Xvoid *zalloc(l) /**/
+Xint l;
+X{
+Xvoid *z;
+X 
+X	if (!l)
+X		l = 1;
+X	if (!(z = malloc(l)))
+X		{
+X		zerr("fatal error: out of memory: restarting",NULL,0);
+X		execl(MYSELF,"zsh","-f",(void *) 0);
+X		exit(1);
+X		}
+X	return z;
+X}
+X
+Xvoid *zcalloc(size) /**/
+Xint size;
+X{
+Xvoid *ptr;
+X
+X	ptr = zalloc(size);
+X	bzero(ptr,size);
+X	return ptr;
+X}
+X
+Xchar *strdup(s) /**/
+Xchar *s;
+X{
+Xchar *t;
+X
+X	if (!s)
+X		return NULL;
+X	t = ncalloc(strlen(s)+1);
+X	strcpy(t,s);
+X	return t;
+X}
+X
+Xchar *ztrdup(s) /**/
+Xchar *s;
+X{
+Xchar *t;
+X
+X	if (!s)
+X		return NULL;
+X	t = zalloc(strlen(s)+1);
+X	strcpy(t,s);
+X	return t;
+X}
+X
+SHAR_EOF
+chmod 0644 zsh2.00/src/mem.c ||
+echo 'restore of zsh2.00/src/mem.c failed'
+Wc_c="`wc -c < 'zsh2.00/src/mem.c'`"
+test 5039 -eq "$Wc_c" ||
+	echo 'zsh2.00/src/mem.c: original size 5039, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+# ============= zsh2.00/src/mem.pro ==============
+if test -f 'zsh2.00/src/mem.pro' -a X"$1" != X"-c"; then
+	echo 'x - skipping zsh2.00/src/mem.pro (File already exists)'
+	rm -f _shar_wnt_.tmp
+else
+> _shar_wnt_.tmp
+echo 'x - extracting zsh2.00/src/mem.pro (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/src/mem.pro' &&
+Xvoid meminit DCLPROTO((void));
+Xvoid heapalloc DCLPROTO((void));
+Xvoid permalloc DCLPROTO((void));
+Xvoid lastalloc DCLPROTO((void));
+Xvoid pushheap DCLPROTO((void));
+Xvoid freeheap DCLPROTO((void));
+Xvoid popheap DCLPROTO((void));
+Xvoid freeh DCLPROTO((Heap h));
+Xvoid *halloc DCLPROTO((int size));
+Xvoid *hcalloc DCLPROTO((int size));
+Xvoid *hrealloc DCLPROTO((char *p,int old,int new));
+Xvoid *zalloc DCLPROTO((int l));
+Xvoid *zcalloc DCLPROTO((int size));
+Xchar *strdup DCLPROTO((char *s));
+Xchar *ztrdup DCLPROTO((char *s));
+SHAR_EOF
+chmod 0644 zsh2.00/src/mem.pro ||
+echo 'restore of zsh2.00/src/mem.pro failed'
+Wc_c="`wc -c < 'zsh2.00/src/mem.pro'`"
+test 515 -eq "$Wc_c" ||
+	echo 'zsh2.00/src/mem.pro: original size 515, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+# ============= zsh2.00/src/params.c ==============
+if test -f 'zsh2.00/src/params.c' -a X"$1" != X"-c"; then
+	echo 'x - skipping zsh2.00/src/params.c (File already exists)'
+	rm -f _shar_wnt_.tmp
+else
+> _shar_wnt_.tmp
+echo 'x - extracting zsh2.00/src/params.c (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/src/params.c' &&
+X/*
+X
+X	params.c - parameters
+X
+X	This file is part of zsh, the Z shell.
+X
+X	zsh is free software; no one can prevent you from reading the source
+X   code, or giving it to someone else.
+X
+X   This file is copyrighted under the GNU General Public License, which
+X   can be found in the file called COPYING.
+X
+X   Copyright (C) 1990, 1991 Paul Falstad
+X
+X   zsh is distributed in the hope that it will be useful, but
+X   WITHOUT ANY WARRANTY.  No author or distributor accepts
+X   responsibility to anyone for the consequences of using it or for
+X   whether it serves any particular purpose or works at all, unless he
+X   says so in writing.  Refer to the GNU General Public License
+X   for full details.
+X
+X   Everyone is granted permission to copy, modify and redistribute
+X   zsh, but only under the conditions described in the GNU General Public
+X   License.   A copy of this license is supposed to have been given to you
+X   along with zsh so you can know your rights and responsibilities.
+X   It should be in a file named COPYING.
+X
+X   Among other things, the copyright notice and this notice must be
+X   preserved on all copies.
+X
+X*/
+X
+X#include "zsh.h"
+X#include "funcs.h"
+X#include <pwd.h>
+X
+X#define new(X) (X=(void*)alloc(sizeof(*(X))))
+X
+Xstatic Param argvparam;
+X
+X/* put predefined params in hash table */
+X
+Xvoid setupparams() /**/
+X{
+X/* special integer params */
+Xstatic struct { char *name;
+X			long (*get) DCLPROTO((Param));
+X			void (*set) DCLPROTO((Param,long)); } x1[] = {
+X	"#",poundgetfn,NULL,
+X	"ARGC",poundgetfn,NULL,
+X	"ERRNO",errnogetfn,NULL,
+X	"GID",gidgetfn,NULL,
+X	"HISTSIZE",histsizegetfn,histsizesetfn,
+X	"LITHISTSIZE",lithistsizegetfn,lithistsizesetfn,
+X	"RANDOM",randomgetfn,randomsetfn,
+X	"SECONDS",secondsgetfn,secondssetfn,
+X	"UID",uidgetfn,uidsetfn,
+X	NULL,NULL,NULL
+X	}, *p1 = x1;
+X/* special string params */
+Xstatic struct { char *name;
+X			char *(*get) DCLPROTO((Param));
+X			void (*set) DCLPROTO((Param,char *)); } x2[] = {
+X	"-",dashgetfn,NULL,
+X	"HISTCHARS",histcharsgetfn,histcharssetfn,
+X	"HOME",homegetfn,homesetfn,
+X	"TERM",termgetfn,termsetfn,
+X	"WORDCHARS",wordcharsgetfn,wordcharssetfn,
+X	"IFS",ifsgetfn,ifssetfn,
+X	"_",underscoregetfn,NULL,
+X	NULL,NULL,NULL
+X	}, *p2 = x2;
+X/* constant string params */
+Xstatic struct { char *name,*data; } x3[] = {
+X	"HOSTTYPE",HOSTTYPE,
+X	"VERSION",VERSIONSTR,
+X	NULL,NULL
+X	}, *p3 = x3;
+X/* variable integer params */
+Xstatic struct { char *name; long *data; } x4[] = {
+X	"!",&lastpid,				/* read only */
+X	"$",&mypid,
+X	"?",&lastval,
+X	"LINENO",&lineno,
+X	"PPID",&ppid,
+X	NULL,NULL,
+X
+X	"BAUD",&baud,				/* read/write */
+X	"COLUMNS",&columns,
+X	"DIRSTACKSIZE",&dirstacksize,
+X	"LINES",&lines,
+X	"LISTMAX",&listmax,
+X	"LOGCHECK",&logcheck,
+X	"MAILCHECK",&mailcheck,
+X	"OPTIND",&optind,
+X	"PERIOD",&period,
+X	"SAVEHIST",&savehist,
+X	"SHLVL",&shlvl,
+X	"TMOUT",&tmout,
+X	NULL,NULL
+X	}, *p4 = x4;
+X/* variable string params */
+Xstatic struct { char *name; char **data; } x5[] = {
+X	"HOST",&hostm,				/* read only */
+X	"LOGNAME",&username,
+X	"OLDPWD",&oldpwd,
+X	"PWD",&cwd,
+X	"TTY",&ttystrname,
+X	"USERNAME",&username,
+X	NULL,NULL,
+X
+X	"OPTARG",&optarg,		/* read/write */
+X	"MAIL",&mailfile,
+X	"PROMPT",&prompt,
+X	"PROMPT2",&prompt2,
+X	"PROMPT3",&prompt3,
+X	"PROMPT4",&prompt4,
+X	"RPROMPT",&rprompt,
+X	"PS1",&prompt,
+X	"PS2",&prompt2,
+X	"PS3",&prompt3,
+X	"PS4",&prompt4,
+X	"RPS1",&rprompt,
+X	"TIMEFMT",&timefmt,
+X	"WATCHFMT",&watchfmt,
+X	"0",&argzero,
+X	NULL,NULL
+X	}, *p5 = x5;
+X/* colonsplit string params */
+Xstatic struct { char *name; } x6[] = {
+X	"CDPATH","FIGNORE","FPATH","MAILPATH","WATCH",
+X	NULL
+X	}, *p6 = x6;
+X/* variable array params */
+Xstatic struct { char *name; char ***data; } x7[] = {
+X	"cdpath",&cdpath,
+X	"fignore",&fignore,
+X	"fpath",&fpath,
+X	"mailpath",&mailpath,
+X	"watch",&watch,
+X	"signals",(char ***) &sigptr,
+X	"argv",&pparams,
+X	"*",&pparams,
+X	"@",&pparams,
+X	NULL,NULL
+X	}, *p7 = x7;
+X/* special array params */
+Xstatic struct { char *name;
+X					char **(*get) DCLPROTO((Param));
+X					void (*set) DCLPROTO((Param,char **)); } x8[] = {
+X	"path",pathgetfn,pathsetfn,
+X	NULL,NULL,NULL
+X	}, *p8 = x8;
+XParam pm,pm2;
+X
+X	for (;p1->name;p1++)
+X		{
+X		new(pm);
+X		pm->gets.ifn = p1->get;
+X		pm->sets.ifn = p1->set;
+X		pm->flags = (p1->set) ? PMFLAG_i|PMFLAG_SPECIAL :
+X			PMFLAG_r|PMFLAG_i|PMFLAG_SPECIAL;
+X		pm->ct = 10;
+X		addhperm(p1->name,pm,paramtab,NULL);
+X		}
+X	for (;p2->name;p2++)
+X		{
+X		new(pm);
+X		pm->gets.cfn = p2->get;
+X		pm->sets.cfn = p2->set;
+X		pm->flags = (p2->set) ? PMFLAG_SPECIAL : PMFLAG_r|PMFLAG_SPECIAL;
+X		addhperm(p2->name,pm,paramtab,NULL);
+X		}
+X	for (;p3->name;p3++)
+X		{
+X		new(pm);
+X		pm->gets.cfn = strconstgetfn;
+X		pm->flags = PMFLAG_r|PMFLAG_SPECIAL;
+X		pm->data = p3->data;
+X		addhperm(p3->name,pm,paramtab,NULL);
+X		}
+X	for (;p4->name;p4++)
+X		{
+X		new(pm);
+X		pm->gets.ifn = intvargetfn;
+X		pm->sets.ifn = NULL;
+X		pm->data = p4->data;
+X		pm->flags = PMFLAG_r|PMFLAG_i|PMFLAG_SPECIAL;
+X		pm->ct = 10;
+X		addhperm(p4->name,pm,paramtab,NULL);
+X		}
+X	for (p4++;p4->name;p4++)
+X		{
+X		new(pm);
+X		pm->gets.ifn = intvargetfn;
+X		pm->sets.ifn = intvarsetfn;
+X		pm->data = p4->data;
+X		pm->flags = PMFLAG_i|PMFLAG_SPECIAL;
+X		pm->ct = 10;
+X		addhperm(p4->name,pm,paramtab,NULL);
+X		}
+X	for (;p5->name;p5++)
+X		{
+X		new(pm);
+X		pm->gets.cfn = strvargetfn;
+X		pm->sets.cfn = NULL;
+X		pm->data = p5->data;
+X		pm->flags = PMFLAG_r|PMFLAG_SPECIAL;
+X		addhperm(p5->name,pm,paramtab,NULL);
+X		}
+X	for (p5++;p5->name;p5++)
+X		{
+X		new(pm);
+X		pm->gets.cfn = strvargetfn;
+X		pm->sets.cfn = strvarsetfn;
+X		pm->data = p5->data;
+X		pm->flags = PMFLAG_SPECIAL;
+X		addhperm(p5->name,pm,paramtab,NULL);
+X		}
+X	for (;p6->name;p6++,p7++)
+X		{
+X		new(pm);
+X		new(pm2);
+X		pm->gets.cfn = colonarrgetfn;
+X		pm->sets.cfn = colonarrsetfn;
+X		pm2->gets.afn = arrvargetfn;
+X		pm2->sets.afn = arrvarsetfn;
+X		pm->data = p7->data;
+X		pm2->data = p7->data;
+X		pm->flags = PMFLAG_SPECIAL;
+X		pm2->flags = PMFLAG_A|PMFLAG_SPECIAL;
+X		pm2->ename = p6->name;
+X		addhperm(p6->name,pm,paramtab,NULL);
+X		addhperm(p7->name,pm2,paramtab,NULL);
+X		}
+X	new(pm);
+X	pm->gets.cfn = colonarrgetfn;
+X	pm->sets.cfn = colonarrsetfn;
+X	pm->data = NULL;
+X	pm->flags = PMFLAG_SPECIAL;
+X	addhperm("PATH",pm,paramtab,NULL);
+X	for (;p7->name;p7++)
+X		{
+X		new(pm);
+X		pm->gets.afn = arrvargetfn;
+X		pm->sets.afn = arrvarsetfn;
+X		pm->data = p7->data;
+X		pm->flags = PMFLAG_A|PMFLAG_SPECIAL;
+X		if (pm->data == &sigptr)
+X			pm->flags |= PMFLAG_r;
+X		addhperm(p7->name,pm,paramtab,NULL);
+X		}
+X	for (;p8->name;p8++)
+X		{
+X		new(pm);
+X		pm->gets.afn = p8->get;
+X		pm->sets.afn = p8->set;
+X		pm->flags = PMFLAG_A|PMFLAG_SPECIAL;
+X		addhperm(p8->name,pm,paramtab,NULL);
+X		}
+X	argvparam = gethnode("argv",paramtab);
+X}
+X
+Xstatic int unsetflag;
+X
+Xstruct param *createparam(name,value,flags) /**/
+Xchar *name;void *value;int flags;
+X{
+Xstruct param *pm;
+X
+X	pm = zcalloc(sizeof *pm);
+X	if (isset(ALLEXPORT))
+X		flags |= PMFLAG_x;
+X	pm->flags = flags;
+X	if ((flags & PMTYPE) == PMFLAG_s)
+X		{
+X		pm->u.str = ztrdup(value);
+X		pm->sets.cfn = strsetfn;
+X		pm->gets.cfn = strgetfn;
+X		}
+X	else if ((flags & PMTYPE) == PMFLAG_A)
+X		{
+X		pm->u.arr = value;
+X		pm->sets.afn = arrsetfn;
+X		pm->gets.afn = arrgetfn;
+X		}
+X	else
+X		{
+X		pm->u.val = (value) ? matheval(value) : 0;
+X		pm->sets.ifn = intsetfn;
+X		pm->gets.ifn = intgetfn;
+X		}
+X	if (flags & PMFLAG_x)
+X		pm->env = addenv(name,value);
+X	addhnode(ztrdup(name),pm,paramtab,NULL);
+X	return pm;
+X}
+X
+Xint isident(s) /**/
+Xchar *s;
+X{
+X	if (idigit(*s))
+X		while (idigit(*s)) s++;
+X	else if (iident(*s))
+X		while (iident(*s)) s++;
+X	else if (*s == Quest)
+X		*s++ = '?';
+X	else if (*s == Pound)
+X		*s++ = '#';
+X	else if (*s == String)
+X		*s++ = '$';
+X	else if (*s == Qstring)
+X		*s++ = '$';
+X	else if (*s == Star)
+X		*s++ = '*';
+X	else if (*s == '#' || *s == '-' || *s == '?' || *s == '$' ||
+X			*s == '_' || *s == '!' || *s == '@' || *s == '*')
+X		s++;
+X	else
+X		return 0;
+X	return 1;
+X}
+X
+XValue getvalue(pptr,bracks) /**/
+Xchar **pptr;int bracks;
+X{
+Xchar *s = *pptr,*t = *pptr;
+Xchar sav;
+XValue v;
+X
+X	if (idigit(*s))
+X		while (idigit(*s)) s++;
+X	else if (iident(*s))
+X		while (iident(*s)) s++;
+X	else if (*s == Quest)
+X		*s++ = '?';
+X	else if (*s == Pound)
+X		*s++ = '#';
+X	else if (*s == String)
+X		*s++ = '$';
+X	else if (*s == Qstring)
+X		*s++ = '$';
+X	else if (*s == Star)
+X		*s++ = '*';
+X	else if (*s == '#' || *s == '-' || *s == '?' || *s == '$' ||
+X			*s == '_' || *s == '!' || *s == '@' || *s == '*')
+X		s++;
+X	else
+X		return NULL;
+X	if (sav = *s)
+X		*s = '\0';
+X	if (idigit(*t) && *t != '0')
+X		{
+X		v = (Value) alloc(sizeof *v);
+X		v->pm = argvparam;
+X		v->a = v->b = atoi(t)-1;
+X		if (sav)
+X			*s = sav;
+X		}
+X	else
+X		{
+X		struct param *pm;
+X
+X		pm = gethnode(t,paramtab);
+X		if (sav)
+X			*s = sav;
+X		*pptr = s;
+X		if (!pm)
+X			return NULL;
+X		v = alloc(sizeof *v);
+X		v->isarr = pmtype(pm) == PMFLAG_A;
+X		v->pm = pm;
+X		v->a = v->b = -1;
+X		if (bracks && (*s == '[' || *s == Inbrack))
+X			{
+X			int a,b;
+X			char *olds = s,*t;
+X
+X			*s++ = '[';
+X			for (t = s; *t && *t != ']' && *t != Outbrack; t++)
+X				if (itok(*t))
+X					*t = ztokens[*t-Pound];
+X			if (*t == Outbrack)
+X				*t = ']';
+X			if (s[0] == '*' && s[1] == ']')
+X				{
+X				s += 2;
+X				v->isarr = 1;
+X				v->a = 0;
+X				v->b = -1;
+X				}
+X			else
+X				{
+X				a = mathevalarg(s,&s)-1;
+X				if (a < 0)
+X					a = -1;
+X				else if (*s == ',' || *s == Comma)
+X					{
+X					s++;
+X					b = mathevalarg(s,&s)-1;
+X					if (b < 0 || b < a)
+X						b = -1;
+X					}
+X				else
+X					b = a;
+X				if (*s == ']')
+X					{
+X					s++;
+X					v->isarr = v->isarr && ((a == -1) || !(a == b));
+X					v->a = a;
+X					v->b = b;
+X					}
+X				else
+X					s = olds;
+X				}
+X			}
+X		}
+X	if (!bracks && *s)
+X		return NULL;
+X	*pptr = s;
+X	return v;
+X}
+X
+Xchar *getstrvalue(v) /**/
+XValue v;
+X{
+Xchar *s;
+Xstatic char buf[20];
+X
+X	if (!v)
+X		return "";
+X	if (pmtype(v->pm) != PMFLAG_A)
+X		{
+X		if ((pmtype(v->pm) == PMFLAG_i))
+X			convbase(s = buf,v->pm->gets.ifn(v->pm),v->pm->ct);
+X		else
+X			s = v->pm->gets.cfn(v->pm);
+X		if (v->a != -1)
+X			{
+X			s = (v->a > strlen(s)) ? strdup("") : strdup(s+v->a);
+X			if (v->b != -1 && v->b-v->a < strlen(s))
+X				s[v->b-v->a+1] = '\0';
+X			}
+X		}
+X	else if (v->isarr)
+X		s = spacejoin(v->pm->gets.afn(v->pm));
+X	else
+X		{
+X		char **ss = v->pm->gets.afn(v->pm);
+X
+X		s = (v->a >= arrlen(ss)) ? "" : ss[v->a];
+X		}
+X	return s;
+X}
+X
+Xchar **getarrvalue(v) /**/
+XValue v;
+X{
+Xchar **s;
+Xstatic char *nular[] = { "", NULL };
+X
+X	if (!v)
+X		return arrdup(nular);
+X	s = v->pm->gets.afn(v->pm);
+X	if (v->a != -1)
+X		{
+X		if (v->a > arrlen(s))
+X			s = arrdup(nular);
+X		else
+X			s = arrdup(s)+v->a;
+X		if (v->b != -1 && v->b-v->a < arrlen(s))
+X			s[v->b-v->a+1] = NULL;
+X		}
+X	return s;
+X}
+X
+Xlong getintvalue(v) /**/
+XValue v;
+X{
+X	if (!v || v->isarr)
+X		return 0;
+X	if (pmtype(v->pm) != PMFLAG_A)
+X		{
+X		if (pmtype(v->pm) == PMFLAG_i)
+X			return v->pm->gets.ifn(v->pm);
+X		return atol(v->pm->gets.cfn(v->pm));
+X		}
+X	return atol(v->pm->gets.afn(v->pm)[v->a]);
+X}
+X
+Xvoid setstrvalue(v,val) /**/
+XValue v;char *val;
+X{
+Xchar *s;
+X
+X	if (v->pm->flags & PMFLAG_r)
+X		return;
+X	if ((s = v->pm->env) && val)
+X		v->pm->env = replenv(v->pm->env,val);
+X	switch (pmtype(v->pm))
+X		{
+X		case PMFLAG_s:
+X			if (v->a == -1)
+X				(v->pm->sets.cfn)(v->pm,val);
+X			else
+X				{
+X				char *z,*y,*x;
+X
+X				z = strdup((v->pm->gets.cfn)(v->pm));
+X				z[v->a] = '\0';
+X				y = (v->b == -1) ? "" : z+v->b+1;
+X				x = zalloc(strlen(z)+strlen(y)+strlen(val)+1);
+X				strcpy(x,z);
+X				strcat(x,val);
+X				strcat(x,y);
+X				(v->pm->sets.cfn)(v->pm,z);
+X				}
+X			if (v->pm->flags & (PMFLAG_L|PMFLAG_R|PMFLAG_Z) && !v->pm->ct)
+X				v->pm->ct = strlen(val);
+X			break;
+X		case PMFLAG_i:
+X			(v->pm->sets.ifn)(v->pm,matheval(val));
+X			if (!v->pm->ct && lastbase != 1)
+X				v->pm->ct = lastbase;
+X			free(val);
+X			break;
+X		case PMFLAG_A:
+X			if (v->a == -1 || v->a != v->b)
+X				zerr("illegal array assignment",NULL,0);
+X			else
+X				{
+X				char **ss = (v->pm->gets.afn)(v->pm);
+X				int act;
+X
+X				act = arrlen(ss);
+X				if (v->a < act)
+X					{
+X					free(ss[v->a]);
+X					ss[v->a] = val;
+X					(v->pm->sets.afn)(v->pm,ss);
+X					}
+X				else
+X					zerr("illegal array assignment",NULL,0);
+X				}
+X			break;
+X		}
+X}
+X
+Xvoid setintvalue(v,val) /**/
+XValue v;long val;
+X{
+Xchar buf[20];
+X
+X	if (v->pm->flags & PMFLAG_r)
+X		return;
+X	switch (pmtype(v->pm))
+X		{
+X		case PMFLAG_s:
+X			sprintf(buf,"%ld",val);
+X			(v->pm->sets.cfn)(v->pm,ztrdup(buf));
+X			break;
+X		case PMFLAG_i:
+X			(v->pm->sets.ifn)(v->pm,val);
+X			if (!v->pm->ct && lastbase != -1)
+X				v->pm->ct = lastbase;
+X			break;
+X		case PMFLAG_A:
+X			zerr("attempt to assign integer to array",NULL,0);
+X			break;
+X		}
+X}
+X
+Xvoid setarrvalue(v,val) /**/
+XValue v;char **val;
+X{
+X	if (v->pm->flags & PMFLAG_r)
+X		return;
+X	if (pmtype(v->pm) != PMFLAG_A)
+X		{
+X		zerr("attempt to assign non-array to array",NULL,0);
+X		return;
+X		}
+X	(v->pm->sets.afn)(v->pm,val);
+X}
+X
+Xchar *getsparamval(s,l) /**/
+Xchar *s;int l;
+X{
+Xchar sav,*t = s;
+XValue v;
+X
+X	if (sav = t[l])
+X		t[l] = '\0';
+X	if (!(v = getvalue(&s,0)))
+X		return NULL;
+X	t[l] = sav;
+X	t = getstrvalue(v);
+X	return t;
+X}
+X
+Xlong getiparam(s) /**/
+Xchar *s;
+X{
+XValue v;
+X
+X	if (!(v = getvalue(&s,0)))
+X		return 0;
+X	return getintvalue(v);
+X}
+X
+Xchar *getsparam(s) /**/
+Xchar *s;
+X{
+XValue v;
+X
+X	if (!(v = getvalue(&s,0)))
+X		return NULL;
+X	return getstrvalue(v);
+X}
+X
+XParam setsparam(s,val) /**/
+Xchar *s;char *val;
+X{
+XValue v;
+Xchar *t = s;
+X
+X	if (!isident(s))
+X		{
+X		zerr("not an identifier: %s",s,0);
+X		return NULL;
+X		}
+X	if (!(v = getvalue(&s,1)) || *s)
+X		return createparam(t,val,PMFLAG_s);
+X	setstrvalue(v,val);
+X	return v->pm;
+X}
+X
+XParam setaparam(s,val) /**/
+Xchar *s;char **val;
+X{
+XValue v;
+Xchar *t = s;
+X
+X	if (!isident(s))
+X		{
+X		zerr("not an identifier: %s",s,0);
+X		return NULL;
+X		}
+X	if (!(v = getvalue(&s,1)) || *s)
+X		return createparam(t,val,PMFLAG_A);
+X	setarrvalue(v,val);
+X	return v->pm;
+X}
+X
+XParam setiparam(s,val) /**/
+Xchar *s;long val;
+X{
+XValue v;
+Xchar *t = s;
+XParam pm;
+X
+X	if (!isident(s))
+X		{
+X		zerr("not an identifier: %s",s,0);
+X		return NULL;
+X		}
+X	if (!(v = getvalue(&s,0)))
+X		{
+X		pm = createparam(t,NULL,PMFLAG_i);
+X		pm->u.val = val;
+X		return pm;
+X		}
+X	setintvalue(v,val);
+X	return v->pm;
+X}
+X
+Xvoid unsetparam(s) /**/
+Xchar *s;
+X{
+XParam pm;
+X
+X	if (!(pm = gethnode(s,paramtab)))
+X		return;
+X	if (pm->flags & PMFLAG_r)
+X		return;
+X	unsetflag = 1;
+X	switch (pmtype(pm))
+X		{
+X		case 0:
+X			(pm->sets.cfn)(pm,NULL);
+X			break;
+X		case PMFLAG_i:
+X			(pm->sets.ifn)(pm,0);
+X			break;
+X		case PMFLAG_A:
+X			(pm->sets.afn)(pm,NULL);
+X			break;
+X		}
+X	if (pmtype(pm) == PMFLAG_s && (pm->flags & PMFLAG_x))
+X		delenv(pm->env);
+X	if (!(pm->flags & PMFLAG_SPECIAL))
+X		remhnode(s,paramtab); /* storage leak - no freepm */
+X	unsetflag = 0;
+X}
+X
+Xvoid intsetfn(pm,x) /**/
+XParam pm;long x;
+X{
+X	pm->u.val = x;
+X}
+X
+Xlong intgetfn(pm) /**/
+XParam pm;
+X{
+X	return pm->u.val;
+X}
+X
+Xvoid strsetfn(pm,x) /**/
+XParam pm;char *x;
+X{
+X	if (x) 
+X		{
+X		if (pm->u.str)
+X			free(pm->u.str);
+X		pm->u.str = x;
+X		}
+X}
+X
+Xchar *strgetfn(pm) /**/
+XParam pm;
+X{
+X	return pm->u.str;
+X}
+X
+Xvoid arrsetfn(pm,x) /**/
+XParam pm;char **x;
+X{
+Xint ct;
+X
+X	if (x)
+X		{
+X		if (pm->u.arr && pm->u.arr != x)
+X			freearray(pm->u.arr);
+X		pm->u.arr = x;
+X		for (ct = 0; *x; x++,ct++);
+X		pm->ct = ct;
+X		}
+X}
+X
+Xchar **arrgetfn(pm) /**/
+XParam pm;
+X{
+X	return pm->u.arr;
+X}
+X
+Xvoid intvarsetfn(pm,x) /**/
+XParam pm;long x;
+X{
+X	*((long *) pm->data) = x;
+X}
+X
+Xlong intvargetfn(pm) /**/
+XParam pm;
+X{
+X	return *((long *) pm->data);
+X}
+X
+Xvoid strvarsetfn(pm,x) /**/
+XParam pm;char *x;
+X{
+X	*((char **) pm->data) = x;
+X}
+X
+Xvoid strvarnonullsetfn(pm,x) /**/
+XParam pm;char *x;
+X{
+X	*((char **) pm->data) = (x) ? x : ztrdup("");
+X}
+X
+Xchar *strvargetfn(pm) /**/
+XParam pm;
+X{
+X	return *((char **) pm->data);
+X}
+X
+Xchar *strconstgetfn(pm) /**/
+XParam pm;
+X{
+X	return (char *) pm->data;
+X}
+X
+Xvoid colonarrsetfn(pm,x) /**/
+XParam pm;char *x;
+X{
+Xchar **s,**t,*u;
+X
+X	s = colonsplit(x);
+X	for (t = s; *t; t++)
+X		{
+X		u = *t;
+X		if (*u == '~')
+X			*u = Tilde;
+X		if (*u == '=')
+X			*u = Equals;
+X		u = strdup(u);
+X		filesub(&u);
+X		if (!*u)
+X			u = ".";
+X		*t = ztrdup(u);
+X		}
+X	if (pm->data)
+X		{
+X		*((char ***) pm->data) = s;
+X		if (pm->ename)
+X			arrfixenv(pm->ename,s);
+X		}
+X	else
+X		{
+X		path = s;
+X		newcmdnamtab();
+X		arrfixenv("PATH",s);
+X		}
+X}
+X
+Xchar *colonarrgetfn(pm) /**/
+XParam pm;
+X{
+X	if ((char **) pm->data)
+X		return colonjoin(*(char ***) pm->data);
+X	else
+X		return colonjoin(path);
+X}
+X
+Xchar **arrvargetfn(pm) /**/
+XParam pm;
+X{
+X	return *((char ***) pm->data);
+X}
+X
+Xvoid arrvarsetfn(pm,x) /**/
+XParam pm;char **x;
+X{
+X	if ((*(char ***) pm->data) != x)
+X		freearray(*(char ***) pm->data);
+X	*((char ***) pm->data) = x;
+X	if (pm->ename)
+X		arrfixenv(pm->ename,x);
+X}
+X
+Xchar **pathgetfn(pm) /**/
+XParam pm;
+X{
+X	return path;
+X}
+X
+Xvoid pathsetfn(pm,x) /**/
+XParam pm;char **x;
+X{
+X	if (path != x)
+X		freearray(path);
+X	path = x;
+X	newcmdnamtab();
+X	arrfixenv("PATH",x);
+X}
+X
+Xvoid unsettablesetfn(pm,x) /**/
+XParam pm;char *x;
+X{ ; }
+X
+Xlong poundgetfn(pm) /**/
+XParam pm;
+X{
+X	return arrlen(pparams);
+X}
+X
+Xlong euidgetfn(pm) /**/
+XParam pm;
+X{
+X	return geteuid();
+X}
+X
+Xvoid euidsetfn(pm,x) /**/
+XParam pm;long x;
+X{
+X	if (!unsetflag)
+X		seteuid(x);
+X}
+X
+Xlong randomgetfn(pm) /**/
+XParam pm;
+X{
+X	return rand() & 0x7fff;
+X}
+X
+Xvoid randomsetfn(pm,v) /**/
+XParam pm;long v;
+X{
+X	srand((unsigned int) v);
+X}
+X
+Xlong secondsgetfn(pm) /**/
+XParam pm;
+X{
+X	return time(NULL)-shtimer;
+X}
+X
+Xvoid secondssetfn(pm,x) /**/
+XParam pm;long x;
+X{
+X	shtimer = x+time(NULL);
+X}
+X
+Xlong uidgetfn(pm) /**/
+XParam pm;
+X{
+X	return getuid();
+X}
+X
+Xvoid uidsetfn(pm,x) /**/
+XParam pm;long x;
+X{
+X	if (!unsetflag)
+X		setuid(x);
+X}
+X
+Xlong gidgetfn(pm) /**/
+XParam pm;
+X{
+X	return getegid();
+X}
+X
+Xvoid gidsetfn(pm,x) /**/
+XParam pm;long x;
+X{
+X	if (!unsetflag)
+X		setegid(x);
+X}
+X
+Xchar *usernamegetfn(pm) /**/
+XParam pm;
+X{
+Xstruct passwd *pwd;
+X
+X	pwd = getpwuid(getuid());
+X	return pwd->pw_name;
+X}
+X
+Xchar *hostgetfn(pm) /**/
+XParam pm;
+X{
+Xstatic char hostnam[65];
+Xstatic int got = 0;
+X
+X	if (!got)
+X		{
+X		gethostname(hostnam,64);
+X		hostnam[64] = '\0';
+X		got = 1;
+X		}
+X	return hostnam;
+X}
+X
+Xchar *ifsgetfn(pm) /**/
+XParam pm;
+X{
+X	return ifs;
+X}
+X
+Xvoid ifssetfn(pm,x) /**/
+XParam pm;char *x;
+X{
+X	if (x) ifs = x;
+X	inittyptab();
+X}
+X
+Xvoid histsizesetfn(pm,v) /**/
+XParam pm;long v;
+X{
+X	if ((histsiz = v) <= 2)
+X		histsiz = 2;
+X}
+X
+Xlong histsizegetfn(pm) /**/
+XParam pm;
+X{
+X	return histsiz;
+X}
+X
+Xvoid lithistsizesetfn(pm,v) /**/
+XParam pm;long v;
+X{
+X	if ((lithistsiz = v) <= 2)
+X		lithistsiz = 2;
+X}
+X
+Xlong lithistsizegetfn(pm) /**/
+XParam pm;
+X{
+X	return lithistsiz;
+X}
+X
+Xvoid mailchecksetfn(pm,x) /**/
+XParam pm;long x;
+X{
+X	mailcheck = (unsetflag) ? 600 : x;
+X}
+X
+Xvoid pathasetfn(pm,x) /**/
+XParam pm;char **x;
+X{
+X	freearray(path);
+X	path = x;
+X	newcmdnamtab();
+X}
+X
+Xchar **pathagetfn(pm) /**/
+XParam pm;
+X{
+X	return path;
+X}
+X
+Xlong errnogetfn(pm) /**/
+XParam pm;
+X{
+X	return errno;
+X}
+X
+Xchar *dashgetfn(pm) /**/
+XParam pm;
+X{
+Xstatic char buf[100];
+Xchar *val = buf;
+Xint t0;
+X
+X	for (val = buf, t0 = ' ';t0 <= 'z'; t0++)
+X		if (opts[t0] == OPT_SET)
+X			*val++ = t0;
+X	*val = '\0';
+X	return buf;
+X}
+X
+Xchar *ttygetfn(pm) /**/
+XParam pm;
+X{
+X	return ttyname(SHTTY);
+X}
+X
+Xvoid histcharssetfn(pm,x) /**/
+XParam pm;char *x;
+X{
+X	if (x)
+X		{
+X		bangchar = x[0];
+X		hatchar = (bangchar) ? x[1] : '\0';
+X		hashchar = (hatchar) ? x[2] : '\0';
+X		free(x);
+X		}
+X}
+X
+Xchar *histcharsgetfn(pm) /**/
+XParam pm;
+X{
+Xstatic char buf[4];
+X
+X	buf[0] = bangchar;
+X	buf[1] = hatchar;
+X	buf[2] = hashchar;
+X	buf[3] = '\0';
+X	return buf;
+X}
+X
+Xchar *homegetfn(pm) /**/
+XParam pm;
+X{
+X	return home;
+X}
+X
+Xvoid homesetfn(pm,x) /**/
+XParam pm;char *x;
+X{
+X	if (home = xsymlink(x))
+X		free(x);
+X	else
+X		home = x;
+X}
+X
+Xchar *wordcharsgetfn(pm) /**/
+XParam pm;
+X{
+X	return wordchars;
+X}
+X
+Xvoid wordcharssetfn(pm,x) /**/
+XParam pm;char *x;
+X{
+X	if (x)
+X		wordchars = x;
+X	else
+X		wordchars = ztrdup(DEFWORDCHARS);
+X	inittyptab();
+X}
+X
+Xchar *underscoregetfn(pm) /**/
+XParam pm;
+X{
+Xchar *s,*t;
+X
+X	if (!(s = qgetevent(curhist-1)))
+X		return "";
+X	for (t = s+strlen(s); t > s; t--)
+X		if (*t == HISTSPACE)
+X			break;
+X	if (t != s)
+X		t++;
+X	return t;
+X}
+X
+Xchar *termgetfn(pm) /**/
+XParam pm;
+X{
+X	return term;
+X}
+X
+Xvoid termsetfn(pm,x) /**/
+XParam pm;char *x;
+X{
+X	if (term)
+X		free(term);
+X	term = x;
+X	if (!interact || unset(USEZLE))
+X		return;
+X	if (tgetent(termbuf,term) != 1)
+X		{
+X		zerr("can't find termcap info for %s",term,0);
+X		errflag = 0;
+X		termok = 0;
+X		}
+X	else
+X		{
+X		char tbuf[1024],*pp;
+X		int t0;
+X
+X		termok = 1;
+X		for (t0 = 0; t0 != TC_COUNT; t0++)
+X			{
+X			pp = tbuf;
+X			if (tcstr[t0])
+X				free(tcstr[t0]);
+X			if (!tgetstr(tccapnams[t0],&pp))
+X				tcstr[t0] = NULL, tclen[t0] = 0;
+X			else
+X				{
+X				tcstr[t0] = zalloc(tclen[t0] = pp-tbuf);
+X				memcpy(tcstr[t0],tbuf,tclen[t0]);
+X				}
+X			}
+X
+X/* if there's no termcap entry for cursor left, use \b. */
+X
+X		if (!tccan(TCLEFT))
+X			{
+X			tcstr[TCLEFT] = ztrdup("\b");
+X			tclen[TCLEFT] = 1;
+X			}
+X
+X/* if there's no termcap entry for clear, use ^L. */
+X
+X		if (!tccan(TCCLEARSCREEN))
+X			{
+X			tcstr[TCCLEARSCREEN] = ztrdup("\14");
+X			tclen[TCCLEARSCREEN] = 1;
+X			}
+X
+X/* if the termcap entry for down is \n, don't use it. */
+X
+X		if (tccan(TCDOWN) && tcstr[TCDOWN][0] == '\n')
+X			{
+X			tclen[TCDOWN] = 0;
+X			tcstr[TCDOWN] = NULL;
+X			}
+X
+X/* if there's no termcap entry for cursor up, forget it.
+X	Use single line mode. */
+X
+X		if (!tccan(TCUP))
+X			termok = 0;
+X		}
+X}
+X
+Xvoid setparams() /**/
+X{
+Xchar **envp,**envp2,**envp3,*str;
+Xchar buf[50];
+Xstruct param *pm;
+Xint ct;
+X
+X	noerrs = 1;
+X	for (envp = environ, ct = 2; *envp; envp++,ct++);
+X	envp = environ;
+X	envp2 = envp3 = (char **) zalloc(sizeof(char *)*ct);
+X	for (; *envp; envp++)
+X		*envp2++ = ztrdup(*envp);
+X	*envp2 = NULL;
+X	envp = environ;
+X	environ = envp2 = envp3;
+X	for (; *envp; envp++,envp2++)
+X		{
+X		for (str = *envp; *str && *str != '='; str++);
+X		if (*str == '=')
+X			{
+X			*str = '\0';
+X			if (isident(*envp))
+X				pm = setsparam(ztrdup(*envp),ztrdup(str+1));
+X			*str = '=';
+X			if (pm)
+X				{
+X				pm->flags |= PMFLAG_x;
+X				pm->env = *envp2;
+X				}
+X			}
+X		}
+X	pm = gethnode("HOME",paramtab);
+X	if (!(pm->flags & PMFLAG_x))
+X		{
+X		pm->flags |= PMFLAG_x;
+X		pm->env = addenv("HOME",home);
+X		}
+X	pm = gethnode("SHLVL",paramtab);
+X	if (!(pm->flags & PMFLAG_x))
+X		pm->flags |= PMFLAG_x;
+X	sprintf(buf,"%d",++shlvl);
+X	pm->env = addenv("SHLVL",buf);
+X	noerrs = 0;
+X}
+X
+Xchar *mkenvstr(x,y) /**/
+Xchar *x;char *y;
+X{
+Xchar *z;
+Xint xl = strlen(x),yl = strlen(y);
+X
+X	z = zalloc(xl+yl+2);
+X	strcpy(z,x);
+X	z[xl] = '=';
+X	strcpy(z+xl+1,y);
+X	z[xl+yl+1] = '\0';
+X	return z;
+X}
+X
+Xvoid arrfixenv(s,t) /**/
+Xchar *s;char **t;
+X{
+Xchar **ep;
+Xint sl = strlen(s);
+X
+X	for (ep = environ; *ep; ep++)
+X		if (!strncmp(*ep,s,sl) && (*ep)[sl] == '=')
+X			{
+X			char *u = colonjoin(t);
+X
+X			replenv(*ep,u);
+X			free(u);
+X			break;
+X			}
+X}
+X
+Xchar *replenv(e,value) /**/
+Xchar *e;char *value;
+X{
+Xchar **ep;
+X
+X	for (ep = environ; *ep; ep++)
+X		if (*ep == e)
+X			{
+X			char *s = e;
+X
+X			while (*s++ != '=');
+X			*s = '\0';
+X			*ep = zalloc(strlen(e)+strlen(value)+2);
+X			strcpy(*ep,e);
+X			strcat(*ep,value);
+X			free(e);
+X			return *ep;
+X			}
+X	return NULL;
+X}
+X
+Xchar *addenv(name,value) /**/
+Xchar *name;char *value;
+X{
+Xchar **ep,**ep2,**ep3;
+Xint envct;
+X
+X	for (ep = environ; *ep; ep++)
+X		{
+X		char *s = *ep,*t = name;
+X
+X		while (*s && *s == *t) s++,t++;
+X		if (*s == '=' && !*t)
+X			{
+X			free(*ep);
+X			return *ep = mkenvstr(name,value);
+X			}
+X		}
+X	envct = arrlen(environ);
+X	ep = ep2 = (char **) zalloc((sizeof (char *))*(envct+3));
+X	for (ep3 = environ; *ep2 = *ep3; ep3++,ep2++);
+X	*ep2 = mkenvstr(name,value);
+X	ep2[1] = NULL;
+X	free(environ);
+X	environ = ep;
+X	return *ep2;
+X}
+X
+Xvoid delenv(x) /**/
+Xchar *x;
+X{
+Xchar **ep;
+X
+X	ep = environ;
+X	for (; *ep; ep++)
+X		if (*ep == x)
+X			break;
+X	if (*ep)
+X		for (; ep[0] = ep[1]; ep++);
+X}
+X
+Xvoid convbase(s,v,base) /**/
+Xchar *s;long v;int base;
+X{
+Xint digs = 0;
+Xlong x;
+X
+X	if (base <= 1)
+X		base = 10;
+X	x = v;
+X	if (x < 0)
+X		{
+X		x = -x;
+X		digs++;
+X		}
+X	for (; x; digs++)
+X		x /= base;
+X	if (!digs)
+X		digs = 1;
+X	s[digs--] = '\0';
+X	x = (v < 0) ? -v : v;
+X	while (digs >= 0)
+X		{
+X		s[digs--] = '0'+(x % base);
+X		x /= base;
+X		}
+X	if (v < 0)
+X		s[0] = '-';
+X}
+X
+X
+SHAR_EOF
+chmod 0644 zsh2.00/src/params.c ||
+echo 'restore of zsh2.00/src/params.c failed'
+Wc_c="`wc -c < 'zsh2.00/src/params.c'`"
+test 23076 -eq "$Wc_c" ||
+	echo 'zsh2.00/src/params.c: original size 23076, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+# ============= zsh2.00/src/params.pro ==============
+if test -f 'zsh2.00/src/params.pro' -a X"$1" != X"-c"; then
+	echo 'x - skipping zsh2.00/src/params.pro (File already exists)'
+	rm -f _shar_wnt_.tmp
+else
+> _shar_wnt_.tmp
+echo 'x - extracting zsh2.00/src/params.pro (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/src/params.pro' &&
+Xvoid setupparams DCLPROTO((void));
+Xstruct param *createparam DCLPROTO((char *name,void *value,int flags));
+Xint isident DCLPROTO((char *s));
+XValue getvalue DCLPROTO((char **pptr,int bracks));
+Xchar *getstrvalue DCLPROTO((Value v));
+Xchar **getarrvalue DCLPROTO((Value v));
+Xlong getintvalue DCLPROTO((Value v));
+Xvoid setstrvalue DCLPROTO((Value v,char *val));
+Xvoid setintvalue DCLPROTO((Value v,long val));
+Xvoid setarrvalue DCLPROTO((Value v,char **val));
+Xchar *getsparamval DCLPROTO((char *s,int l));
+Xlong getiparam DCLPROTO((char *s));
+Xchar *getsparam DCLPROTO((char *s));
+XParam setsparam DCLPROTO((char *s,char *val));
+XParam setaparam DCLPROTO((char *s,char **val));
+XParam setiparam DCLPROTO((char *s,long val));
+Xvoid unsetparam DCLPROTO((char *s));
+Xvoid intsetfn DCLPROTO((Param pm,long x));
+Xlong intgetfn DCLPROTO((Param pm));
+Xvoid strsetfn DCLPROTO((Param pm,char *x));
+Xchar *strgetfn DCLPROTO((Param pm));
+Xvoid arrsetfn DCLPROTO((Param pm,char **x));
+Xchar **arrgetfn DCLPROTO((Param pm));
+Xvoid intvarsetfn DCLPROTO((Param pm,long x));
+Xlong intvargetfn DCLPROTO((Param pm));
+Xvoid strvarsetfn DCLPROTO((Param pm,char *x));
+Xvoid strvarnonullsetfn DCLPROTO((Param pm,char *x));
+Xchar *strvargetfn DCLPROTO((Param pm));
+Xchar *strconstgetfn DCLPROTO((Param pm));
+Xvoid colonarrsetfn DCLPROTO((Param pm,char *x));
+Xchar *colonarrgetfn DCLPROTO((Param pm));
+Xchar **arrvargetfn DCLPROTO((Param pm));
+Xvoid arrvarsetfn DCLPROTO((Param pm,char **x));
+Xchar **pathgetfn DCLPROTO((Param pm));
+Xvoid pathsetfn DCLPROTO((Param pm,char **x));
+Xvoid unsettablesetfn DCLPROTO((Param pm,char *x));
+Xlong poundgetfn DCLPROTO((Param pm));
+Xlong euidgetfn DCLPROTO((Param pm));
+Xvoid euidsetfn DCLPROTO((Param pm,long x));
+Xlong randomgetfn DCLPROTO((Param pm));
+Xvoid randomsetfn DCLPROTO((Param pm,long v));
+Xlong secondsgetfn DCLPROTO((Param pm));
+Xvoid secondssetfn DCLPROTO((Param pm,long x));
+Xlong uidgetfn DCLPROTO((Param pm));
+Xvoid uidsetfn DCLPROTO((Param pm,long x));
+Xlong gidgetfn DCLPROTO((Param pm));
+Xvoid gidsetfn DCLPROTO((Param pm,long x));
+Xchar *usernamegetfn DCLPROTO((Param pm));
+Xchar *hostgetfn DCLPROTO((Param pm));
+Xchar *ifsgetfn DCLPROTO((Param pm));
+Xvoid ifssetfn DCLPROTO((Param pm,char *x));
+Xvoid histsizesetfn DCLPROTO((Param pm,long v));
+Xlong histsizegetfn DCLPROTO((Param pm));
+Xvoid lithistsizesetfn DCLPROTO((Param pm,long v));
+Xlong lithistsizegetfn DCLPROTO((Param pm));
+Xvoid mailchecksetfn DCLPROTO((Param pm,long x));
+Xvoid pathasetfn DCLPROTO((Param pm,char **x));
+Xchar **pathagetfn DCLPROTO((Param pm));
+Xlong errnogetfn DCLPROTO((Param pm));
+Xchar *dashgetfn DCLPROTO((Param pm));
+Xchar *ttygetfn DCLPROTO((Param pm));
+Xvoid histcharssetfn DCLPROTO((Param pm,char *x));
+Xchar *histcharsgetfn DCLPROTO((Param pm));
+Xchar *homegetfn DCLPROTO((Param pm));
+Xvoid homesetfn DCLPROTO((Param pm,char *x));
+Xchar *wordcharsgetfn DCLPROTO((Param pm));
+Xvoid wordcharssetfn DCLPROTO((Param pm,char *x));
+Xchar *underscoregetfn DCLPROTO((Param pm));
+Xchar *termgetfn DCLPROTO((Param pm));
+Xvoid termsetfn DCLPROTO((Param pm,char *x));
+Xvoid setparams DCLPROTO((void));
+Xchar *mkenvstr DCLPROTO((char *x,char *y));
+Xvoid arrfixenv DCLPROTO((char *s,char **t));
+Xchar *replenv DCLPROTO((char *e,char *value));
+Xchar *addenv DCLPROTO((char *name,char *value));
+Xvoid delenv DCLPROTO((char *x));
+Xvoid convbase DCLPROTO((char *s,long v,int base));
+SHAR_EOF
+chmod 0644 zsh2.00/src/params.pro ||
+echo 'restore of zsh2.00/src/params.pro failed'
+Wc_c="`wc -c < 'zsh2.00/src/params.pro'`"
+test 3316 -eq "$Wc_c" ||
+	echo 'zsh2.00/src/params.pro: original size 3316, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+# ============= zsh2.00/src/parse.pro ==============
+if test -f 'zsh2.00/src/parse.pro' -a X"$1" != X"-c"; then
+	echo 'x - skipping zsh2.00/src/parse.pro (File already exists)'
+	rm -f _shar_wnt_.tmp
+else
+> _shar_wnt_.tmp
+echo 'x - extracting zsh2.00/src/parse.pro (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/src/parse.pro' &&
+Xint getfdstr DCLPROTO((char *s));
+Xstruct redir *parredir DCLPROTO((struct fdpair fdp,char *toks));
+Xstruct list *parev DCLPROTO((void));
+Xstruct list *parlist DCLPROTO((void));
+Xstruct list *makelnode DCLPROTO((struct sublist *x,int type));
+Xstruct sublist *makel2node DCLPROTO((struct pline *p,int type));
+Xstruct pline *makepnode DCLPROTO((struct cmd *c,struct pline *p,int type));
+Xstruct cmd *makefornode DCLPROTO((char *str,Lklist t,struct list *l,int type));
+Xstruct ifcmd *makeifnode DCLPROTO((struct list *l1,struct list *l2, struct ifcmd *i2));
+Xstruct cmd *makewhilenode DCLPROTO((struct list *l1,struct list *l2, int sense));
+Xstruct cmd *makecnode DCLPROTO((int type));
+Xstruct cmd *makefuncdef DCLPROTO((Lklist x,struct list *l));
+Xstruct cond *makecond DCLPROTO((void));
+Xstruct varasg *makevarnode DCLPROTO((int type));
+Xstruct casecmd *makecasenode DCLPROTO((char *str,struct list *l,struct casecmd *c));
+Xvoid parcond2 DCLPROTO((char *a,char *b,struct cond *n));
+Xvoid parcond3 DCLPROTO((char *a,char *b,char *c,struct cond *n));
+SHAR_EOF
+chmod 0644 zsh2.00/src/parse.pro ||
+echo 'restore of zsh2.00/src/parse.pro failed'
+Wc_c="`wc -c < 'zsh2.00/src/parse.pro'`"
+test 1032 -eq "$Wc_c" ||
+	echo 'zsh2.00/src/parse.pro: original size 1032, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+# ============= zsh2.00/src/parse.y ==============
+if test -f 'zsh2.00/src/parse.y' -a X"$1" != X"-c"; then
+	echo 'x - skipping zsh2.00/src/parse.y (File already exists)'
+	rm -f _shar_wnt_.tmp
+else
+> _shar_wnt_.tmp
+echo 'x - extracting zsh2.00/src/parse.y (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/src/parse.y' &&
+X%{
+X
+X/*
+X
+X	parse.y - yacc parser specification
+X
+X	This file is part of zsh, the Z shell.
+X
+X	zsh is free software; no one can prevent you from reading the source
+X   code, or giving it to someone else.
+X
+X   This file is copyrighted under the GNU General Public License, which
+X   can be found in the file called COPYING.
+X
+X   Copyright (C) 1990, 1991 Paul Falstad
+X
+X   zsh is distributed in the hope that it will be useful, but
+SHAR_EOF
+true || echo 'restore of zsh2.00/src/parse.y failed'
+fi
+echo 'End of zsh2.00.00 part 8'
+echo 'File zsh2.00/src/parse.y is continued in part 9'
+echo 9 > _shar_seq_.tmp
+exit 0
+--
+              Paul Falstad  pfalstad@phoenix.princeton.edu
+         And on the roads, too, vicious gangs of KEEP LEFT signs!
+     If Princeton knew my opinions, they'd have expelled me long ago.
+
+exit 0 # Just in case...
+-- 
+Kent Landfield                   INTERNET: kent@sparky.IMD.Sterling.COM
+Sterling Software, IMD           UUCP:     uunet!sparky!kent
+Phone:    (402) 291-8300         FAX:      (402) 291-4362
+Please send comp.sources.misc-related mail to kent@uunet.uu.net.

@@ -1,0 +1,1494 @@
+Path: funic!news.funet.fi!sunic!hagbard!eru!bloom-beacon!mintaka!think.com!sdd.hp.com!zaphod.mps.ohio-state.edu!samsung!uunet!sparky!kent
+From: pfalstad@phoenix.princeton.edu (Paul Falstad)
+Newsgroups: comp.sources.misc
+Subject: v18i098:  zsh2.00 - The Z shell, Part15/15
+Message-ID: <1991Apr24.194636.19682@sparky.IMD.Sterling.COM>
+Date: 24 Apr 91 19:46:36 GMT
+Sender: kent@sparky.IMD.Sterling.COM (Kent Landfield)
+Organization: League For Fighting Chartered Accountancy
+Lines: 1482
+Approved: kent@sparky.imd.sterling.com
+X-Checksum-Snefru: dd93a327 5f17f979 a325c40e 7d452bfc
+
+Submitted-by: Paul Falstad <pfalstad@phoenix.princeton.edu>
+Posting-number: Volume 18, Issue 98
+Archive-name: zsh2.00/part15
+
+#!/bin/sh
+# this is zsh2.00.00.shar.15 (part 15 of zsh2.00.00)
+# do not concatenate these parts, unpack them in order with /bin/sh
+# file zsh2.00/src/zsh.1 continued
+#
+if test ! -r _shar_seq_.tmp; then
+	echo 'Please unpack part 1 first!'
+	exit 1
+fi
+(read Scheck
+ if test "$Scheck" != 15; then
+	echo Please unpack part "$Scheck" next!
+	exit 1
+ else
+	exit 0
+ fi
+) < _shar_seq_.tmp || exit 1
+if test ! -f _shar_wnt_.tmp; then
+	echo 'x - still skipping zsh2.00/src/zsh.1'
+else
+echo 'x - continuing file zsh2.00/src/zsh.1'
+sed 's/^X//' << 'SHAR_EOF' >> 'zsh2.00/src/zsh.1' &&
+Xand \-\fBu\fP.  The flag \-\fBt\fP turns on execution tracing for this
+Xfunction.  The flag \-\fBu\fP causes this function to be marked
+Xundefined.  The \fBfpath\fP parameter will be searched to find the
+Xfunction definition when the function is first referenced.
+X.TP
+X\-\fBi\fP
+XUse an internal integer representation.  If \fBi\fP is nonzero
+Xit defines the output arithmetic base, otherwise it is determined by the first
+Xassignment.
+X.TP
+X\-\fBl\fP
+XConvert to lower case.
+X.TP
+X\-\fBr\fP
+XThe given \fIname\fPs are marked readonly.
+X.TP
+X\-\fBt\fP
+XTags the named parameters.  Tags have no special meaning to the shell.
+X.TP
+X\-\fBu\fP
+XConvert to upper case.
+X.TP
+X\-\fBx\fP
+XMark for automatic export to the environment of subsequently
+Xexecuted commands.
+X.RE
+X.PD
+X.PP
+XUsing + rather than \- causes these flags to be turned off.
+XIf no arguments are given but flags are specified,
+Xa list of named parameters which have these flags set is printed.
+XUsing + instead of \- keeps their values from being printed.
+XIf no arguments or options are given, the names and attributes
+Xof all parameters are printed.
+X.TP
+X\fBulimit\fP [ \-\fBHSacdfmnt\fP ] [ \fIlimit\fP ]
+XSet or display a resource limit.  The value of limit can be a number
+Xin the unit specified below or the value \fBunlimited\fP.
+XThe \fBH\fP and \fBS\fP flags specify whether the hard limit
+Xor the soft limit for the given resource is set.
+X.RS
+X.PD 0
+X.TP
+X\-\fBa\fP
+XLists all of the current resource limits.
+X.TP
+X\-\fBc\fP
+XThe number of 512-byte blocks on the size of core dumps.
+X.TP
+X\-\fBd\fP
+XThe number of K-bytes on the size of the data segment.
+X.TP
+X\-\fBf\fP
+XThe number of 512-byte blocks on the size of files written.
+X.TP
+X\-\fBm\fP
+XThe number of K-bytes on the size of physical memory.
+X.TP
+X\-\fBn\fP
+XThe number of file descriptors.
+X.TP
+X\-\fBs\fP
+XThe number of K-bytes on the size of the stack.
+X.TP
+X\-\fBt\fP
+XThe number of CPU seconds to be used.
+X.RE
+X.PD
+X.TP
+X\fBumask\fP [ \fImask\fP ]
+XThe umask is set to \fImask\fP.  \fImask\fP can be either
+Xan octal number or a symbolic value as described in \fBchmod\fP(1).
+XIf \fImask\fP is omitted, the current value is printed.
+X.TP
+X\fBunalias\fP \fIname\fP ...
+XThe alias definition, if any, for each \fIname\fP is removed.
+X.TP
+X\fBunfunction\fP \fIname\fP ...
+XThe function definition, if any, for each \fIname\fP is removed.
+X.TP
+X\fBunhash\fP \fIname\fP ...
+XThe entry in the command hash table, if any, for each \fIname\fP
+Xis removed.
+X.TP
+X\fBunlimit\fP [ \-\fBh\fP ] \fIresource\fP ...
+XThe resource limit for each \fIresource\fP is set to the hard limit.
+XIf the \-\fBh\fP flag is given and the shell is running as root,
+Xthe hard resource limit for each \fIresource\fP is removed.
+X.TP
+X\fBunset\fP \fIname\fP ...
+XEach named parameter is unset.
+X.TP
+X\fBunsetopt\fP [ \(+-\fIoptions\fP ] [ \fIname\fP ... ]
+XUnset the options for the shell.  All options specified either
+Xwith flags or by name are unset.
+X.TP
+X\fBvared\fP \fIname\fP
+XThe value of the parameter \fIname\fP is loaded into the edit
+Xbuffer, and the line editor is invoked.  When the editor exits,
+X\fIname\fP is set to the string value returned by the editor.
+X.TP
+X\fBwait\fP [ \fIjob\fP ... ]
+XWait for the specified \fIjob\fPs.  If \fIjob\fP is not given
+Xthen all currently active child processes are waited for.
+XThe exit status from this command is that of the process waited for.
+X.TP
+X\fBwhence\fP [ \-\fBpv\fP ] \fIname\fP ...
+XFor each name, indicate how it would be interpreted if used
+Xas a command name.  The \-\fBv\fP flag produces a more verbose
+Xreport.  The \-\fBp\fP flag does a path search for \fIname\fP
+Xeven if it is a shell function, alias, or reserved word.
+X.TP
+X\fBwhich\fP
+XSame as \fBwhence\fP.
+X.RE
+X.SH INVOCATION
+XUnless the \fBNO_RCS\fP option is set, commands are read
+Xfrom /etc/zshrc and ~/.zshrc, in that order, if either file
+Xexists.
+XIf the first character of argument zero passed to the shell
+Xis \-, then the shell is assumed to be a login shell, and commands
+Xare read from /etc/zlogin and ~/.zlogin, if either file exists.
+XIf the \-\fBs\fP flag is not present and an argument is given,
+Xthe first argument is taken to be the pathname of a script to
+Xexecute.  The remaining arguments are assigned to the positional
+Xparameters.  The following flags are interpreted by the shell
+Xwhen invoked:
+X.TP
+X.PD 0
+X\-\fBc\fP \fIstring\fP
+XRead commands from \fIstring\fP.
+X.TP
+X\-\fBs\fP
+XRead command from the standard input.
+X.TP
+X\-\fBi\fP
+XIf this flag is present or the shell input and output
+Xare attached to a terminal, this shell is interactive.
+X.PD
+X.SH "SEE ALSO"
+Xsh(1),
+Xcsh(1),
+Xtcsh(1),
+Xitcsh(1),
+Xrc(1),
+Xbash(1),
+Xash(1),
+Xksh(1),
+Xclam(1).
+X.SH FILES
+X~/.zshrc
+X.br
+X~/.zlogin
+X.br
+X~/.zlogout
+X.br
+X/tmp/zsh*
+X.br
+X/etc/zshrc
+X.br
+X/etc/zlogin
+X.SH AUTHOR
+XPaul Falstad (pfalstad@phoenix.princeton.edu)
+X.SH "UNDOCUMENTED FEATURES"
+XNone known, but many suspected.
+XPlease mail the author if you find any.
+X.SH CAVEATS
+X\fBzsh\fP is available for use by CS undergraduate
+Xconcentrators between the hours of 8:00am and 5:00pm, and by
+Xfaculty, staff, graduate students, and special guests
+Xof the Princeton University Department of Computer Science.
+SHAR_EOF
+echo 'File zsh2.00/src/zsh.1 is complete' &&
+chmod 0644 zsh2.00/src/zsh.1 ||
+echo 'restore of zsh2.00/src/zsh.1 failed'
+Wc_c="`wc -c < 'zsh2.00/src/zsh.1'`"
+test 97988 -eq "$Wc_c" ||
+	echo 'zsh2.00/src/zsh.1: original size 97988, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+# ============= zsh2.00/src/zsh.h ==============
+if test -f 'zsh2.00/src/zsh.h' -a X"$1" != X"-c"; then
+	echo 'x - skipping zsh2.00/src/zsh.h (File already exists)'
+	rm -f _shar_wnt_.tmp
+else
+> _shar_wnt_.tmp
+echo 'x - extracting zsh2.00/src/zsh.h (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/src/zsh.h' &&
+X/*
+X
+X	zsh.h - standard header file
+X
+X	This file is part of zsh, the Z shell.
+X
+X	zsh is free software; no one can prevent you from reading the source
+X   code, or giving it to someone else.
+X
+X   This file is copyrighted under the GNU General Public License, which
+X   can be found in the file called COPYING.
+X
+X   Copyright (C) 1990, 1991 Paul Falstad
+X
+X   zsh is distributed in the hope that it will be useful, but
+X   WITHOUT ANY WARRANTY.  No author or distributor accepts
+X   responsibility to anyone for the consequences of using it or for
+X   whether it serves any particular purpose or works at all, unless he
+X   says so in writing.  Refer to the GNU General Public License
+X   for full details.
+X
+X   Everyone is granted permission to copy, modify and redistribute
+X   zsh, but only under the conditions described in the GNU General Public
+X   License.   A copy of this license is supposed to have been given to you
+X   along with zsh so you can know your rights and responsibilities.
+X   It should be in a file named COPYING.
+X
+X   Among other things, the copyright notice and this notice must be
+X   preserved on all copies.
+X
+X*/
+X
+X#include "config.h"
+X#include <stdio.h>
+X#include <string.h>
+X#include <ctype.h>
+X#include <sys/types.h>		/* this is the key to the whole thing */
+X#include <sys/wait.h>
+X#include <sys/time.h>
+X#include <sys/resource.h>
+X#include <sys/file.h>
+X#include <signal.h>
+X#ifdef TERMIO
+X#include <sys/termio.h>
+X#else
+X#ifdef TERMIOS
+X#include <sys/termios.h>
+X#else
+X#include <sgtty.h>
+X#endif
+X#endif
+X#include <sys/param.h>
+X#include <sys/stat.h>
+X
+X#define VERSIONSTR "zsh v2.00.00"
+X
+X#define DEFWORDCHARS "*?_-.[]~=/"
+X#define DEFTIMEFMT "%E real  %U user  %S system  %P"
+X#ifdef UTMP_HOST
+X#define DEFWATCHFMT "%n has %a %l from %m."
+X#else
+X#define DEFWATCHFMT "%n has %a %l."
+X#endif
+X
+X#define DCLPROTO(X) ()
+X
+X#ifdef GLOBALS
+X#define EXTERN
+X#else
+X#define EXTERN extern
+X#endif
+X
+X#include "zle.h"
+X
+X/* size of job list - set small on purpose */
+X
+X#define MAXJOB 16
+X
+X/* memory allocation routines - changed with permalloc()/heapalloc() */
+X
+Xvoid *(*alloc)DCLPROTO((int));
+Xvoid *(*ncalloc)DCLPROTO((int));
+X
+X#define addhnode(A,B,C,D) Addhnode(A,B,C,D,1)
+X#define addhperm(A,B,C,D) Addhnode(A,B,C,D,0)
+X
+X/* character tokens */
+X
+X#define ALPOP			((char) 0x81)
+X#define HERR			((char) 0x82)
+X#define HISTSPACE		((char) 0x83)
+X#define Pound			((char) 0x84)
+X#define String			((char) 0x85)
+X#define Hat				((char) 0x86)
+X#define Star			((char) 0x87)
+X#define Inpar			((char) 0x88)
+X#define Outpar			((char) 0x89)
+X#define Qstring		((char) 0x8a)
+X#define Equals			((char) 0x8b)
+X#define Bar				((char) 0x8c)
+X#define Inbrace		((char) 0x8d)
+X#define Outbrace		((char) 0x8e)
+X#define Inbrack		((char) 0x8f)
+X#define Outbrack		((char) 0x90)
+X#define Tick			((char) 0x91)
+X#define Inang			((char) 0x92)
+X#define Outang			((char) 0x93)
+X#define Quest			((char) 0x94)
+X#define Tilde			((char) 0x95)
+X#define Qtick			((char) 0x96)
+X#define Comma			((char) 0x97)
+X#define Nularg			((char) 0x98)
+X
+X/* chars that need to be quoted if meant literally */
+X
+X#define SPECCHARS "#$^*()$=|{}[]`<>?~;&!\n\t \\\'\""
+X
+X/* ALPOP in the form of a string */
+X
+X#define ALPOPS " \201"
+X#define HISTMARK "\201"
+X
+XEXTERN char **environ;
+X
+Xtypedef struct hashtab *Hashtab;
+Xtypedef struct hashnode *Hashnode;
+Xtypedef struct schedcmd *Schedcmd;
+Xtypedef struct alias *Alias;
+Xtypedef struct process *Process;
+Xtypedef struct job *Job;
+Xtypedef struct value *Value;
+Xtypedef struct arrind *Arrind;
+Xtypedef struct varasg *Varasg;
+Xtypedef struct param *Param;
+Xtypedef struct cmdnam *Cmdnam;
+Xtypedef struct cond *Cond;
+Xtypedef struct cmd *Cmd;
+Xtypedef struct pline *Pline;
+Xtypedef struct sublist *Sublist;
+Xtypedef struct list *List;
+Xtypedef struct lklist *Lklist;
+Xtypedef struct lknode *Lknode;
+Xtypedef struct comp *Comp;
+Xtypedef struct complist *Complist;
+Xtypedef struct heap *Heap;
+Xtypedef void (*FFunc)DCLPROTO((void *));
+Xtypedef void *(*VFunc)DCLPROTO((void *));
+Xtypedef void (*HFunc)DCLPROTO((char *,char *));
+X
+X/* linked list abstract data type */
+X
+Xstruct lknode;
+Xstruct lklist;
+X
+Xstruct lknode {
+X   Lknode next,last;
+X   void *dat;
+X   };
+Xstruct lklist {
+X   Lknode first,last;
+X   };
+X
+X#define addnode(X,Y) insnode(X,(X)->last,Y)
+X#define full(X) ((X)->first != NULL)
+X#define firstnode(X) ((X)->first)
+X#define getaddrdata(X) (&((X)->dat))
+X#define getdata(X) ((X)->dat)
+X#define setdata(X,Y) ((X)->dat = (Y))
+X#define lastnode(X) ((X)->last)
+X#define nextnode(X) ((X)->next)
+X#define prevnode(X) ((X)->last)
+X#define peekfirst(X) ((X)->first->dat)
+X#define pushnode(X,Y) insnode(X,(Lknode) X,Y)
+X#define incnode(X) (X = nextnode(X))
+X
+X/* node structure for syntax trees */
+X
+X/* struct list, struct sublist, struct pline, etc.  all fit the form
+X	of this structure and are used interchangably
+X*/
+X
+Xstruct node {
+X	int data[4];			/* arbitrary integer data */
+X	void *ptrs[4];			/* arbitrary pointer data */
+X	int types[4];			/* what ptrs[] are pointing to */
+X	int type;				/* node type */
+X	};
+X
+Xenum node_type {
+X	N_LIST,N_SUBLIST,N_PLINE,N_CMD,
+X	N_REDIR,N_COND,N_FOR,N_CASE,
+X	N_IF,N_WHILE,N_VARASG,
+X	N_COUNT
+X	};
+X
+X/* values for types[4] */
+X
+X#define NT_EMPTY 0
+X#define NT_NODE  1
+X#define NT_STR   2
+X#define NT_LIST  4
+X#define NT_MALLOC 8
+X
+X/* tree element for lists */
+X
+Xstruct list {
+X	int type;
+X	int ifil[3];		/* to fit struct node */
+X   Sublist left;
+X   List right;
+X   };
+X
+Xenum list_type {
+X   SYNC,		/* ; */
+X	ASYNC,	/* & */
+X	TIMED
+X   };
+X
+X/* tree element for sublists */
+X
+Xstruct sublist {
+X	int type;
+X	int flags;			/* see PFLAGs below */
+X	int ifil[2];
+X	Pline left;
+X	Sublist right;
+X	};
+X
+Xenum sublist_type {
+X	ORNEXT = 10,	/* || */
+X	ANDNEXT			/* && */
+X	};
+X
+X#define PFLAG_NOT 1			/* ! ... */
+X#define PFLAG_COPROC 32		/* coproc ... */
+X
+X/* tree element for pipes */
+X
+Xstruct pline {
+X	int type;
+X	int ifil[3];
+X   Cmd left;
+X   Pline right;
+X   };
+X
+Xenum pline_type {
+X   END,		/* pnode *right is null */
+X	PIPE		/* pnode *right is the rest of the pipeline */
+X   };
+X
+X/* tree element for commands */
+X
+Xstruct cmd {
+X	int type;
+X	int flags;				/* see CFLAGs below */
+X	int ifil[2];
+X   Lklist args;			/* command & argmument List (char *'s) */
+X	union {
+X   	List list;			/* for SUBSH/CURSH/SHFUNC */
+X		struct forcmd *forcmd;
+X		struct casecmd *casecmd;
+X		struct ifcmd *ifcmd;
+X		struct whilecmd *whilecmd;
+X		Sublist pline;
+X		Cond cond;
+X		} u;
+X   Lklist redir;			/* i/o redirections (struct redir *'s) */
+X	Lklist vars;			/* param assignments (struct varasg *'s) */
+X   };
+X
+Xenum cmd_type {
+X	SIMPLE,		/* simple command */
+X	SUBSH,		/* ( list ) */
+X	CTIME,		/* time pline */
+X	CURSH,		/* { list } */
+X	FUNCDEF,		/* foo ... () { list } */
+X	CFOR,
+X	CWHILE,
+X	CREPEAT,
+X	CIF,
+X	CCASE,
+X	CSELECT,
+X	COND,			/* [[ ... ]] */
+X	};
+X
+X#define CFLAG_EXEC 1			/* exec ... */
+X#define CFLAG_COMMAND 2		/* command ... */
+X#define CFLAG_NOGLOB 4     /* noglob ... */
+X#define CFLAG_DASH 8			/* - ... */
+X
+X/* tree element for redirection lists */
+X
+Xstruct redir {
+X	int type,fd1,fd2,ifil;
+X	char *name;
+X	struct redir *pair;		/* used by the parser */
+X   };
+X
+Xenum ftype {
+X	WRITE,			/* fd1 > name */
+X	WRITENOW,		/* fd1 >! name */
+X	APP,				/* fd1 >> name */
+X	APPNOW,			/* fd1 >>! name */
+X	MERGEOUT,		/* fd1 >& fd2 */
+X	MERGEOUTNOW,	/* fd1 >&! fd2 */
+X	ERRAPP,        /* fd1 >>& */
+X	ERRAPPNOW,     /* fd1 >>&! */
+X	READ,				/* fd1 < name */
+X	HEREDOC,			/* fd1 << foo */
+X	MERGE,			/* fd1 <& fd2 */
+X
+X	CLOSE,			/* fd1 >&-, #<&- */
+X	INPIPE,			/* fd1 < name, where name is <(...) */
+X	OUTPIPE,			/* fd1 > name, where name is >(...)  */
+X	HERESTR,			/* fd1 <<< foo */
+X	NONE
+X	};
+X
+X/* tree element for conditionals */
+X
+Xstruct cond {
+X	int type;		/* can be cond_type, or a single letter (-a, -b, ...) */
+X	int ifil[3];
+X	void *left,*right,*vfil[2];
+X	int types[4],typ;	/* from struct node.  DO NOT REMOVE */
+X	};
+X
+Xenum cond_type {
+X	COND_NOT,COND_AND,COND_OR,
+X	COND_STREQ,COND_STRNEQ,COND_STRLT,COND_STRGTR,
+X	COND_NT,COND_OT,COND_EF,
+X	COND_EQ,COND_NE,COND_LT,COND_GT,COND_LE,COND_GE
+X	};
+X
+Xstruct forcmd {		/* for/select */
+X							/* Cmd->args contains list of words to loop thru */
+X	int inflag;			/* if there is an in ... clause */
+X	int ifil[3];
+X	char *name;			/* parameter to assign values to */
+X	List list;			/* list to look through for each name */
+X	};
+Xstruct casecmd {
+X							/* Cmd->args contains word to test */
+X	int ifil[4];
+X	struct casecmd *next;
+X	char *pat;
+X	List list;					/* list to execute */
+X	};
+X
+X/*
+X
+X	a command like "if foo then bar elif baz then fubar else fooble"
+X	generates a tree like:
+X
+X	struct ifcmd a = { next =  &b,  ifl = "foo", thenl = "bar" }
+X	struct ifcmd b = { next =  &c,  ifl = "baz", thenl = "fubar" }
+X	struct ifcmd c = { next = NULL, ifl = NULL, thenl = "fooble" }
+X
+X*/
+X
+Xstruct ifcmd {
+X	int ifil[4];
+X	struct ifcmd *next;
+X	List ifl;
+X	List thenl;
+X	};
+X
+Xstruct whilecmd {
+X	int cond;		/* 0 for while, 1 for until */
+X	int ifil[3];
+X	List cont;		/* condition */
+X	List loop;		/* list to execute until condition met */
+X	};
+X
+X/* structure used for multiple i/o redirection */
+X/* one for each fd open */
+X
+Xstruct multio {
+X	int ct;				/* # of redirections on this fd */
+X	int rflag;			/* 0 if open for reading, 1 if open for writing */
+X	int pipe;			/* fd of pipe if ct > 1 */
+X	int fds[NOFILE];	/* list of src/dests redirected to/from this fd */
+X   }; 
+X
+X/* node used in command path hash table (cmdnamtab) */
+X
+Xstruct cmdnam 
+X{
+X	int type,flags;
+X	int ifil[2];
+X	union {
+X		char *nam;		/* full pathname if type != BUILTIN */
+X		int binnum;		/* func to exec if type == BUILTIN */
+X		List list;		/* list to exec if type == SHFUNC */
+X		} u;
+X	};
+X
+Xenum cmdnam_type {
+X	EXCMD_PREDOT,		/* external command in path before . */
+X	EXCMD_POSTDOT,		/* external command in path after . */
+X	BUILTIN,
+X	SHFUNC
+X	};
+X
+X/* node used in parameter hash table (paramtab) */
+X
+Xstruct param {
+X	union {
+X		char **arr;		/* value if declared array */
+X		char *str;		/* value if declared string (scalar) */
+X		long val;		/* value if declared integer */
+X		} u;
+X	union {				/* functions to call to set value */
+X		void (*cfn)DCLPROTO((Param,char *));
+X		void (*ifn)DCLPROTO((Param,long));
+X		void (*afn)DCLPROTO((Param,char **));
+X		} sets;
+X	union {				/* functions to call to get value */
+X		char *(*cfn)DCLPROTO((Param));
+X		long (*ifn)DCLPROTO((Param));
+X		char **(*afn)DCLPROTO((Param));
+X		} gets;
+X	int ct;				/* output base or field width */
+X	int flags;
+X	void *data;			/* used by getfns */
+X	char *env;			/* location in environment, if exported */
+X	char *ename;		/* name of corresponding environment var */
+X	};
+X
+X#define PMFLAG_s 0		/* scalar */
+X#define PMFLAG_L 1		/* left justify and remove leading blanks */
+X#define PMFLAG_R 2		/* right justify and fill with leading blanks */
+X#define PMFLAG_Z 4		/* right justify and fill with leading zeros */
+X#define PMFLAG_i 8		/* integer */
+X#define PMFLAG_l 16		/* all lower case */
+X#define PMFLAG_u 32		/* all upper case */
+X#define PMFLAG_r 64		/* readonly */
+X#define PMFLAG_t 128		/* tagged */
+X#define PMFLAG_x 256		/* exported */
+X#define PMFLAG_A 512		/* array */
+X#define PMFLAG_SPECIAL	1024
+X#define PMTYPE (PMFLAG_i|PMFLAG_A)
+X#define pmtype(X) ((X)->flags & PMTYPE)
+X
+X/* variable assignment tree element */
+X
+Xstruct varasg {
+X	int type;			/* nonzero means array */
+X	int ifil[3];
+X	char *name;
+X	char *str;			/* should've been a union here.  oh well */
+X	Lklist arr;
+X	};
+X
+X/* lvalue for variable assignment/expansion */
+X
+Xstruct value {
+X	int isarr;
+X	struct param *pm;		/* parameter node */
+X	int a;					/* first element of array slice, or -1 */
+X	int b;					/* last element of array slice, or -1 */
+X	};
+X
+Xstruct fdpair {
+X	int fd1,fd2;
+X	};
+X
+X/* tty state structure */
+X
+Xstruct ttyinfo {
+X#ifdef TERMIOS
+X	struct termios termios;
+X#else
+X#ifdef TERMIO
+X	struct termio termio;
+X#else
+X	struct sgttyb sgttyb;
+X	struct tchars tchars;
+X	struct ltchars ltchars;
+X#endif
+X#endif
+X	struct winsize winsize;
+X	};
+X
+XEXTERN struct ttyinfo shttyinfo;
+X
+X/* entry in job table */
+X
+Xstruct job {
+X	long gleader;					/* process group leader of this job */
+X	int stat;
+X	char *cwd;						/* current working dir of shell when
+X											this job was spawned */
+X	struct process *procs;		/* list of processes */
+X	Lklist filelist;				/* list of files to delete when done */
+X	struct ttyinfo ttyinfo;		/* saved tty state */
+X	};
+X
+X#define STAT_CHANGED 1		/* status changed and not reported */
+X#define STAT_STOPPED 2		/* all procs stopped or exited */
+X#define STAT_TIMED 4			/* job is being timed */
+X#define STAT_DONE 8
+X#define STAT_LOCKED 16		/* shell is finished creating this job,
+X										may be deleted from job table */
+X#define STAT_INUSE 64		/* this job entry is in use */
+X
+X#define SP_RUNNING -1		/* fake statusp for running jobs */
+X
+X/* node in job process lists */
+X
+Xstruct process {
+X	struct process *next;
+X	long pid;
+X	char *text;						/* text to print when 'jobs' is run */
+X	int statusp;					/* return code from wait3() */
+X	int lastfg;						/* set if this process represents a
+X											fragment of a pipeline run in a subshell
+X											for commands like:
+X
+X											foo | bar | ble
+X
+X											where foo is a current shell function
+X											or control structure.  The command
+X											actually executed is:
+X
+X											foo | (bar | ble)
+X
+X											That's two procnodes in the parent
+X											shell, the latter having this flag set. */
+X	struct rusage ru;
+X	time_t bgtime;					/* time job was spawned */
+X	time_t endtime;				/* time job exited */
+X	};
+X
+X/* node in alias hash table */
+X
+Xstruct alias {
+X	char *text;			/* expansion of alias */
+X	int cmd;				/* one for regular aliases,
+X								zero for global aliases,
+X								negative for reserved words */
+X	int inuse;			/* alias is being expanded */
+X	};
+X
+X/* node in sched list */
+X
+Xstruct schedcmd {
+X	struct schedcmd *next;
+X	char *cmd;		/* command to run */
+X	time_t time;	/* when to run it */
+X	};
+X
+X#define MAXAL 20	/* maximum number of aliases expanded at once */
+X
+X/* hash table node */
+X
+Xstruct hashnode {
+X	struct hashnode *next;
+X	char *nam;
+X	void *dat;
+X	int canfree;		/* nam is free()able */
+X	};
+X
+X/* hash table */
+X
+Xstruct hashtab {
+X	int hsize;							/* size of nodes[] */
+X	int ct;								/* # of elements */
+X	struct hashnode **nodes;		/* array of size hsize */
+X	};
+X
+Xextern char *sys_errlist[];
+Xextern int errno;
+X
+X/* values in opts[] array */
+X
+X#define OPT_INVALID 1	/* opt is invalid, like -$ */
+X#define OPT_UNSET 0
+X#define OPT_SET 2
+X
+X/* the options */
+X
+Xstruct option {
+X	char *name;
+X	char id;			/* corresponding letter */
+X	};
+X
+X#define CORRECT '0'
+X#define NOCLOBBER '1'
+X#define NOBADPATTERN '2'
+X#define NONOMATCH '3'
+X#define GLOBDOTS '4'
+X#define NOTIFY '5'
+X#define BGNICE '6'
+X#define IGNOREEOF '7'
+X#define MARKDIRS '8'
+X#define AUTOLIST '9'
+X#define NOBEEP 'B'
+X#define PRINTEXITVALUE 'C'
+X#define PUSHDTOHOME 'D'
+X#define PUSHDSILENT 'E'
+X#define NOGLOBOPT 'F'
+X#define NULLGLOB 'G'
+X#define RMSTARSILENT 'H'
+X#define IGNOREBRACES 'I'
+X#define AUTOCD 'J'
+X#define NOBANGHIST 'K'
+X#define SUNKEYBOARDHACK 'L'
+X#define SINGLELINEZLE 'M'
+X#define AUTOPUSHD 'N'
+X#define CORRECTALL 'O'
+X#define RCEXPANDPARAM 'P'
+X#define PATHDIRS 'Q'
+X#define LONGLISTJOBS 'R'
+X#define RECEXACT 'S'
+X#define CDABLEVARS 'T'
+X#define MAILWARNING 'U'
+X#define AUTORESUME 'W'
+X#define NICEAPPENDAGES 'X'			/* historical */
+X#define MENUCOMPLETE 'Y'
+X#define USEZLE 'Z'
+X#define ALLEXPORT 'a'
+X#define ERREXIT 'e'
+X#define NORCS 'f'
+X#define HISTIGNORESPACE 'g'
+X#define HISTIGNOREDUPS 'h'
+X#define INTERACTIVE 'i'
+X#define HISTLIT 'j'
+X#define INTERACTIVECOMMENTS 'k'
+X#define LOGINSHELL 'l'
+X#define MONITOR 'm'
+X#define NOEXEC 'n'
+X#define SHINSTDIN 's'
+X#define NOUNSET 'u'
+X#define VERBOSE 'v'
+X#define XTRACE 'x'
+X#define SHWORDSPLIT 'y'
+X
+X#ifndef GLOBALS
+Xextern struct option optns[];
+X#else
+Xstruct option optns[] = {
+X	"correct",'0',
+X	"noclobber",'1',
+X	"nobadpattern",'2',
+X	"nonomatch",'3',
+X	"globdots",'4',
+X	"notify",'5',
+X	"bgnice",'6',
+X	"ignoreeof",'7',
+X	"markdirs",'8',
+X	"autolist",'9',
+X	"nobeep",'B',
+X	"printexitvalue",'C',
+X	"pushdtohome",'D',
+X	"pushdsilent",'E',
+X	"noglob",'F',
+X	"nullglob",'G',
+X	"rmstarsilent",'H',
+X	"ignorebraces",'I',
+X	"autocd",'J',
+X	"nobanghist",'K',
+X	"sunkeyboardhack",'L',
+X	"singlelinezle",'M',
+X	"autopushd",'N',
+X	"correctall",'O',
+X	"rcexpandparam",'P',
+X	"pathdirs",'Q',
+X	"longlistjobs",'R',
+X	"recexact",'S',
+X	"cdablevars",'T',
+X	"mailwarning",'U',
+X	"autoresume",'W',
+X	"listtypes",'X',
+X	"menucomplete",'Y',
+X	"zle",'Z',
+X	"allexport",'a',
+X	"errexit",'e',
+X	"norcs",'f',
+X	"histignorespace",'g',
+X	"histignoredups",'h',
+X	"interactive",'i',
+X	"histlit",'j',
+X	"interactivecomments",'k',
+X	"login",'l',
+X	"monitor",'m',
+X	"noexec",'n',
+X	"shinstdin",'s',
+X	"nounset",'u',
+X	"verbose",'v',
+X	"xtrace",'x',
+X	"shwordsplit",'y',
+X	NULL,0
+X};
+X#endif
+X
+X#define ALSTAT_MORE 1	/* last alias ended with ' ' */
+X#define ALSTAT_JUNK 2	/* don't put word in history List */
+X
+X#undef isset
+X#define isset(X) (opts[X])
+X#define unset(X) (!opts[X])
+X#define interact (isset(INTERACTIVE))
+X#define jobbing (isset(MONITOR))
+X#define nointr() signal(SIGINT,SIG_IGN)
+X#define islogin (isset(LOGINSHELL))
+X
+X
+X#define SP(x) (*((union wait *) &(x)))
+X
+X#ifndef WEXITSTATUS
+X#define	WEXITSTATUS(x)	(((union wait*)&(x))->w_retcode)
+X#define	WTERMSIG(x)	(((union wait*)&(x))->w_termsig)
+X#define	WSTOPSIG(x)	(((union wait*)&(x))->w_stopsig)
+X#endif
+X
+X#ifndef S_ISBLK
+X#define	_IFMT		0170000
+X#define	_IFDIR	0040000
+X#define	_IFCHR	0020000
+X#define	_IFBLK	0060000
+X#define	_IFREG	0100000
+X#define	_IFLNK	0120000
+X#define	_IFSOCK	0140000
+X#define	_IFIFO	0010000
+X#define	S_ISBLK(m)	(((m)&_IFMT) == _IFBLK)
+X#define	S_ISCHR(m)	(((m)&_IFMT) == _IFCHR)
+X#define	S_ISDIR(m)	(((m)&_IFMT) == _IFDIR)
+X#define	S_ISFIFO(m)	(((m)&_IFMT) == _IFIFO)
+X#define	S_ISREG(m)	(((m)&_IFMT) == _IFREG)
+X#define	S_ISLNK(m)	(((m)&_IFMT) == _IFLNK)
+X#define	S_ISSOCK(m)	(((m)&_IFMT) == _IFSOCK)
+X#endif
+X
+X/* buffered shell input for non-interactive shells */
+X
+XEXTERN FILE *bshin;
+X
+X/* NULL-terminated arrays containing path, cdpath, etc. */
+X
+XEXTERN char **path,**cdpath,**fpath,**watch,**mailpath,**tildedirs,**fignore;
+X
+X/* named directories */
+X
+XEXTERN char **userdirs,**usernames;
+X
+X/* size of userdirs[], # of userdirs */
+X
+XEXTERN int userdirsz,userdirct;
+X
+XEXTERN char *mailfile;
+X
+XEXTERN char *yytext;
+X
+X/* error/break flag */
+X
+XEXTERN int errflag;
+X
+X/* suppress error messages */
+X
+XEXTERN int noerrs;
+X
+X/* current history event number */
+X
+XEXTERN int curhist;
+X
+X/* if != 0, this is the first line of the command */
+X
+XEXTERN int isfirstln;
+X
+X/* if != 0, this is the first char of the command (not including
+X	white space */
+X
+XEXTERN int isfirstch;
+X
+X/* first event number in the history lists */
+X
+XEXTERN int firsthist,firstlithist;
+X
+X/* capacity of history lists */
+X
+XEXTERN int histsiz,lithistsiz;
+X
+X/* if = 1, we have performed history substitution on the current line
+X 	if = 2, we have used the 'p' modifier */
+X
+XEXTERN int histdone;
+X
+X/* default event (usually curhist-1, that is, "!!") */
+X
+XEXTERN int defev;
+X
+X/* != 0 if we are in the middle of parsing a command (that is,
+X	we have already read the command word */
+X
+XEXTERN int incmd;
+X
+X/* != 0 if we just read a redirection */
+X
+XEXTERN int inredir;
+X
+X/* != 0 if we are in the middle of a [[ ... ]] */
+X
+XEXTERN int incond;
+X
+X/* != 0 if we are about to read a case pattern */
+X
+XEXTERN int incase;
+X
+X/* != 0 if we just read a separator (; or newline) */
+X
+XEXTERN int lsep;
+X
+X/* != 0 if we just read FUNCTION */
+X
+XEXTERN int infunc;
+X
+X/* the lists of history events */
+X
+XEXTERN Lklist histlist,lithistlist;
+X
+X/* the directory stack */
+X
+XEXTERN Lklist dirstack;
+X
+X/* the zle buffer stack */
+X
+XEXTERN Lklist bufstack;
+X
+X/* the input queue (stack?)
+X
+X	inbuf    = start of buffer
+X	inbufptr = location in buffer (= inbuf for a FULL buffer)
+X											(= inbuf+inbufsz for an EMPTY buffer)
+X	inbufct  = # of chars in buffer (inbufptr+inbufct == inbuf+inbufsz)
+X	inbufsz  = max size of buffer
+X*/
+X
+XEXTERN char *inbuf,*inbufptr;
+XEXTERN int inbufct,inbufsz;
+X
+XEXTERN char *ifs;		/* $IFS */
+X
+XEXTERN char *oldpwd;	/* $OLDPWD */
+X
+XEXTERN char *underscore; /* $_ */
+X
+X/* != 0 if this is a subshell */
+X
+XEXTERN int subsh;
+X
+X/* # of break levels */
+X
+XEXTERN int breaks;
+X
+X/* != 0 if we have a return pending */
+X
+XEXTERN int retflag;
+X
+X/* != 0 means don't hash the PATH */
+X
+XEXTERN int pathsuppress;
+X
+X/* # of nested loops we are in */
+X
+XEXTERN int loops;
+X
+X/* # of continue levels */
+X
+XEXTERN int contflag;
+X
+X/* the job we are working on */
+X
+XEXTERN int thisjob;
+X
+X/* the current job (+) */
+X
+XEXTERN int curjob;
+X
+X/* the previous job (-) */
+X
+XEXTERN int prevjob;
+X
+X/* hash table containing the aliases and reserved words */
+X
+XEXTERN Hashtab aliastab;
+X
+X/* hash table containing the parameters */
+X
+XEXTERN Hashtab paramtab;
+X
+X/* hash table containing the builtins/shfuncs/hashed commands */
+X
+XEXTERN Hashtab cmdnamtab;
+X
+X/* hash table containing the zle multi-character bindings */
+X
+XEXTERN Hashtab xbindtab;
+X
+X/* the job table */
+X
+XEXTERN struct job jobtab[MAXJOB];
+X
+X/* the list of sched jobs pending */
+X
+XEXTERN struct schedcmd *schedcmds;
+X
+X/* the last l for s/l/r/ history substitution */
+X
+XEXTERN char *hsubl;
+X
+X/* the last r for s/l/r/ history substitution */
+X
+XEXTERN char *hsubr;
+X
+XEXTERN char *username;	/* $USERNAME */
+XEXTERN long lastval;		/* $? */
+XEXTERN long baud;			/* $BAUD */
+XEXTERN long columns;		/* $COLUMNS */
+XEXTERN long lines;		/* $LINES */
+X
+X/* input fd from the coprocess */
+X
+XEXTERN int coprocin;
+X
+X/* output fd from the coprocess */
+X
+XEXTERN int coprocout;
+X
+XEXTERN long mailcheck;	/* $MAILCHECK */
+XEXTERN long logcheck;	/* $LOGCHECK */
+X
+X/* the last time we checked mail */
+X
+XEXTERN time_t lastmailcheck;
+X
+X/* the last time we checked the people in the WATCH variable */
+X
+XEXTERN time_t lastwatch;
+X
+X/* the last time we did the periodic() shell function */
+X
+XEXTERN time_t lastperiod;
+X
+X/* $SECONDS = time(NULL) - shtimer */
+X
+XEXTERN time_t shtimer;
+X
+XEXTERN long mypid;		/* $$ */
+XEXTERN long lastpid;		/* $! */
+XEXTERN long ppid;			/* $PPID */
+X
+X/* the process group of the shell */
+X
+XEXTERN long mypgrp;
+X
+XEXTERN char *cwd;			/* $PWD */
+XEXTERN char *optarg;		/* $OPTARG */
+XEXTERN long optind;		/* $OPTIND */
+XEXTERN char *prompt;		/* $PROMPT */
+XEXTERN char *rprompt;	/* $RPROMPT */
+XEXTERN char *prompt2;	/* etc. */
+XEXTERN char *prompt3;
+XEXTERN char *prompt4;
+XEXTERN char *timefmt;
+XEXTERN char *watchfmt;
+XEXTERN char *wordchars;
+X
+XEXTERN char *argzero;	/* $0 */
+X
+X/* the hostname */
+X
+XEXTERN char *hostm;
+X
+X/* the hostname, truncated after the '.' */
+X
+XEXTERN char *hostM;
+X
+XEXTERN char *home;		/* $HOME */
+XEXTERN char **pparams;	/* $argv */
+X
+X/* the List of local variables we have to destroy */
+X
+XEXTERN Lklist locallist;
+X
+X/* the shell input fd */
+X
+XEXTERN int SHIN;
+X
+X/* the shell tty fd */
+X
+XEXTERN int SHTTY;
+X
+X/* the stack of aliases we are expanding */
+X
+XEXTERN struct alias *alstack[MAXAL];
+X
+X/* the alias stack pointer; also, the number of aliases currently
+X 	being expanded */
+X
+XEXTERN int alstackind;
+X
+X/* != 0 means we are reading input from a string */
+X
+XEXTERN int strin;
+X
+X/* period between periodic() commands, in seconds */
+X
+XEXTERN long period;
+X
+X/* != 0 means history substitution is turned off */
+X
+XEXTERN int stophist;
+X
+XEXTERN int lithist;
+X
+X/* this line began with a space, so junk it if HISTIGNORESPACE is on */
+X
+XEXTERN int spaceflag;
+X
+X/* != 0 means we have removed the current event from the history List */
+X
+XEXTERN int histremmed;
+X
+X/* the options; e.g. if opts['a'] == OPT_SET, -a is turned on */
+X
+XEXTERN int opts[128];
+X
+XEXTERN long lineno;		/* LINENO */
+XEXTERN long listmax;		/* LISTMAX */
+XEXTERN long savehist;	/* SAVEHIST */
+XEXTERN long shlvl;		/* SHLVL */
+XEXTERN long tmout;		/* TMOUT */
+XEXTERN long dirstacksize;	/* DIRSTACKSIZE */
+X
+X/* != 0 means we have called execlist() and then intend to exit(),
+X 	so don't fork if not necessary */
+X
+XEXTERN int exiting;
+X
+XEXTERN int lastbase;		/* last input base we used */
+X
+X/* the limits for child processes */
+X
+XEXTERN struct rlimit limits[RLIM_NLIMITS];
+X
+X/* the current word in the history List */
+X
+XEXTERN char *hlastw;
+X
+X/* pointer into the history line */
+X
+XEXTERN char *hptr;
+X
+X/* the current history line */
+X
+XEXTERN char *hline;
+X
+X/* the termcap buffer */
+X
+XEXTERN char termbuf[1024];
+X
+X/* $TERM */
+X
+XEXTERN char *term;
+X
+X/* != 0 if this $TERM setup is usable */
+X
+XEXTERN int termok;
+X
+X/* max size of hline */
+X
+XEXTERN int hlinesz;
+X
+X/* the alias expansion status - if == ALSTAT_MORE, we just finished
+X	expanding an alias ending with a space */
+X
+XEXTERN int alstat;
+X
+X/* we have printed a 'you have stopped (running) jobs.' message */
+X
+XEXTERN int stopmsg;
+X
+X/* the default tty state */
+X
+XEXTERN struct ttyinfo shttyinfo;
+X
+X/* $TTY */
+X
+XEXTERN char *ttystrname;
+X
+X/* list of memory heaps */
+X
+XEXTERN Lklist heaplist;
+X
+X/* != 0 if we are allocating in the heaplist */
+X
+XEXTERN int useheap;
+X
+X#include "signals.h"
+X
+X#ifdef GLOBALS
+X
+X/* signal names */
+Xchar **sigptr = sigs;
+X
+X/* tokens */
+Xchar *ztokens = "#$^*()$=|{}[]`<>?~`,";
+X
+X#else
+Xextern char *ztokens,**sigptr;
+X#endif
+X
+X#define SIGERR (SIGCOUNT+1)
+X#define SIGDEBUG (SIGCOUNT+2)
+X#define VSIGCOUNT (SIGCOUNT+3)
+X#define SIGEXIT 0
+X
+X/* signals that are trapped = 1, signals ignored =2 */
+X
+XEXTERN int sigtrapped[VSIGCOUNT];
+X
+X/* trap functions for each signal */
+X
+XEXTERN List sigfuncs[VSIGCOUNT];
+X
+X/* $HISTCHARS */
+X
+XEXTERN char bangchar,hatchar,hashchar;
+X
+XEXTERN int eofseen;
+X
+X/* we are parsing a line sent to use by the editor */
+X
+XEXTERN int zleparse;
+X
+XEXTERN int wordbeg;
+X
+X/* interesting termcap strings */
+X
+Xenum xtcaps {
+X	TCCLEARSCREEN,TCLEFT,TCMULTLEFT,TCRIGHT,
+X	TCMULTRIGHT,TCUP,TCMULTUP,TCDOWN,
+X	TCMULTDOWN,TCDEL,TCMULTDEL,TCINS,
+X	TCMULTINS,TCCLEAREOD,TCCLEAREOL,TCINSLINE,
+X	TCDELLINE,TC_COUNT
+X	};
+X
+X/* lengths of each string */
+X
+XEXTERN int tclen[TC_COUNT];
+X
+XEXTERN char *tcstr[TC_COUNT];
+X
+X#ifdef GLOBALS
+X
+X/* names of the strings we want */
+X
+Xchar *tccapnams[TC_COUNT] = {
+X	"cl","le","LE","nd","RI","up","UP","do",
+X	"DO","dc","DC","ic","IC","cd","ce","al","dl"
+X	};
+X
+X#else
+Xextern char *tccapnams[TC_COUNT];
+X#endif
+X
+X#define tccan(X) (!!tclen[X])
+X
+X#include "ztype.h"
+SHAR_EOF
+chmod 0644 zsh2.00/src/zsh.h ||
+echo 'restore of zsh2.00/src/zsh.h failed'
+Wc_c="`wc -c < 'zsh2.00/src/zsh.h'`"
+test 25361 -eq "$Wc_c" ||
+	echo 'zsh2.00/src/zsh.h: original size 25361, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+# ============= zsh2.00/src/ztype.h ==============
+if test -f 'zsh2.00/src/ztype.h' -a X"$1" != X"-c"; then
+	echo 'x - skipping zsh2.00/src/ztype.h (File already exists)'
+	rm -f _shar_wnt_.tmp
+else
+> _shar_wnt_.tmp
+echo 'x - extracting zsh2.00/src/ztype.h (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'zsh2.00/src/ztype.h' &&
+X/*
+X
+X	ztype.h - character classification macros
+X
+X	This file is part of zsh, the Z shell.
+X
+X	zsh is free software; no one can prevent you from reading the source
+X   code, or giving it to someone else.
+X
+X   This file is copyrighted under the GNU General Public License, which
+X   can be found in the file called COPYING.
+X
+X   Copyright (C) 1990, 1991 Paul Falstad
+X
+X   zsh is distributed in the hope that it will be useful, but
+X   WITHOUT ANY WARRANTY.  No author or distributor accepts
+X   responsibility to anyone for the consequences of using it or for
+X   whether it serves any particular purpose or works at all, unless he
+X   says so in writing.  Refer to the GNU General Public License
+X   for full details.
+X
+X   Everyone is granted permission to copy, modify and redistribute
+X   zsh, but only under the conditions described in the GNU General Public
+X   License.   A copy of this license is supposed to have been given to you
+X   along with zsh so you can know your rights and responsibilities.
+X   It should be in a file named COPYING.
+X
+X   Among other things, the copyright notice and this notice must be
+X   preserved on all copies.
+X
+X*/
+X
+X#define IDIGIT  1
+X#define IALNUM  2
+X#define IBLANK  4
+X#define INBLANK 8
+X#define ITOK    16
+X#define ISEP    32
+X#define IALPHA  64
+X#define IIDENT  128
+X#define IUSER   256
+X#define ICNTRL  512
+X#define IWORD	 1024
+X#define ISPECIAL 2048
+X#define _icom(X,Y) (typtab[(int) (unsigned char) (X)] & Y)
+X#define idigit(X) _icom(X,IDIGIT)
+X#define ialnum(X) _icom(X,IALNUM)
+X#define iblank(X) _icom(X,IBLANK)		/* blank, not including \n */
+X#define inblank(X) _icom(X,INBLANK)		/* blank or \n */
+X#define itok(X) _icom(X,ITOK)
+X#define isep(X) _icom(X,ISEP)
+X#define ialpha(X) _icom(X,IALPHA)
+X#define iident(X) _icom(X,IIDENT)
+X#define iuser(X) _icom(X,IUSER)			/* username char */
+X#define icntrl(X) _icom(X,ICNTRL)
+X#define iword(X) _icom(X,IWORD)
+X#define ispecial(X) _icom(X,ISPECIAL)
+X
+XEXTERN short int typtab[256];
+X
+SHAR_EOF
+chmod 0644 zsh2.00/src/ztype.h ||
+echo 'restore of zsh2.00/src/ztype.h failed'
+Wc_c="`wc -c < 'zsh2.00/src/ztype.h'`"
+test 1927 -eq "$Wc_c" ||
+	echo 'zsh2.00/src/ztype.h: original size 1927, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+rm -f _shar_seq_.tmp
+echo You have unpacked the last part
+exit 0
+--
+              Paul Falstad  pfalstad@phoenix.princeton.edu
+         And on the roads, too, vicious gangs of KEEP LEFT signs!
+     If Princeton knew my opinions, they'd have expelled me long ago.
+
+exit 0 # Just in case...
+-- 
+Kent Landfield                   INTERNET: kent@sparky.IMD.Sterling.COM
+Sterling Software, IMD           UUCP:     uunet!sparky!kent
+Phone:    (402) 291-8300         FAX:      (402) 291-4362
+Please send comp.sources.misc-related mail to kent@uunet.uu.net.

@@ -1,0 +1,1758 @@
+Path: funic!fuug!sics.se!sunic!hagbard!eru!bloom-beacon!ora!camb.com!spdcc!mintaka!think.com!rpi!crdgw1!uunet!sparky!kent
+From: pfalstad@phoenix.princeton.edu (Paul Falstad)
+Newsgroups: comp.sources.misc
+Subject: v20i025:  The Z shell, Patch03d/4
+Message-ID: <1991May29.165132.6804@sparky.IMD.Sterling.COM>
+Date: 29 May 91 16:51:32 GMT
+References: <csm-v20i022=zsh2.00.114111@sparky.IMD.Sterling.COM>
+Sender: kent@sparky.IMD.Sterling.COM (Kent Landfield)
+Organization: Sterling Software, IMD
+Lines: 1745
+Approved: kent@sparky.imd.sterling.com
+X-Md4-Signature: 1f164fdd781138e2f7e28dc4624dc9c4
+
+Submitted-by: Paul Falstad <pfalstad@phoenix.princeton.edu>
+Posting-number: Volume 20, Issue 25
+Archive-name: zsh2.00/patch03d
+Patch-To: zsh2.00: Volume 18, Issue 84-98
+
+#!/bin/sh
+# patch03d
+# do not concatenate these parts, unpack them in order with /bin/sh
+# file patches continued
+#
+if test ! -r _shar_seq_.tmp; then
+	echo 'Please unpack part 1 first!'
+	exit 1
+fi
+(read Scheck
+ if test "$Scheck" != 2; then
+	echo Please unpack part "$Scheck" next!
+	exit 1
+ else
+	exit 0
+ fi
+) < _shar_seq_.tmp || exit 1
+if test ! -f _shar_wnt_.tmp; then
+	echo 'x - still skipping patches'
+else
+echo 'x - continuing file patches'
+sed 's/^X//' << 'SHAR_EOF' >> 'patches' &&
+X  		RETURN;
+X  		}
++ #ifdef SIGWINCH
+X  	if (sig == SIGWINCH)
+X  		adjustwinsize();
++ #endif
+X  	if (sig != SIGCHLD)
+X  		{
+X  		dotrap(sig);
+***************
+*** 85,95 ****
+X  		}
+X  	for (;;)
+X  		{
+X  		pid = wait3(&statusp,WNOHANG|WUNTRACED,&ru);
+X  		if (pid == -1)
+X  			{
+X  			if (errno != ECHILD)
+! 				zerr("%e",NULL,errno);
+X  			RETURN;
+X  			}
+X  		if (!pid)
+--- 85,99 ----
+X  		}
+X  	for (;;)
+X  		{
++ #ifdef RLIM_INFINITY
+X  		pid = wait3(&statusp,WNOHANG|WUNTRACED,&ru);
++ #else
++ 		pid = wait3(&statusp,WNOHANG|WUNTRACED,NULL);
++ #endif
+X  		if (pid == -1)
+X  			{
+X  			if (errno != ECHILD)
+! 				zerr("wait failed: %e",NULL,errno);
+X  			RETURN;
+X  			}
+X  		if (!pid)
+***************
+*** 460,466 ****
+X  
+X  void chldsuspend() /**/
+X  {
+! #ifdef SIGVEC
+X  static struct sigvec vec = { handler,sigmask(SIGCHLD),SV_INTERRUPT };
+X  
+X  	sigvec(SIGCHLD,&vec,NULL);
+--- 464,470 ----
+X  
+X  void chldsuspend() /**/
+X  {
+! #ifdef SV_INTERRUPT
+X  static struct sigvec vec = { handler,sigmask(SIGCHLD),SV_INTERRUPT };
+X  
+X  	sigvec(SIGCHLD,&vec,NULL);
+***************
+*** 467,473 ****
+X  	sigpause(0);
+X  	signal(SIGCHLD,handler);
+X  #else
+! 	pause();
+X  #endif
+X  }
+X  
+--- 471,477 ----
+X  	sigpause(0);
+X  	signal(SIGCHLD,handler);
+X  #else
+! 	sigpause(0);
+X  #endif
+X  }
+X  
+***************
+*** 664,670 ****
+X  		if (t0 != thisjob && jobtab[t0].stat &&
+X  				!(jobtab[t0].stat & STAT_STOPPED))
+X  			{
+! 			killpg(jobtab[t0].gleader,SIGHUP);
+X  			killed++;
+X  			}
+X  	if (killed)
+--- 668,674 ----
+X  		if (t0 != thisjob && jobtab[t0].stat &&
+X  				!(jobtab[t0].stat & STAT_STOPPED))
+X  			{
+! 			kill(-jobtab[t0].gleader,SIGHUP);
+X  			killed++;
+X  			}
+X  	if (killed)
+***************
+*** 696,702 ****
+X  		}
+X  }
+X  
+! /* send a signal to a job (simply involves killpg if monitoring is on) */
+X  
+X  int killjb(jn,sig) /**/
+X  Job jn;int sig;
+--- 700,706 ----
+X  		}
+X  }
+X  
+! /* send a signal to a job (simply involves kill if monitoring is on) */
+X  
+X  int killjb(jn,sig) /**/
+X  Job jn;int sig;
+***************
+*** 705,711 ****
+X  int err;
+X  
+X  	if (jobbing)
+! 		return(killpg(jn->gleader,sig));
+X  	for (pn = jn->procs; pn; pn = pn->next)
+X  		if ((err = kill(pn->pid,sig)) == -1 && errno != ESRCH)
+X  			return -1;
+--- 709,715 ----
+X  int err;
+X  
+X  	if (jobbing)
+! 		return(kill(-jn->gleader,sig));
+X  	for (pn = jn->procs; pn; pn = pn->next)
+X  		if ((err = kill(pn->pid,sig)) == -1 && errno != ESRCH)
+X  			return -1;
+*** zshdist/zsh2.00/src/lex.c	Tue May  7 23:08:33 1991
+--- zsh2.00/src/lex.c	Thu May 23 00:16:45 1991
+***************
+*** 98,103 ****
+--- 98,104 ----
+X  	hline = xhline;
+X  	hptr = xhptr;
+X  	hlastw = xhlastw;
++ 	clearalstack();
+X  	alstackind = xalstackind;
+X  	hlinesz = xhlinesz;
+X  	lexstop = eofseen = errflag = 0;
+***************
+*** 305,310 ****
+--- 306,312 ----
+X  		{
+X  		d = hgetc();
+X  		hungetc(d);
++ 		lexstop = 0;
+X  		if (d == '>' || d == '<')
+X  			{
+X  			peekfd = c-'0';
+***************
+*** 314,321 ****
+X  
+X  	/* chars in initial position in word */
+X  
+! 	if (c == hashchar && (!interact || unset(SHINSTDIN) || strin ||
+! 			isset(INTERACTIVECOMMENTS)))
+X  		{
+X  		while ((c = hgetch()) != '\n' && !lexstop);
+X  		if (c == '\n')
+--- 316,324 ----
+X  
+X  	/* chars in initial position in word */
+X  
+! 	if (c == hashchar &&
+! 			(isset(INTERACTIVECOMMENTS) ||
+! 			(!zleparse && (!interact || unset(SHINSTDIN) || strin))))
+X  		{
+X  		while ((c = hgetch()) != '\n' && !lexstop);
+X  		if (c == '\n')
+***************
+*** 657,663 ****
+--- 660,676 ----
+X  				from printing the path. */
+X  
+X  				while ((c = hgetc()) != '\'' && !lexstop)
++ 					{
+X  					add(c);
++ 					if (isset(CSHJUNKIEQUOTES) && c == '\n')
++ 						break;
++ 					}
++ 				if (c != '\'')
++ 					{
++ 					zerr("unmatched \'");
++ 					peek = LEXERR;
++ 					goto brk;
++ 					}
+X  				c = Nularg;
+X  				break;
+X  			case LX2_DQUOTE:
+***************
+*** 673,678 ****
+--- 686,693 ----
+X  							add(c);
+X  							}
+X  						}
++ 					else if (isset(CSHJUNKIEQUOTES) && c == '\n')
++ 						break;
+X  					else
+X  						{
+X  						if (c == '$')
+***************
+*** 702,707 ****
+--- 717,728 ----
+X  							c = Qtick;
+X  						add(c);
+X  						}
++ 				if (c != '\"')
++ 					{
++ 					zerr("unmatched \"");
++ 					peek = LEXERR;
++ 					goto brk;
++ 					}
+X  				c = Nularg;
+X  				break;
+X  			case LX2_BQUOTE:
+***************
+*** 717,728 ****
+X  							add(c);
+X  							}
+X  						}
+X  					else
+- 						{
+- 						if (c == '$')
+- 							c = String;
+X  						add(c);
+! 						}
+X  				c = Tick;
+X  				break;
+X  			}
+--- 738,753 ----
+X  							add(c);
+X  							}
+X  						}
++ 					else if (isset(CSHJUNKIEQUOTES) && c == '\n')
++ 						break;
+X  					else
+X  						add(c);
+! 				if (c != '`')
+! 					{
+! 					zerr("unmatched `");
+! 					peek = LEXERR;
+! 					goto brk;
+! 					}
+X  				c = Tick;
+X  				break;
+X  			}
+***************
+*** 755,761 ****
+X  		t = NULL;
+X  	else
+X  		*t = '\0';
+! 	ic = incmd || incond || inredir || incase;
+X  	if (interact && isset(SHINSTDIN) && !strin && !incase && *pk == STRING &&
+X  		(isset(CORRECTALL) || (isset(CORRECT) && !ic)) && !nocorrect)
+X  			spckword(&yylval.str,&s,ic,1);
+--- 780,786 ----
+X  		t = NULL;
+X  	else
+X  		*t = '\0';
+! 	ic = incmd || incond || inredir || incase || infunc;
+X  	if (interact && isset(SHINSTDIN) && !strin && !incase && *pk == STRING &&
+X  		(isset(CORRECTALL) || (isset(CORRECT) && !ic)) && !nocorrect)
+X  			spckword(&yylval.str,&s,ic,1);
+***************
+*** 778,783 ****
+--- 803,811 ----
+X  				hungets(ALPOPS);
+X  				hungets((alstack[alstackind++] = an)->text);
+X  				alstat = 0;
++ 				/* remove from history if it begins with space */
++ 				if (isset(HISTIGNORESPACE) && an->text[0] == ' ')
++ 				    remhist();
+X  				return 1;
+X  				}
+X  			}
+*** zshdist/zsh2.00/src/loop.c	Fri May  3 20:52:22 1991
+--- zsh2.00/src/loop.c	Tue May 21 17:36:53 1991
+***************
+*** 267,273 ****
+X  	exiting = 0;
+X  	if (firstnode(args) && nextnode(firstnode(args)))
+X  		{
+! 		zerr("bad case statement",NULL,0);
+X  		errflag = 1;
+X  		return 1;
+X  		}
+--- 267,273 ----
+X  	exiting = 0;
+X  	if (firstnode(args) && nextnode(firstnode(args)))
+X  		{
+! 		zerr("too many arguments to case",NULL,0);
+X  		errflag = 1;
+X  		return 1;
+X  		}
+*** zshdist/zsh2.00/src/mem.c	Fri May  3 20:52:26 1991
+--- zsh2.00/src/mem.c	Wed May 22 09:57:39 1991
+***************
+*** 184,190 ****
+X  vptr ptr;
+X  
+X  	ptr = halloc(size);
+! 	bzero(ptr,size);
+X  	return ptr;
+X  }
+X  
+--- 184,190 ----
+X  vptr ptr;
+X  
+X  	ptr = halloc(size);
+! 	memset(ptr,0,size);
+X  	return ptr;
+X  }
+X  
+***************
+*** 221,227 ****
+X  vptr ptr;
+X  
+X  	ptr = zalloc(size);
+! 	bzero(ptr,size);
+X  	return ptr;
+X  }
+X  
+--- 221,227 ----
+X  vptr ptr;
+X  
+X  	ptr = zalloc(size);
+! 	memset(ptr,0,size);
+X  	return ptr;
+X  }
+X  
+*** zshdist/zsh2.00/src/params.c	Fri May  3 20:52:28 1991
+--- zsh2.00/src/params.c	Wed May 22 10:01:56 1991
+***************
+*** 53,59 ****
+X  	"LITHISTSIZE",lithistsizegetfn,lithistsizesetfn,
+X  	"RANDOM",randomgetfn,randomsetfn,
+X  	"SECONDS",secondsgetfn,secondssetfn,
+! 	"UID",uidgetfn,uidsetfn,
+X  	NULL,NULL,NULL
+X  	}, *p1 = x1;
+X  /* special string params */
+--- 53,59 ----
+X  	"LITHISTSIZE",lithistsizegetfn,lithistsizesetfn,
+X  	"RANDOM",randomgetfn,randomsetfn,
+X  	"SECONDS",secondsgetfn,secondssetfn,
+! 	"UID",uidgetfn,NULL,
+X  	NULL,NULL,NULL
+X  	}, *p1 = x1;
+X  /* special string params */
+***************
+*** 101,108 ****
+X  	}, *p4 = x4;
+X  /* variable string params */
+X  static struct { char *name; char **data; } x5[] = {
+! 	"HOST",&hostm,				/* read only */
+! 	"LOGNAME",&username,
+X  	"OLDPWD",&oldpwd,
+X  	"PWD",&cwd,
+X  	"TTY",&ttystrname,
+--- 101,107 ----
+X  	}, *p4 = x4;
+X  /* variable string params */
+X  static struct { char *name; char **data; } x5[] = {
+! 	"LOGNAME",&username,		/* read only */
+X  	"OLDPWD",&oldpwd,
+X  	"PWD",&cwd,
+X  	"TTY",&ttystrname,
+***************
+*** 110,117 ****
+--- 109,118 ----
+X  	NULL,NULL,
+X  
+X  	"FCEDIT",&fceditparam,	/* read/write */
++ 	"HOST",&hostnam,
+X  	"OPTARG",&optarg,
+X  	"MAIL",&mailfile,
++ 	"NULLCMD",&nullcmd,
+X  	"prompt",&prompt,
+X  	"PROMPT",&prompt,
+X  	"PROMPT2",&prompt2,
+***************
+*** 301,324 ****
+X  int isident(s) /**/
+X  char *s;
+X  {
+! 	if (idigit(*s))
+! 		while (idigit(*s)) s++;
+! 	else if (iident(*s))
+! 		while (iident(*s)) s++;
+! 	else if (*s == Quest)
+! 		*s++ = '?';
+X  	else if (*s == Pound)
+! 		*s++ = '#';
+X  	else if (*s == String)
+! 		*s++ = '$';
+X  	else if (*s == Qstring)
+! 		*s++ = '$';
+X  	else if (*s == Star)
+! 		*s++ = '*';
+! 	else if (*s == '#' || *s == '-' || *s == '?' || *s == '$' ||
+! 			*s == '_' || *s == '!' || *s == '@' || *s == '*')
+! 		s++;
+! 	else
+X  		return 0;
+X  	return 1;
+X  }
+--- 302,320 ----
+X  int isident(s) /**/
+X  char *s;
+X  {
+! 	if (*s == Quest)
+! 		*s = '?';
+X  	else if (*s == Pound)
+! 		*s = '#';
+X  	else if (*s == String)
+! 		*s = '$';
+X  	else if (*s == Qstring)
+! 		*s = '$';
+X  	else if (*s == Star)
+! 		*s = '*';
+! 	else if (!idigit(*s) && !iident(*s) && *s != '#' && *s != '-' &&
+! 			*s != '?' && *s != '$' && *s != '_' && *s != '!' &&
+! 			*s != '@' && *s != '*')
+X  		return 0;
+X  	return 1;
+X  }
+***************
+*** 362,367 ****
+--- 358,364 ----
+X  	else
+X  		{
+X  		struct param *pm;
++ 		int isvarat = !strcmp(t, "@");
+X  
+X  		pm = gethnode(t,paramtab);
+X  		if (sav)
+***************
+*** 370,376 ****
+X  		if (!pm)
+X  			return NULL;
+X  		v = alloc(sizeof *v);
+! 		v->isarr = pmtype(pm) == PMFLAG_A;
+X  		v->pm = pm;
+X  		v->a = v->b = -1;
+X  		if (bracks && (*s == '[' || *s == Inbrack))
+--- 367,374 ----
+X  		if (!pm)
+X  			return NULL;
+X  		v = alloc(sizeof *v);
+! 		if (pmtype(pm) == PMFLAG_A)
+! 			v->isarr = isvarat ? -1 : 1;
+X  		v->pm = pm;
+X  		v->a = v->b = -1;
+X  		if (bracks && (*s == '[' || *s == Inbrack))
+***************
+*** 384,395 ****
+X  					*t = ztokens[*t-Pound];
+X  			if (*t == Outbrack)
+X  				*t = ']';
+! 			if (s[0] == '*' && s[1] == ']')
+X  				{
+! 				s += 2;
+! 				v->isarr = 1;
+X  				v->a = 0;
+X  				v->b = -1;
+X  				}
+X  			else
+X  				{
+--- 382,393 ----
+X  					*t = ztokens[*t-Pound];
+X  			if (*t == Outbrack)
+X  				*t = ']';
+! 			if ((s[0] == '*' || s[0] == '@')  && s[1] == ']')
+X  				{
+! 				v->isarr = (s[0] == '*') ? 1 : -1;
+X  				v->a = 0;
+X  				v->b = -1;
++ 				s += 2;
+X  				}
+X  			else
+X  				{
+***************
+*** 408,414 ****
+X  				if (*s == ']')
+X  					{
+X  					s++;
+! 					v->isarr = v->isarr && ((a == -1) || !(a == b));
+X  					v->a = a;
+X  					v->b = b;
+X  					}
+--- 406,413 ----
+X  				if (*s == ']')
+X  					{
+X  					s++;
+! 					if (v->isarr && a == b && a != -1)
+! 						v->isarr = 0;
+X  					v->a = a;
+X  					v->b = b;
+X  					}
+***************
+*** 532,538 ****
+X  			else
+X  				{
+X  				char **ss = (v->pm->gets.afn)(v->pm);
+! 				int ac,ad;
+X  
+X  				if (v->a >= (ac = arrlen(ss)))
+X  					{
+--- 531,537 ----
+X  			else
+X  				{
+X  				char **ss = (v->pm->gets.afn)(v->pm);
+! 				int ac,ad,t0;
+X  
+X  				if (v->a >= (ac = arrlen(ss)))
+X  					{
+***************
+*** 541,546 ****
+--- 540,547 ----
+X  					ad = v->a+1;
+X  					ss = zalloc((ad+1)*sizeof *ss);
+X  					memcpy(ss,st,(ad+1)*sizeof *ss);
++ 					for (t0 = 0; t0 != ac; t0++)
++ 						ss[t0] = ztrdup(ss[t0]);
+X  					while (ac < ad)
+X  						ss[ac++] = ztrdup("");
+X  					ss[ac] = NULL;
+***************
+*** 880,898 ****
+X  	return arrlen(pparams);
+X  }
+X  
+- long euidgetfn(pm) /**/
+- Param pm;
+- {
+- 	return geteuid();
+- }
+- 
+- void euidsetfn(pm,x) /**/
+- Param pm;long x;
+- {
+- 	if (!unsetflag)
+- 		seteuid(x);
+- }
+- 
+X  long randomgetfn(pm) /**/
+X  Param pm;
+X  {
+--- 881,886 ----
+***************
+*** 923,946 ****
+X  	return getuid();
+X  }
+X  
+- void uidsetfn(pm,x) /**/
+- Param pm;long x;
+- {
+- 	if (!unsetflag)
+- 		setuid(x);
+- }
+- 
+X  long gidgetfn(pm) /**/
+X  Param pm;
+X  {
+X  	return getegid();
+- }
+- 
+- void gidsetfn(pm,x) /**/
+- Param pm;long x;
+- {
+- 	if (!unsetflag)
+- 		setegid(x);
+X  }
+X  
+X  char *usernamegetfn(pm) /**/
+--- 911,920 ----
+*** zshdist/zsh2.00/src/params.pro	Tue May  7 22:53:28 1991
+--- zsh2.00/src/params.pro	Wed May 22 11:13:11 1991
+***************
+*** 35,50 ****
+X  void pathsetfn DCLPROTO((Param pm,char **x));
+X  void unsettablesetfn DCLPROTO((Param pm,char *x));
+X  long poundgetfn DCLPROTO((Param pm));
+- long euidgetfn DCLPROTO((Param pm));
+- void euidsetfn DCLPROTO((Param pm,long x));
+X  long randomgetfn DCLPROTO((Param pm));
+X  void randomsetfn DCLPROTO((Param pm,long v));
+X  long secondsgetfn DCLPROTO((Param pm));
+X  void secondssetfn DCLPROTO((Param pm,long x));
+X  long uidgetfn DCLPROTO((Param pm));
+- void uidsetfn DCLPROTO((Param pm,long x));
+X  long gidgetfn DCLPROTO((Param pm));
+- void gidsetfn DCLPROTO((Param pm,long x));
+X  char *usernamegetfn DCLPROTO((Param pm));
+X  char *hostgetfn DCLPROTO((Param pm));
+X  char *ifsgetfn DCLPROTO((Param pm));
+--- 35,46 ----
+*** zshdist/zsh2.00/src/parse.y	Mon May  6 06:18:51 1991
+--- zsh2.00/src/parse.y	Thu May 23 16:49:09 1991
+***************
+*** 92,103 ****
+X  %type <Casenode> caselist
+X  %%
+X  
+! event	: ENDINPUT { tree = NULL; eofseen = 1; return 0; }
+! 		| SEPER { tree = NULL; lsep = 0; return 0; }
+! 		| list1 { tree = $1; return 0; }
+! 		| error ENDINPUT { errflag = 1; tree = NULL; eofseen = 1; return 1; }
+! 		| error SEPER { errflag = 1; tree = NULL; return 1; }
+! 		| error LEXERR { errflag = 1; tree = NULL; return 1; }
+X  		;
+X  
+X  list1	: sublist ENDINPUT { $$ = makelnode($1,SYNC); eofseen = 1; }
+--- 92,103 ----
+X  %type <Casenode> caselist
+X  %%
+X  
+! event	: ENDINPUT { tree = NULL; eofseen = 1; YYACCEPT; }
+! 		| SEPER { tree = NULL; lsep = 0; YYACCEPT; }
+! 		| list1 { tree = $1; YYACCEPT; }
+! 		| error ENDINPUT { errflag = 1; tree = NULL; eofseen = 1; YYABORT; }
+! 		| error SEPER { errflag = 1; tree = NULL; YYABORT; }
+! 		| error LEXERR { errflag = 1; tree = NULL; YYABORT; }
+X  		;
+X  
+X  list1	: sublist ENDINPUT { $$ = makelnode($1,SYNC); eofseen = 1; }
+***************
+*** 155,162 ****
+X  					if ($1->pair) pushnode($2->redir,$1->pair);
+X  					pushnode($2->redir,$1);
+X  					}
+! 				| INOUTPAR INBRACE list OUTBRACE
+! 					{ $$ = makefuncdef(newlist(),$3); }
+X  				| %prec DOITNOW { $$ = makecnode(SIMPLE); }
+X  				;
+X  
+--- 155,162 ----
+X  					if ($1->pair) pushnode($2->redir,$1->pair);
+X  					pushnode($2->redir,$1);
+X  					}
+! 				| INOUTPAR optbreak INBRACE list OUTBRACE
+! 					{ $$ = makefuncdef(newlist(),$4); }
+X  				| %prec DOITNOW { $$ = makecnode(SIMPLE); }
+X  				;
+X  
+***************
+*** 209,216 ****
+X  				{ $$ = makecnode(SUBSH); $$->u.list = $2; }
+X  			| INBRACE list OUTBRACE
+X  				{ $$ = makecnode(CURSH); $$->u.list = $2; }
+! 			| FUNC wordlist optbreak INBRACE list OUTBRACE
+! 				{ $$ = makefuncdef($2,$5); }
+X  			| TIME sublist2
+X  				{ $$ = makecnode(ZCTIME); $$->u.pline = $2; }
+X  			| DINBRACK cond DOUTBRACK
+--- 209,216 ----
+X  				{ $$ = makecnode(SUBSH); $$->u.list = $2; }
+X  			| INBRACE list OUTBRACE
+X  				{ $$ = makecnode(CURSH); $$->u.list = $2; }
+! 			| FUNC wordlist optinout optbreak INBRACE list OUTBRACE
+! 				{ $$ = makefuncdef($2,$6); }
+X  			| TIME sublist2
+X  				{ $$ = makecnode(ZCTIME); $$->u.pline = $2; }
+X  			| DINBRACK cond DOUTBRACK
+***************
+*** 217,222 ****
+--- 217,226 ----
+X  				{ $$ = makecnode(COND); $$->u.cond = $2; }
+X  			;
+X  
++ optinout	:
++ 			| INOUTPAR
++ 			;
++ 
+X  cond	: word word { $$ = makecond(); parcond2($1,$2,$$); }
+X  		| word word word { $$ = makecond(); parcond3($1,$2,$3,$$); }
+X  		| word INANG word
+***************
+*** 453,460 ****
+X  		s = ugetnode(t);
+X  		if (strcmp(s,"in"))
+X  			{
+- 			errflag = 1;
+X  			yyerror();
+X  			}
+X  		}
+X  	c->u.forcmd = f;
+--- 457,464 ----
+X  		s = ugetnode(t);
+X  		if (strcmp(s,"in"))
+X  			{
+X  			yyerror();
++ 			errflag = 1;
+X  			}
+X  		}
+X  	c->u.forcmd = f;
+***************
+*** 558,564 ****
+X  	};
+X  int t0;
+X  
+! 	if (b[0] == Equals && !b[1])
+X  		n->type = COND_STREQ;
+X  	else if (b[0] == '!' && b[1] == '=' && !b[2])
+X  		n->type = COND_STRNEQ;
+--- 562,568 ----
+X  	};
+X  int t0;
+X  
+! 	if ((b[0] == Equals || b[0] == '=') && !b[1])
+X  		n->type = COND_STREQ;
+X  	else if (b[0] == '!' && b[1] == '=' && !b[2])
+X  		n->type = COND_STRNEQ;
+*** zshdist/zsh2.00/src/subst.c	Fri May 10 06:25:22 1991
+--- zsh2.00/src/subst.c	Tue May 21 23:25:41 1991
+***************
+*** 396,401 ****
+--- 396,402 ----
+X  int colf;		/* != 0 means we found a colon after the name */
+X  int doub = 0;	/* != 0 means we have %%, not %, or ##, not # */
+X  int isarr = 0;
++ int wasnularr = 0;
+X  int plan9 = isset(RCEXPANDPARAM);
+X  int getlen = 0;
+X  int vunset = 0;
+***************
+*** 498,504 ****
+X  	if (brs && (*s == '-' || *s == '=' || *s == '?' || *s == '+' || *s == '#' ||
+X  			*s == '%' || *s == Quest || *s == Pound))
+X  		{
+! 		if (v && v->isarr)
+X  			{
+X  			zerr("operator requires a scalar",NULL,0);
+X  			return;
+--- 499,505 ----
+X  	if (brs && (*s == '-' || *s == '=' || *s == '?' || *s == '+' || *s == '#' ||
+X  			*s == '%' || *s == Quest || *s == Pound))
+X  		{
+! 		if (v && v->isarr && (*s == '%' || *s == '#' || *s == Pound))
+X  			{
+X  			zerr("operator requires a scalar",NULL,0);
+X  			return;
+***************
+*** 510,517 ****
+X  			}
+X  		u = ++s;
+X  		if (brs)
+! 			while (*s != '}' && *s != Outbrace)
+X  				s++;
+X  		else
+X  			{
+X  			while (*s++);
+--- 511,530 ----
+X  			}
+X  		u = ++s;
+X  		if (brs)
+! 			{
+! 			int bct = 1;
+! 
+! 			for (;;)
+! 				{
+! 				if (*s == '{' || *s == Inbrace)
+! 					bct++;
+! 				else if (*s == '}' || *s == Outbrace)
+! 					bct--;
+! 				if (!bct || !*s)
+! 					break;
+X  				s++;
++ 				}
++ 			}
+X  		else
+X  			{
+X  			while (*s++);
+***************
+*** 519,530 ****
+X  			}
+X  		*s++ = '\0';
+X  		if (colf && !vunset)
+! 			vunset = !*val;
+X  		switch (u[-1])
+X  			{
+X  			case '-':
+X  				if (vunset)
+! 					val = strdup(u);
+X  				break;
+X  			case '=':
+X  				if (vunset)
+--- 532,543 ----
+X  			}
+X  		*s++ = '\0';
+X  		if (colf && !vunset)
+! 			vunset = (isarr) ? !*aval : !*val;
+X  		switch (u[-1])
+X  			{
+X  			case '-':
+X  				if (vunset)
+! 					val = strdup(u), isarr = 0;
+X  				break;
+X  			case '=':
+X  				if (vunset)
+***************
+*** 534,539 ****
+--- 547,553 ----
+X  					*idend = '\0';
+X  					setsparam(idbeg,ztrdup(val = strdup(u)));
+X  					*idend = sav;
++ 					isarr = 0;
+X  					}
+X  				break;
+X  			case '?':
+***************
+*** 551,556 ****
+--- 565,571 ----
+X  					val = strdup("");
+X  				else
+X  					val = strdup(u);
++ 				isarr = 0;
+X  				break;
+X  			case '#':
+X  			case Pound:
+***************
+*** 613,621 ****
+X  		val = strdup(buf);
+X  		isarr = 0;
+X  		}
+! 	if (isarr && !plan9)
+X  		if (!aval || !aval[0])
+X  			{
+X  			val = strdup("");
+X  			isarr = 0;
+X  			}
+--- 628,638 ----
+X  		val = strdup(buf);
+X  		isarr = 0;
+X  		}
+! 	if (isarr)
+X  		if (!aval || !aval[0])
+X  			{
++ 			if (isarr < 0)
++ 				wasnularr = 1;
+X  			val = strdup("");
+X  			isarr = 0;
+X  			}
+***************
+*** 626,632 ****
+X  			}
+X  	if (qt)
+X  		{
+! 		if (isarr)
+X  			{
+X  			val = spacejoin(aval);
+X  			isarr = 0;
+--- 643,649 ----
+X  			}
+X  	if (qt)
+X  		{
+! 		if (isarr > 0)
+X  			{
+X  			val = spacejoin(aval);
+X  			isarr = 0;
+***************
+*** 638,643 ****
+--- 655,670 ----
+X  			val = spacejoin(aval);
+X  		isarr = 1;
+X  		aval = spacesplit(val);
++ 		if (!aval || !aval[0])
++ 			{
++ 			val = strdup("");
++ 			isarr = 0;
++ 			}
++ 		else if (!aval[1])
++ 			{
++ 			val = aval[0];
++ 			isarr = 0;
++ 			}
+X  		/* if only one member, not really an array */
+X  		if (!aval[1])
+X  			isarr = 0;
+*** zshdist/zsh2.00/src/utils.c	Tue May  7 23:02:59 1991
+--- zsh2.00/src/utils.c	Thu May 23 17:24:05 1991
+***************
+*** 74,81 ****
+X  char *s;
+X  {
+X  char buf[MAXPATHLEN];
+X  
+! 	sprintf(buf,"%s/%s",home,s);
+X  	(void) source(buf);
+X  }
+X  
+--- 74,84 ----
+X  char *s;
+X  {
+X  char buf[MAXPATHLEN];
++ char *h;
+X  
+! 	if (!(h = getsparam("ZDOTDIR")))
+! 		h = home;
+! 	sprintf(buf,"%s/%s",h,s);
+X  	(void) source(buf);
+X  }
+X  
+***************
+*** 183,189 ****
+X  
+X  void intr() /**/
+X  {
+! #ifdef SIGVEC
+X  static struct sigvec vec = { handler,sigmask(SIGINT),SV_INTERRUPT };
+X  
+X  	if (interact)
+--- 186,192 ----
+X  
+X  void intr() /**/
+X  {
+! #ifdef SV_INTERRUPT
+X  static struct sigvec vec = { handler,sigmask(SIGINT),SV_INTERRUPT };
+X  
+X  	if (interact)
+***************
+*** 202,208 ****
+X  
+X  void holdintr() /**/
+X  {
+! #ifdef SIGVEC
+X  static struct sigvec vec = { handler,sigmask(SIGINT),0 };
+X  
+X  	if (interact)
+--- 205,211 ----
+X  
+X  void holdintr() /**/
+X  {
+! #ifdef SV_INTERRUPT
+X  static struct sigvec vec = { handler,sigmask(SIGINT),0 };
+X  
+X  	if (interact)
+***************
+*** 400,406 ****
+X  	t0 = finddir(s);
+X  	if (t0 == -1)
+X  		{
+! 		if (!strncmp(s,home,t0 = strlen(home)))
+X  			{
+X  			putchar('~');
+X  			fputs(s+t0,stdout);
+--- 403,409 ----
+X  	t0 = finddir(s);
+X  	if (t0 == -1)
+X  		{
+! 		if (!strncmp(s,home,t0 = strlen(home)) && t0 > 1)
+X  			{
+X  			putchar('~');
+X  			fputs(s+t0,stdout);
+***************
+*** 457,462 ****
+--- 460,467 ----
+X  
+X  	if (!interact || ((t0 = finddir(t)) != -1 && !strcmp(s,usernames[t0])))
+X  		return;
++ 	if (!strcmp(t,"/"))
++ 		return;
+X  	if ((t0 = finddir(t)) != -1 && !strcmp(s,usernames[t0]))
+X  		return;
+X  	if (userdirsz == userdirct)
+***************
+*** 638,644 ****
+X  			}
+X  		else
+X  			{
+! 			if (st.st_size && st.st_atime < st.st_mtime &&
+X  					st.st_mtime > lastmailcheck)
+X  				if (!u)
+X  					{
+--- 643,649 ----
+X  			}
+X  		else
+X  			{
+! 			if (st.st_size && st.st_atime <= st.st_mtime &&
+X  					st.st_mtime > lastmailcheck)
+X  				if (!u)
+X  					{
+***************
+*** 677,683 ****
+X  {
+X  Cmdnam cc;
+X  
+! 	if (y->type == SHFUNC)
+X  		{
+X  		cc = (Cmdnam) zcalloc(sizeof *cc);
+X  		*cc = *y;
+--- 682,688 ----
+X  {
+X  Cmdnam cc;
+X  
+! 	if (y->type == SHFUNC || y->type == DISABLED)
+X  		{
+X  		cc = (Cmdnam) zcalloc(sizeof *cc);
+X  		*cc = *y;
+***************
+*** 895,901 ****
+X  		execl("/bin/sh","sh","-c",s,(char *) 0);
+X  		_exit(1);
+X  		}
+! 	waitpid(pid,&statusp,WUNTRACED);
+X  	if (WIFEXITED(SP(statusp)))
+X  		return WEXITSTATUS(SP(statusp));
+X  	return 1;
+--- 900,906 ----
+X  		execl("/bin/sh","sh","-c",s,(char *) 0);
+X  		_exit(1);
+X  		}
+! 	while (waitpid(pid,&statusp,WUNTRACED) == -1 && errno == EINTR);
+X  	if (WIFEXITED(SP(statusp)))
+X  		return WEXITSTATUS(SP(statusp));
+X  	return 1;
+***************
+*** 1093,1098 ****
+--- 1098,1110 ----
+X  
+X  static int d;
+X  static char *guess,*best;
++ 
++ void spscannodis(s,cn) /**/
++ char *s;char *cn;
++ {
++ 	if (((Cmdnam) cn)->type != DISABLED)
++ 		spscan(s,NULL);
++ }
+X  
+X  void spscan(s,junk) /**/
+X  char *s;char *junk;
+*** zshdist/zsh2.00/src/utils.pro	Tue May  7 22:53:29 1991
+--- zsh2.00/src/utils.pro	Wed May 22 11:13:13 1991
+***************
+*** 45,50 ****
+--- 45,51 ----
+X  void struncpy DCLPROTO((char **s,char *t,int n));
+X  void checkrmall DCLPROTO((void));
+X  int getquery DCLPROTO((void));
++ void spscannodis DCLPROTO((char *s,char *cn));
+X  void spscan DCLPROTO((char *s,char *junk));
+X  void spckword DCLPROTO((char **s,char **s2,int cmd,int ask));
+X  int ztrftime DCLPROTO((char *buf,int bufsize,char *fmt,struct tm *tm));
+*** zshdist/zsh2.00/src/watch.c	Wed May  8 21:48:28 1991
+--- zsh2.00/src/watch.c	Tue May 21 01:24:03 1991
+***************
+*** 64,70 ****
+--- 64,73 ----
+X  			return time(NULL);
+X  			}
+X  		if (uu.ut_time < lastwatch)
++ 			{
++ 			fclose(in);
+X  			return time(NULL);
++ 			}
+X  		}
+X  	while (memcmp(&uu,u,sizeof(struct utmp)));
+X  	do
+*** zshdist/zsh2.00/src/zle_bindings.c	Fri May 10 14:34:23 1991
+--- zsh2.00/src/zle_bindings.c	Thu May 23 17:06:43 1991
+***************
+*** 89,96 ****
+X  "list-choices",listchoices,0,
+X  "list-expand",listexpand,ZLE_MENUCMP,
+X  "magic-space",magicspace,ZLE_MOD,
+! "menu-complete",menucompleteword,ZLE_MOD|ZLE_MENUCMP,
+! "menu-expand-or-complete",menuexpandorcomplete,ZLE_MOD|ZLE_MENUCMP,
+X  "overwrite-mode",overwritemode,0,
+X  "push-line",pushline,ZLE_MOD,
+X  "quoted-insert",quotedinsert,ZLE_INSMOD,
+--- 89,96 ----
+X  "list-choices",listchoices,0,
+X  "list-expand",listexpand,ZLE_MENUCMP,
+X  "magic-space",magicspace,ZLE_MOD,
+! "menu-complete",menucompleteword,ZLE_MENUCMP,
+! "menu-expand-or-complete",menuexpandorcomplete,ZLE_MENUCMP,
+X  "overwrite-mode",overwritemode,0,
+X  "push-line",pushline,ZLE_MOD,
+X  "quoted-insert",quotedinsert,ZLE_INSMOD,
+***************
+*** 97,103 ****
+X  "quote-line",quoteline,ZLE_MOD,
+X  "quote-region",quoteregion,ZLE_MOD,
+X  "redisplay",redisplay,0,
+! "reverse-menu-complete",reversemenucomplete,ZLE_MOD|ZLE_MENUCMP,
+X  "run-help",processcmd,0,
+X  "self-insert",selfinsert,ZLE_INSMOD,
+X  "self-insert-unmeta",selfinsertunmeta,ZLE_INSMOD,
+--- 97,103 ----
+X  "quote-line",quoteline,ZLE_MOD,
+X  "quote-region",quoteregion,ZLE_MOD,
+X  "redisplay",redisplay,0,
+! "reverse-menu-complete",reversemenucomplete,ZLE_MENUCMP,
+X  "run-help",processcmd,0,
+X  "self-insert",selfinsert,ZLE_INSMOD,
+X  "self-insert-unmeta",selfinsertunmeta,ZLE_INSMOD,
+*** zshdist/zsh2.00/src/zle_emacs.c	Wed May  8 22:34:14 1991
+--- zsh2.00/src/zle_emacs.c	Tue May 21 04:21:32 1991
+***************
+*** 110,116 ****
+X  
+X  void selfinsert() /**/
+X  {
+! 	if (insmode)
+X  		spaceinline(mult);
+X  	else if (mult+cs > ll)
+X  		spaceinline(ll-(mult+cs));
+--- 110,116 ----
+X  
+X  void selfinsert() /**/
+X  {
+! 	if (insmode || ll == cs)
+X  		spaceinline(mult);
+X  	else if (mult+cs > ll)
+X  		spaceinline(ll-(mult+cs));
+***************
+*** 122,128 ****
+X  {
+X  	c &= 0x7f;
+X  	if (c == '\r') c = '\n';
+! 	if (insmode)
+X  		spaceinline(mult);
+X  	else if (mult+cs > ll)
+X  		spaceinline(ll-(mult+cs));
+--- 122,128 ----
+X  {
+X  	c &= 0x7f;
+X  	if (c == '\r') c = '\n';
+! 	if (insmode || ll == cs)
+X  		spaceinline(mult);
+X  	else if (mult+cs > ll)
+X  		spaceinline(ll-(mult+cs));
+*** zshdist/zsh2.00/src/zle_main.c	Wed May  8 22:34:14 1991
+--- zsh2.00/src/zle_main.c	Wed May 22 09:54:27 1991
+***************
+*** 51,84 ****
+X  	ti.termios.c_lflag &= ~(ICANON|ECHO);
+X  	ti.termios.c_cc[VQUIT] = ti.termios.c_cc[VDISCARD] = 
+X  		ti.termios.c_cc[VSUSP] = ti.termios.c_cc[VDSUSP] =
+! 		ti.termios.c_cc[VSTOP] = ti.termios.c_cc[VSTART] = 0;
+X  	ti.termios.c_cc[VMIN] = 1;
+X  	ti.termios.c_cc[VTIME] = 0;
+X  	ti.termios.c_iflag &= ~(IXON|IXOFF|INLCR|ICRNL|ISTRIP);
+X  #else
+X  #ifdef TERMIO
+X  	ti.termio.c_lflag &= ~(ICANON|ECHO);
+X  	ti.termio.c_cc[VQUIT] =
+! 		ti.termio.c_cc[VSTOP] = ti.termio.c_cc[VSTART] = 0;
+X  	ti.termio.c_cc[VMIN] = 1;
+X  	ti.termio.c_cc[VTIME] = 0;
+X  	ti.termio.c_iflag &= ~(IXON|IXOFF|INLCR|ICRNL|ISTRIP);
+X  #else
+X  	ti.sgttyb.sg_flags = (ti.sgttyb.sg_flags | CBREAK) & ~ECHO;
+X  #ifdef LPASS8OUT
+X  	ti.lmodes |= LPASS8|LPASS8OUT;
+X  #else
+X  	ti.lmodes |= LPASS8;
+X  #endif
+! 	ti.tchars.t_quitc = ti.tchars.t_startc =
+! 		ti.tchars.t_stopc = ti.ltchars.t_suspc =
+X  		ti.ltchars.t_dsuspc = ti.ltchars.t_lnextc = -1;
+X  #endif
+X  #endif
+X  	settyinfo(&ti);
+X  #ifdef TCXONC
+X  	ioctl(SHTTY,TCXONC,1);
+X  #endif
+X  }
+X  
+X  void unsetterm() /**/
+--- 51,109 ----
+X  	ti.termios.c_lflag &= ~(ICANON|ECHO);
+X  	ti.termios.c_cc[VQUIT] = ti.termios.c_cc[VDISCARD] = 
+X  		ti.termios.c_cc[VSUSP] = ti.termios.c_cc[VDSUSP] =
+! #ifndef REAL_TTY
+! #ifdef VSTOP
+! 		ti.termios.c_cc[VSTOP] = ti.termios.c_cc[VSTART] =
+! #endif
+! #endif
+! 		0;
+X  	ti.termios.c_cc[VMIN] = 1;
+X  	ti.termios.c_cc[VTIME] = 0;
++ #ifndef REAL_TTY
+X  	ti.termios.c_iflag &= ~(IXON|IXOFF|INLCR|ICRNL|ISTRIP);
+X  #else
++ 	ti.termios.c_iflag &= ~(INLCR|ICRNL);
++ #endif
++ #else
+X  #ifdef TERMIO
+X  	ti.termio.c_lflag &= ~(ICANON|ECHO);
+X  	ti.termio.c_cc[VQUIT] =
+! #ifndef REAL_TTY
+! #ifdef VSTOP
+! 		ti.termio.c_cc[VSTOP] = ti.termio.c_cc[VSTART] =
+! #endif
+! #endif
+! 		0;
+X  	ti.termio.c_cc[VMIN] = 1;
+X  	ti.termio.c_cc[VTIME] = 0;
++ #ifndef REAL_TTY
+X  	ti.termio.c_iflag &= ~(IXON|IXOFF|INLCR|ICRNL|ISTRIP);
+X  #else
++ 	ti.termio.c_iflag &= ~(INLCR|ICRNL);
++ #endif
++ #else
+X  	ti.sgttyb.sg_flags = (ti.sgttyb.sg_flags | CBREAK) & ~ECHO;
++ #ifndef REAL_TTY
+X  #ifdef LPASS8OUT
+X  	ti.lmodes |= LPASS8|LPASS8OUT;
+X  #else
+X  	ti.lmodes |= LPASS8;
+X  #endif
+! #endif
+! 	ti.tchars.t_quitc =
+! #ifndef REAL_TTY
+! 		ti.tchars.t_startc = ti.tchars.t_stopc =
+! #endif
+! 		ti.ltchars.t_suspc =
+X  		ti.ltchars.t_dsuspc = ti.ltchars.t_lnextc = -1;
+X  #endif
+X  #endif
+X  	settyinfo(&ti);
++ #ifndef REAL_TTY
+X  #ifdef TCXONC
+X  	ioctl(SHTTY,TCXONC,1);
+X  #endif
++ #endif
+X  }
+X  
+X  void unsetterm() /**/
+***************
+*** 114,122 ****
+X  	if (kungetct)
+X  		return (unsigned int) (unsigned char) kungetbuf[--kungetct];
+X  	while ((ret = read(0,&cc,1)) != 1)
+! 		if (!ret)
+! 			continue;
+! 		else if (errno == EINTR)
+X  			{
+X  			if (!errflag)
+X  				continue;
+--- 139,145 ----
+X  	if (kungetct)
+X  		return (unsigned int) (unsigned char) kungetbuf[--kungetct];
+X  	while ((ret = read(0,&cc,1)) != 1)
+! 		if (errno == EINTR)
+X  			{
+X  			if (!errflag)
+X  				continue;
+***************
+*** 206,212 ****
+X  			if (!(lastcmd & ZLE_ARG))
+X  				mult = 1;
+X  			if ((lastcmd & ZLE_INSMOD) && !(zc->flags & ZLE_INSMOD) ||
+! 					(lastcmd & ZLE_UNDO) && !(zc->flags & ZLE_UNDO))
+X  				addundo();
+X  			if (menucmp && !(zc->flags & ZLE_MENUCMP))
+X  				freemenu();
+--- 229,235 ----
+X  			if (!(lastcmd & ZLE_ARG))
+X  				mult = 1;
+X  			if ((lastcmd & ZLE_INSMOD) && !(zc->flags & ZLE_INSMOD) ||
+! 					(lastcmd & ZLE_UNDO) != (zc->flags & ZLE_UNDO))
+X  				addundo();
+X  			if (menucmp && !(zc->flags & ZLE_MENUCMP))
+X  				freemenu();
+***************
+*** 417,423 ****
+X  					break;
+X  				}
+X  		else if (*s == '^')
+! 			*t++ = *++s & 0x9f;
+X  		else
+X  			*t++ = *s;
+X  		if (metanext && !(--metanext))
+--- 440,449 ----
+X  					break;
+X  				}
+X  		else if (*s == '^')
+! 			if (*++s == '?')
+! 				*t++ = 0x7f;
+! 			else
+! 				*t++ = *s & 0x9f;
+X  		else
+X  			*t++ = *s;
+X  		if (metanext && !(--metanext))
+*** zshdist/zsh2.00/src/zle_refresh.c	Wed May  8 22:34:14 1991
+--- zsh2.00/src/zle_refresh.c	Tue May 21 23:16:26 1991
+***************
+*** 324,337 ****
+X  /* if this is the end of the old buffer, just dump the rest of the
+X  	new buffer. */
+X  
+- 		moveto(ln,ccs);
+X  		if (!*ol)
+X  			{
+! 			fwrite(nl,strlen(nl),1,stdout);
+! 			cost += strlen(nl);
+! 			ccs = (vcs += strlen(nl));
+X  			return;
+X  			}
+X  
+X  /* try to insert/delete characters */
+X  
+--- 324,343 ----
+X  /* if this is the end of the old buffer, just dump the rest of the
+X  	new buffer. */
+X  
+X  		if (!*ol)
+X  			{
+! 			while (*nl == ' ')
+! 				nl++,ccs++;
+! 			if (*nl)
+! 				{
+! 				moveto(ln,ccs);
+! 				fwrite(nl,strlen(nl),1,stdout);
+! 				cost += strlen(nl);
+! 				ccs = (vcs += strlen(nl));
+! 				}
+X  			return;
+X  			}
++ 		moveto(ln,ccs);
+X  
+X  /* try to insert/delete characters */
+X  
+*** zshdist/zsh2.00/src/zle_tricky.c	Fri May 10 07:34:02 1991
+--- zsh2.00/src/zle_tricky.c	Wed May 22 06:19:08 1991
+***************
+*** 181,186 ****
+--- 181,191 ----
+X  	menucompleteword();
+X  }
+X  
++ #ifdef LASTMENU
++ static char *lastmenu = NULL;
++ static int lastmenupos = -1;
++ #endif
++ 
+X  void docomplete(lst) /**/
+X  int lst;
+X  {
+***************
+*** 187,192 ****
+--- 192,210 ----
+X  int t0,lincmd = INCMD;
+X  char *s;
+X  
++ #ifdef LASTMENU
++ 	if (menucmp && lastmenu)
++ 		{
++ 		int     len = strlen(lastmenu);
++ 		if (lst >= COMP_EXPAND || cs != lastmenupos || strcmp(line, lastmenu) != 0)
++ 			{
++ 			free(lastmenu);
++ 			lastmenu = NULL;
++ 			lastmenupos = -1;
++ 			freemenu();
++ 			}
++ 		}
++ #endif
+X  	if (menucmp)
+X  		{
+X  		if (lst == COMP_LIST_COMPLETE)
+***************
+*** 206,211 ****
+--- 224,235 ----
+X  			line[cs++] = *s++;
+X  			}
+X  		inststr(s = menunode->dat);
++ #ifdef LASTMENU
++ 		if (lastmenu)
++ 			free(lastmenu);
++ 		lastmenu = ztrdup(line);
++ 		lastmenupos = cs;
++ #endif
+X  		menue = cs;
+X  		return;
+X  		}
+***************
+*** 328,333 ****
+--- 352,358 ----
+X  	foredel(we-wb);
+X  	while (ss = ugetnode(vl))
+X  		{
++ 		untokenize(ss);
+X  		inststr(ss);
+X  		if (full(vl))
+X  			{
+***************
+*** 413,418 ****
+--- 438,450 ----
+X  		addmatch(s);
+X  }
+X  
++ void addcmdnodis(s,t) /**/
++ char *s;char *t;
++ {
++ 	if (strpfx(pat,s) && ((Cmdnam) t)->type != DISABLED)
++ 		addmatch(s);
++ }
++ 
+X  void maketildelist(s) /**/
+X  char	*s;
+X  {
+***************
+*** 458,463 ****
+--- 490,496 ----
+X     return S_ISDIR(sbuf.st_mode);
+X  }
+X  
++ /* this will work whether s is tokenized or not */
+X  int isdir(t,s) /**/
+X  char *t;char *s;
+X  {
+***************
+*** 465,474 ****
+X  
+X  	sprintf(buf,"%s/%s",(s) ? s : ".",t);
+X  	s = buf;
+! 	if (*s != '~' && *s != '=')
+X  		return(Isdir(s));
+X  	s = strdup(s);
+! 	*s = (*s == '=') ? Equals : Tilde;
+X  	filesub(&s);
+X  	return(Isdir(s));
+X  }
+--- 498,508 ----
+X  
+X  	sprintf(buf,"%s/%s",(s) ? s : ".",t);
+X  	s = buf;
+! 	if (*s != '~' && *s != '=' && *s != Tilde && *s != Equals)
+X  		return(Isdir(s));
+X  	s = strdup(s);
+! 	if (*s == '~' || *s == '=')
+! 		*s = (*s == '=') ? Equals : Tilde;
+X  	filesub(&s);
+X  	return(Isdir(s));
+X  }
+***************
+*** 524,529 ****
+--- 558,580 ----
+X  			ppfx = s;
+X  			tildeexpand = 1;
+X  			}
++ 		else if (commcomp = !incmd && !hasp)
++ 			{
++ 			pat = s;
++ 			listhtable(aliastab ,addcmdmatch);
++ 			listhtable(cmdnamtab,addcmdnodis);
++ 			if (d = opendir("."))
++ 				{
++ 				char *q;
++ 
++ 				readdir(d); readdir(d);
++ 				while ((de = readdir(d)) && !errflag)
++ 					if (strpfx(pat,q = de->d_name) &&
++ 								(*q != '.' || *u == '.' || isset(GLOBDOTS)))
++ 							addmatch(q);
++ 				closedir(d);
++ 				}
++ 			}
+X  		else
+X  		    {
+X  		    int 	commonprefix = 0;
+***************
+*** 541,546 ****
+--- 592,598 ----
+X  			 * We will remove this common prefix from the matches.
+X  			 * ash, 7 May '91
+X  			 */
++ 			ppfx = s;
+X  			addnode(matches,s);
+X  			prefork(matches);
+X  			if (!errflag)
+***************
+*** 584,590 ****
+X  		    if (commonprefix)
+X  			/* remove the common prefix from all the matches */
+X  			for (n = firstnode(matches); n; incnode(n))
+! 				(char *)(n->dat) += commonprefix;
+X  		    s = pt;
+X  		    *s = 0;
+X  		    }
+--- 636,642 ----
+X  		    if (commonprefix)
+X  			/* remove the common prefix from all the matches */
+X  			for (n = firstnode(matches); n; incnode(n))
+! 				n->dat = (char *) n->dat+commonprefix;
+X  		    s = pt;
+X  		    *s = 0;
+X  		    }
+***************
+*** 604,610 ****
+X  		if (commcomp = !incmd && !haspath)
+X  			{
+X  			listhtable(aliastab ,addcmdmatch);
+! 			listhtable(cmdnamtab,addcmdmatch);
+X  			}
+X  		else if ((*s == '~' || *s == '=') && !haspath)
+X  			{
+--- 656,673 ----
+X  		if (commcomp = !incmd && !haspath)
+X  			{
+X  			listhtable(aliastab ,addcmdmatch);
+! 			listhtable(cmdnamtab,addcmdnodis);
+! 			if (d = opendir("."))
+! 				{
+! 				char *q;
+! 
+! 				readdir(d); readdir(d);
+! 				while ((de = readdir(d)) && !errflag)
+! 					if (strpfx(pat,q = de->d_name) &&
+! 								(*q != '.' || *u == '.' || isset(GLOBDOTS)))
+! 							addmatch(q);
+! 				closedir(d);
+! 				}
+X  			}
+X  		else if ((*s == '~' || *s == '=') && !haspath)
+X  			{
+***************
+*** 693,698 ****
+--- 756,767 ----
+X  			menunode = firstnode(menulist);
+X  			popheap();
+X  			permalloc();
++ #ifdef LASTMENU
++ 			if (lastmenu)
++ 				free(lastmenu);
++ 			lastmenu = ztrdup(line);
++ 			lastmenupos = cs;
++ #endif
+X  			return;
+X  			}
+X  		else if (useglob)
+***************
+*** 1038,1043 ****
+--- 1107,1115 ----
+X  void freemenu() /**/
+X  {
+X  	if (menucmp)
++ #ifdef LASTMENU
++ 	    if (lastmenu == NULL)
++ #endif
+X  		{
+X  		menucmp = 0;
+X  		freetable(menulist,freestr);
+*** zshdist/zsh2.00/src/zle_tricky.pro	Tue May  7 22:53:30 1991
+--- zsh2.00/src/zle_tricky.pro	Wed May 22 11:13:15 1991
+***************
+*** 1,6 ****
+X  int usetab DCLPROTO((void));
+X  void completeword DCLPROTO((void));
+- void globcomplete DCLPROTO((void));
+X  void menucompleteword DCLPROTO((void));
+X  void listchoices DCLPROTO((void));
+X  void spellword DCLPROTO((void));
+--- 1,5 ----
+***************
+*** 17,22 ****
+--- 16,22 ----
+X  void inststrlen DCLPROTO((char *s,int l));
+X  void addmatch DCLPROTO((char *s));
+X  void addcmdmatch DCLPROTO((char *s,char *t));
++ void addcmdnodis DCLPROTO((char *s,char *t));
+X  void maketildelist DCLPROTO((char	*s));
+X  int Isdir DCLPROTO((char *s));
+X  int isdir DCLPROTO((char *t,char *s));
+*** zshdist/zsh2.00/src/zsh.h	Wed May  8 22:13:27 1991
+--- zsh2.00/src/zsh.h	Wed May 22 09:53:51 1991
+***************
+*** 51,57 ****
+X  #endif
+X  #include <sys/param.h>
+X  
+! #define VERSIONSTR "zsh v2.00.02"
+X  
+X  #if 0 /* __STDC__ */
+X  #include <unistd.h>
+--- 51,57 ----
+X  #endif
+X  #include <sys/param.h>
+X  
+! #define VERSIONSTR "zsh v2.00.03"
+X  
+X  #if 0 /* __STDC__ */
+X  #include <unistd.h>
+***************
+*** 418,423 ****
+--- 418,425 ----
+X  #define EXCMD_POSTDOT 1
+X  #define BUILTIN 2
+X  #define SHFUNC 3
++ #define DISABLED 4
++ #define ISEXCMD(X) ((X)==EXCMD_PREDOT||(X)==EXCMD_POSTDOT)
+X  
+X  /* node used in parameter hash table (paramtab) */
+X  
+***************
+*** 502,508 ****
+X  #endif
+X  	};
+X  
+- EXTERN struct ttyinfo shttyinfo;
+X  EXTERN struct ttyinfo savedttyinfo;
+X  
+X  /* entry in job table */
+--- 504,509 ----
+***************
+*** 662,667 ****
+--- 663,670 ----
+X  #define HISTNOSTORE '\3'
+X  #define EXTENDEDGLOB '\5'
+X  #define GLOBCOMPLETE '\6'
++ #define CSHJUNKIEQUOTES '\7'
++ #define PUSHDMINUS '\10'
+X  
+X  #ifndef GLOBALS
+X  extern struct option optns[];
+***************
+*** 723,728 ****
+--- 726,733 ----
+X  	"histnostore",'\3',
+X  	"extendedglob",'\5',
+X  	"globcomplete",'\6',
++ 	"cshjunkiequotes",'\7',
++ 	"pushdminus",'\10',
+X  	NULL,0
+X  };
+X  #endif
+***************
+*** 738,752 ****
+X  #define nointr() signal(SIGINT,SIG_IGN)
+X  #define islogin (isset(LOGINSHELL))
+X  
+X  
+! #define SP(x) (*((union wait *) &(x)))
+X  
+- #ifndef WEXITSTATUS
+- #define	WEXITSTATUS(x)	(((union wait*)&(x))->w_retcode)
+- #define	WTERMSIG(x)	(((union wait*)&(x))->w_termsig)
+- #define	WSTOPSIG(x)	(((union wait*)&(x))->w_stopsig)
+- #endif
+- 
+X  #ifndef S_ISBLK
+X  #define	_IFMT		0170000
+X  #define	_IFDIR	0040000
+--- 743,765 ----
+X  #define nointr() signal(SIGINT,SIG_IGN)
+X  #define islogin (isset(LOGINSHELL))
+X  
++ #undef WIFSTOPPED
++ #undef WIFSIGNALED
++ #undef WIFEXITED
++ #undef WEXITSTATUS
++ #undef WTERMSIG
++ #undef WSTOPSIG
++ #undef WCOREDUMPED
+X  
+! #define SP(X) (X)
+! #define WIFSTOPPED(X) (((X)&0377)==0177)
+! #define WIFSIGNALED(X) (((X)&0377)!=0&&((X)&0377)!=0177)
+! #define WIFEXITED(X) (((X)&0377)==0)
+! #define WEXITSTATUS(X) (((X)>>8)&0377)
+! #define WTERMSIG(X) ((X)&0177)
+! #define WSTOPSIG(X) (((X)>>8)&0377)
+! #define WCOREDUMPED(X) ((X)&0200)
+X  
+X  #ifndef S_ISBLK
+X  #define	_IFMT		0170000
+X  #define	_IFDIR	0040000
+***************
+*** 1018,1031 ****
+X  
+X  /* the hostname */
+X  
+! EXTERN char *hostm;
+X  
+- /* the hostname, truncated after the '.' */
+- 
+- EXTERN char *hostM;
+- 
+X  EXTERN char *home;		/* $HOME */
+X  EXTERN char **pparams;	/* $argv */
+X  
+X  /* the List of local variables we have to destroy */
+X  
+--- 1031,1044 ----
+X  
+X  /* the hostname */
+X  
+! EXTERN char *hostnam;
+X  
+X  EXTERN char *home;		/* $HOME */
+X  EXTERN char **pparams;	/* $argv */
++ 
++ /* the default command for null commands */
++ 
++ EXTERN char *nullcmd;
+X  
+X  /* the List of local variables we have to destroy */
+X  
+SHAR_EOF
+echo 'File patches is complete' &&
+chmod 0644 patches ||
+echo 'restore of patches failed'
+Wc_c="`wc -c < 'patches'`"
+test 86341 -eq "$Wc_c" ||
+	echo 'patches: original size 86341, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+rm -f _shar_seq_.tmp
+echo applying patches...
+(cd ..; patch -p0) <patches && rm patches
+echo You have unpacked the last part
+exit 0
+exit 0 # Just in case...
+-- 
+Kent Landfield                   INTERNET: kent@sparky.IMD.Sterling.COM
+Sterling Software, IMD           UUCP:     uunet!sparky!kent
+Phone:    (402) 291-8300         FAX:      (402) 291-4362
+Please send comp.sources.misc-related mail to kent@uunet.uu.net.

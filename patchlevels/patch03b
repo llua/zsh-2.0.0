@@ -1,0 +1,1162 @@
+Path: funic!fuug!sics.se!sunic!hagbard!eru!bloom-beacon!ora!camb.com!spdcc!mintaka!think.com!rpi!crdgw1!uunet!sparky!kent
+From: pfalstad@phoenix.princeton.edu (Paul Falstad)
+Newsgroups: comp.sources.misc
+Subject: v20i023:  The Z shell, Patch03b/4
+Message-ID: <1991May29.164714.6566@sparky.IMD.Sterling.COM>
+Date: 29 May 91 16:47:14 GMT
+References: <csm-v20i022=zsh2.00.114111@sparky.IMD.Sterling.COM>
+Sender: kent@sparky.IMD.Sterling.COM (Kent Landfield)
+Organization: Sterling Software, IMD
+Lines: 1149
+Approved: kent@sparky.imd.sterling.com
+X-Md4-Signature: cf56f0eabd2933fb078d0b4ef8a2bd42
+
+Submitted-by: Paul Falstad <pfalstad@phoenix.princeton.edu>
+Posting-number: Volume 20, Issue 23
+Archive-name: zsh2.00/patch03b
+Patch-To: zsh2.00: Volume 18, Issue 84-98
+
+#!/bin/sh
+# patch03b
+# do not concatenate these parts, unpack them in order with /bin/sh
+# file doc/zshintro.tex continued
+#
+if test ! -r _shar_seq_.tmp; then
+	echo 'Please unpack part 1 first!'
+	exit 1
+fi
+(read Scheck
+ if test "$Scheck" != 2; then
+	echo Please unpack part "$Scheck" next!
+	exit 1
+ else
+	exit 0
+ fi
+) < _shar_seq_.tmp || exit 1
+if test ! -f _shar_wnt_.tmp; then
+	echo 'x - still skipping doc/zshintro.tex'
+else
+echo 'x - continuing file doc/zshintro.tex'
+sed 's/^X//' << 'SHAR_EOF' >> 'doc/zshintro.tex' &&
+symbol would be replaced with the text of your alias.
+To some extent, global aliases are like macros in C;
+discretion is advised in using them and in choosing names for them.
+Using names in all caps is not a bad idea, especially
+for aliases which introduce shell metasyntax (like @M@ and @GF@
+above).
+\par
+Note that zsh aliases are not like csh aliases.  The syntax for
+defining them is different, and they do not have arguments.
+All your favorite csh aliases will probably not work under zsh.
+For example, if you try:
+\beg
+alias rm mv '\!* /tmp/wastebasket'
+\end
+no aliases will be defined, but zsh will not report an error.
+In csh, this line defines an alias that makes @rm@ safe---files
+that are @rm@'d will be moved to a temporary directory instead
+of instantly destroyed.  In zsh's syntax, however, this line
+asks the shell to print any existing alias definitions for @rm@, @mv@,
+or @!* /tmp/wastebasket@.  Since there are none, most likely,
+the shell will not print anything, although @alias@ will
+return a nonzero exit code.
+The proper syntax is this:
+\beg
+alias rm='mv \!* /tmp/wastebasket'
+\end
+However, this won't work either:
+\beg
+% rm foo.dvi
+zsh: no matches found: !*
+\end
+While this makes @rm@ safe, it is certainly not what the user
+intended.  In zsh, you must use a shell function for this:
+\beg
+% unalias rm
+% rm () { mv $* /tmp/wastebasket }
+% rm foo.dvi
+% ls /tmp/wastebasket
+foo.dvi
+\end
+While this is much cleaner and easier to read (I hope you will
+agree), it is not csh-compatible.  Therefore, a script to convert
+csh aliases has been provided.  You should only need to use it
+once, to convert all your csh aliases to zsh format:
+\beg
+% csh
+csh> source ~/.neat_aliases
+csh> alias
+l       ls -AF
+more    less
+on      last -2 !:1 ; who | grep !:1
+csh> alias | ctoz
+alias l='ls -AF'
+alias more='less'
+on () { last -2 $1 ; who | grep $1 }
+csh> alias | ctoz > ~/.neat_zsh_aliases
+csh> exit
+\end
+The first two aliases were converted to regular zsh aliases, while
+the third, since it needed to handle arguments, was converted to
+a function.  @ctoz@ can convert most aliases to zsh format without
+any problems.  However, if you're using some really arcane csh tricks,
+or if you have an alias with a name like @do@ (which is reserved
+in zsh), you may have to fix some of the aliases by hand.
+\beginsection History
+X
+There are several ways to manipulate history in zsh.
+One way is to use csh-style @!@ history:
+\beg
+% /usr/local/bin/!:0 !-2*:s/foo/bar/ >>!$
+\end
+If you don't want to use this, you can turn it off
+by typing @setopt nobanghist@.
+\par
+Another way is to use the @fc@ command.  For example,
+if you type an erroneous command:
+\beg
+% for i in `cat /etc/clients` 
+X do 
+X rpu $i 
+X done
+zsh: command not found: rpu
+zsh: command not found: rpu
+zsh: command not found: rpu
+@dot
+\end
+typing @fc@ will execute an editor on this command, allowing
+you to fix it.  (The default editor is @vi@, by the way,
+not @ed@).
+\beg
+% fc
+49
+/rpu/s//rup/p
+X rup $i 
+w
+49
+q
+for i in `cat /etc/clients` 
+X do 
+X rup $i 
+X done
+X        beam    up  2 days, 10:17,    load average: 0.86, 0.80, 0.50
+X         bow    up  4 days,  8:41,    load average: 0.91, 0.80, 0.50
+X        burn    up          17:18,    load average: 0.91, 0.80, 0.50
+X       burst    up  9 days,  1:49,    load average: 0.95, 0.80, 0.50
+X         tan    up          11:14,    load average: 0.91, 0.80, 0.50
+X       bathe    up  3 days, 17:49,    load average: 1.84, 1.79, 1.50
+X        bird    up  1 day,   9:13,    load average: 1.95, 1.82, 1.51
+X      bonnet    up  2 days, 21:18,    load average: 0.93, 0.80, 0.50
+@dot
+\end
+A variant of the @fc@ command is @r@, which redoes the last
+command, with optional changes:
+\beg
+% echo foo
+foo
+% r
+echo foo
+foo
+X
+% echo foo
+foo
+% r foo=bar
+echo bar
+bar
+\end
+\beginsection Command Line Editing
+X
+zsh's command line editor, {\sl ZLE}, is quite powerful.
+It is designed to emulate either emacs or vi; the default
+is emacs.  To set the bindings for vi mode, type @bindkey -v@.
+\par
+In addition to basic editing, the shell allows you to 
+recall previous lines in the history.  In emacs mode,
+this is done with \c{P} (control-P):
+\beg
+% ls ~
+-           README      file        mail        pub         tmp
+Mailboxes   bin         func        nicecolors  scr         zsh
+News        etc         iris        notes       src
+% echo foobar
+foobar
+% @C P
+% echo foobar@C P
+% ls ~@ecurs
+\end
+Pressing \c{P} once brings up the previous line (@echo foobar@);
+pressing it again brings up the line before that (@ls ~@).
+The cursor is left at the end of the line, allowing you to
+edit the line if desired before executing it.
+In many cases, {\sl ZLE} eliminates the need for the @fc@ command,
+since it is powerful enough to handle even multiline commands:
+\beg
+% for i in a b c d e
+> do
+> echo $i
+> done
+a
+b
+c
+d
+e
+% @C P
+% for i in a b c d e 
+X do 
+X echo $i 
+X done@ecurs
+\end
+Now you can just move up to the part you want to change...
+\beg
+% for i in @curs a b c d e
+X do 
+X echo $i 
+X done
+\end
+change it, and execute the new command.
+\beg
+% for i in f g h i j
+X do 
+X echo $i 
+X done
+f
+g
+h
+i
+j
+\end
+Also, you can search the history for a certain command using
+\e{P}:
+\beg
+% set @E P
+% setopt autolist @E P
+% setopt nocorrect@ecurs
+\end
+Another way is to do an incremental search, emacs-style:
+\beg
+% @C R
+% @ecurs
+i-search:
+@space
+% l@curs s /usr/bin
+i-search: l
+@space
+% date > foofile@curs .c
+i-search: le
+\end
+Another useful feature of the editor is command and filename completion.
+\def\beep{{\it --beep--}}
+\beg
+% comp@TAB
+% compress @ecurs
+@space
+% ls /nic@TAB
+% ls /nicecolors @ecurs
+@space
+% ls /usr/pr@TAB
+% ls /usr/princeton/@ecurs
+\end
+If the completion is ambiguous, the editor will beep.
+You can list possible completions by pressing \c{D}:
+\beg
+% ls /vmu@TAB @beep
+% ls /vmunix@ecurs
+% ls /vmunix@C D
+vmunix                    vmunix.old                
+vmunix.new.kernelmap.old  vmunix.org
+\end
+Or, you could just set the \opt{AUTOLIST} option:
+\beg
+% setopt autolist
+% ls /vmu@TAB @beep
+vmunix                    vmunix.old                
+vmunix.new.kernelmap.old  vmunix.org
+% ls /vmunix@ecurs
+\end
+Another option you could set is \opt{RECEXACT}, which causes
+exact matches to be accepted, even if there are other possible
+completions:
+\beg
+% setopt recexact
+% ls /vmu@TAB @beep
+vmunix                    vmunix.old                
+vmunix.new.kernelmap.old  vmunix.org
+% ls /vmunix@ecurs @TAB
+% ls /vmunix @ecurs
+\end
+The \opt{fignore} variable lists suffixes of files to ignore
+during completion.
+\beg
+% ls foo@TAB @beep
+foofile.c  foofile.o
+X
+% fignore=( .o \~ .bak .junk )
+% ls foo@TAB
+% ls foofile.c @ecurs
+\end
+Since @foofile.o@ has a suffix that is in the @fignore@ list,
+it was not considered a possible completion of @foo@.
+\goodbreak
+\par
+Username completion is also supported:
+\beg
+% ls ~pfal@TAB
+% ls ~pfalstad/@ecurs
+\end
+\par
+In addition to completion, \TAB\ performs expansion
+if possible.
+\beg
+% ls *.c@TAB
+% ls foofile.c fortune.c rnd.c strfile.c unstr.c@ecurs
+\end
+For example, suppose you have a bunch of weird files in an important
+directory:
+\beg
+% ls
+X  * * *       ; & % $??foo  dspfok        foo.c
+X  !"foo"!       ` \ `         foo           rrr
+\end
+You want to remove them, but you don't want to damage @foo.c@.
+Here is one way to do this:
+\beg
+% rm *@TAB
+% rm \ \ \*\ \*\ \*\ \ \  \!\"foo\"\! \;\ \&\ %\ \$'
+''
+'foo \`\ \\\ \` dspfok foo foo.c rrr@ecurs
+\end
+When you expand @*@, zsh inserts the names of all the files
+into the editing buffer, with proper shell quoting.
+Now, just move back and remove @foo.c@ from the buffer:
+\beg
+% rm \ \ \*\ \*\ \*\ \ \  \!\"foo\"\! \;\ \&\ %\ \$'
+''
+'foo \`\ \\\ \` dspfok foo @curs rrr
+\end
+and press return.
+Everything except @foo.c@ will be deleted from the directory.
+\par
+Here's another trick; let's say you have typed this command in:
+\beg
+% gcc -o x.out foob.c -g -Wpointer-arith -Wtrigraphs@ecurs
+\end
+and you forget which library you want.  You need to escape
+out for a minute and check by typing
+@ls /usr/lib@, or some other such command;
+but you don't want to retype the whole command again,
+and you can't press return now because the current command
+is incomplete.
+In zsh, you can put the line on the {\it buffer stack}, using
+\c{Q}, and type some other commands.  The next time a prompt is printed,
+the @gcc@ line will be popped off the stack and put
+in the editing buffer automatically; you can then enter the
+proper library name and press return (or, \c{Q} again and look
+for some other libraries whose names you forgot).
+\par
+A similar situation: what if you forget the option to gcc that
+finds bugs using AI techniques?  You could either use \c{Q}
+again, and type @man gcc@, or you could press \e{H}, which
+essentially does the same thing; it puts the current line on
+the buffer stack, and executes the command @run-help gcc@,
+where @run-help@ is an alias for @man@.
+\par
+Another interesting command is \e{A}.  This executes the
+current line, but retains it in the buffer, so that it appears
+again when the next prompt is printed.
+Also, the cursor stays in the same place.
+This is useful for executing a series of similar commands:
+\beg
+% cc grok.c -g -lc -lgl -lsun -lmalloc -Bstatic -o b.out
+% cc fubar.c -g -lc -lgl -lsun -lmalloc -Bstatic -o b.out
+% cc fooble.c -g -lc -lgl -lsun -lmalloc -Bstatic -o b.out
+\end
+\par
+The \e{'} command is useful for managing the shell's quoting
+conventions.  Let's say you want to print this string:
+\beg
+don't do that; type 'rm -rf \*', with a \ before the *.
+\end
+All that is necessary is to type it into the editing buffer:
+\beg
+% don't do that; type 'rm -rf \*', with a \ before the *.
+\end
+press \e{'} (escape-quote):
+\beg
+% 'don'\''t do that; type '\''rm -rf \*'\'', with a \ before the *.'
+\end
+then move to the beginning and add the @echo@ command.
+\beg
+% echo 'don'\''t do that; type '\''rm -rf \*'\'', with a \ before the *.'
+don't do that; type 'rm -rf \*', with a \ before the *.
+\end
+Let's say you want to create an alias to do this @echo@ command.
+This can be done by recalling the line with \c{P} and pressing \e{'} again:
+\beg
+% 'echo '\''don'\''\'\'''\''t do that; type '\''\'\'''\''rm -rf
+\*'\''\'\'''\'', with a \ before the *.'\'''
+\end
+and then move to the beginning and add the command to create
+an alias.
+\beg
+% alias zoof='echo '\''don'\''\'\'''\''t do that; type '\''\'\'''\''rm
+-rf \*'\''\'\'''\'', with a \ before the *.'\'''
+% zoof
+don't do that; type 'rm -rf \*', with a \ before the *.
+\end
+\par
+Another interesting option is @menucomplete@.  This affects the
+way \TAB\ works.  Let's look at the @/vmunix@ example again:
+\beg
+% setopt menucomplete
+% ls /vmu@TAB
+% ls /vmunix@TAB
+% ls /vmunix.new.kernelmap.old@TAB
+% ls /vmunix.old@ecurs
+\end
+Each time you press \TAB, it displays the next possible completion.
+In this way, you can cycle through the possible completions until
+you find the one you want.
+\beginsection Bindings
+X
+Each of the above editor commands was actually a function bound
+by default to a certain key.  The real names of the commands are:
+\begindisplay
+@expand-or-complete   @\TAB\cr
+@push-line            @\c{Q}\cr
+@run-help             @\e{H}\cr
+@accept-and-hold      @\e{A}\cr
+@quote-line           @\e{'}\cr
+\enddisplay
+These bindings are arbitrary; you could change them if you want.
+For example, to bind @accept-line@ to \c{Z}:
+\beg
+% bindkey '^Z' accept-line
+\end
+Another idea would be to bind the delete key to @delete-char@;
+this might be convenient if you use \c{H} for backspace.
+\beg
+% bindkey '^?' delete-char
+\end
+Or, you could bind \c{X}\c{H} to @run-help@:
+\beg
+% bindkey '^X^H' run-help
+\end
+Other examples:
+\beg
+% bindkey '^X^Z' universal-argument
+% bindkey ' ' magic-space
+% bindkey -s '^T' 'uptime
+> '
+\end
+@universal-argument@ multiplies the next command by 4.
+Thus \c{X}\c{Z}\c{W} might delete the last four words on the line.
+If you bind space to @magic-space@, then csh-style history
+expansion is done on the line whenever you press the space bar.
+\par
+The @-s@ flag to @bindkey@ specifies that you are binding the key
+to a string, not a command.  Thus \hbox{@bindkey -s@} @'^T' 'uptime\n'@
+lets you get the load average whenever you press \c{T}.
+\par
+If you have a NeXT keyboard, the one with the @|@ and @\@ keys
+very inconveniently placed, the following
+bindings may come in handy:
+\beg
+% bindkey -s '\e/' '\\'
+% bindkey -s '\e=' '|'
+\end
+Now you can type {\sl ALT-/} to get a backslash, and {\sl ALT-=} to
+get a vertical bar.  This only works inside zsh, of course;
+@bindkey@ has no effect on the key mappings inside @talk@
+or @mail@, etc.
+\par
+Another use of the editor is to edit the value of variables.
+For example, an easy way to change your path is to use
+the @vared@ command:
+\beg
+% vared PATH
+> /u/pfalstad/scr:/u/pfalstad/bin/sun4:/u/maruchck/scr:/u/subbarao/bin:/u/maruc
+hck/bin:/u/subbarao/scripts:/usr/princeton/bin:/usr/ucb:/usr/bin:/bin:/usr/host
+s:/usr/princeton/bin/X11:/./usr/lang:/./usr/etc:/./etc
+\end
+You can now edit the path.  When you press return, the contents
+of the edit buffer will be assigned to \parm{PATH}.
+\beginsection Parameter Substitution
+X
+In zsh, parameters are set like this:
+\beg
+% foo=bar
+% echo $foo
+bar
+\end
+Spaces before or after the @=@ are frowned upon:
+\beg
+% foo = bar
+zsh: command not found: foo
+\end
+Also, @set@ doesn't work for setting parameters:
+\beg
+% set foo=bar
+% set foo = bar
+% echo $foo
+@space
+%
+\end
+Note that no error message was printed.  This is because both
+of these commands were perfectly valid; the @set@ builtin
+assigns its arguments to the {\it positional parameters}
+(@$1@, @$2@, etc.).
+\beg
+% set foo=bar
+% echo $1
+foo=bar
+% set foo = bar
+% echo $3 $2
+bar =
+\end
+If you're really intent on using the csh syntax, define a
+function like this:
+\beg
+% set () {
+>    eval "$1$2$3"
+> }
+% set foo = bar
+% set fuu=brrr
+% echo $foo $fuu
+bar brrr
+\end
+But then, of course you can't use the form of @set@ with
+options, like @set -F@ (which turns off filename generation).
+Also, the @set@ command by itself won't list all the parameters
+like it should.
+To get around that you need a @case@ statement:
+\beg
+% set () {
+>    case $1 in
+>    -*|+*|'') builtin set $* ;;
+>    *) eval "$1$2$3" ;;
+>    esac
+> }
+\end
+For the most part, this should make csh users happy.
+\par
+The following sh-style operators are supported in zsh:
+\beg
+% unset null
+% echo ${foo-xxx}
+bar
+% echo ${null-xxx}
+xxx
+% unset null
+% echo ${null=xxx}
+xxx
+% echo $null
+xxx
+% echo ${foo=xxx}
+bar
+% echo $foo
+bar
+% unset null
+% echo ${null+set}
+X
+% echo ${foo+set}
+set
+\end
+Also, csh-style @:@ modifiers may be appended to a parameter
+substitution.
+\beg
+% echo $PWD
+/home/learning/pf/zsh/zsh2.00/src
+% echo $PWD:h
+/home/learning/pf/zsh/zsh2.00
+% echo $PWD:h:h
+/home/learning/pf/zsh
+% echo $PWD:t
+src
+% name=foo.c
+% echo $name
+foo.c
+% echo $name:r
+foo
+% echo $name:e
+c
+\end
+The equivalent constructs in ksh (which are also supported in zsh)
+are a bit more general and easier to remember.
+When the shell expands @${foo#@{\it pat}@}@,
+it checks to see if {\it pat} matches a substring at the beginning
+of the value
+of @foo@.  If so, it removes that portion of @foo@, using the shortest
+possible match.
+With @${foo##@{\it pat}@}@, the longest possible match is removed.
+@${foo%@{\it pat}@}@ and @${foo%%@{\it pat}@}@ remove the match
+from the end.
+Here are the ksh equivalents of the @:@ modifiers:
+\beg
+% echo ${PWD%/*}
+/home/learning/pf/zsh/zsh2.00
+% echo ${PWD%/*/*}
+/home/learning/pf/zsh
+% echo ${PWD##*/}
+src
+% echo ${name%.*}
+foo
+% echo ${name#*.}
+c
+\end
+zsh also has upper/lowercase modifiers:
+\beg
+% xx=Test
+% echo $xx:u
+TEST
+% echo $xx:l
+test
+\end
+and a substitution modifier:
+\beg
+% echo $name:s/foo/bar/
+bar.c
+% ls
+foo.c    foo.h    foo.o    foo.pro
+% for i in foo.*; mv $i $i:s/foo/bar/
+% ls
+bar.c    bar.h    bar.o    bar.pro
+\end
+One possible source of confusion is the fact that in zsh,
+the result of parameter substitution is {\it not} split into
+words.  Thus, this will not work:
+\beg
+% srcs='glob.c exec.c init.c'
+% ls $srcs
+glob.c exec.c init.c not found
+\end
+This is considered a feature, not a bug.
+If splitting were done by default, as it is in most other shells,
+functions like this would not work properly:
+\beg
+$ ll () { ls -F $* }
+$ ll 'fuu bar'
+fuu not found
+bar not found
+@space
+% ll 'fuu bar'
+fuu bar not found
+\end
+Of course, a hackish workaround is available in sh (and zsh):
+\beg
+% setopt shwordsplit
+% ll () { ls -F "$@@" }
+% ll 'fuu bar'
+fuu bar not found
+\end
+If you like the sh behaviour, zsh can accomodate you:
+\beg
+% ls ${=srcs}
+exec.c  glob.c  init.c
+% setopt shwordsplit
+% ls $srcs
+exec.c  glob.c  init.c
+\end
+Another way to get the @$srcs@ trick to work is to use an array:
+\beg
+% unset srcs
+% srcs=( glob.c exec.c init.c )  
+% ls $srcs
+exec.c  glob.c  init.c
+\end
+or an alias:
+\beg
+% alias -g SRCS='exec.c glob.c init.c'
+% ls SRCS
+exec.c  glob.c  init.c
+\end
+Another option that modifies parameter expansion is
+\opt{RCEXPANDPARAM}:
+\beg
+% echo foo/$srcs
+foo/glob.c exec.c init.c
+% setopt rcexpandparam
+% echo foo/$srcs
+foo/glob.c foo/exec.c foo/init.c
+% echo foo/${^srcs}
+foo/glob.c foo/exec.c foo/init.c
+% echo foo/$^srcs
+foo/glob.c foo/exec.c foo/init.c
+\end
+\beginsection Shell Parameters
+X
+The shell has many predefined parameters that may be
+accessed.  Here are some examples:
+\beg
+% sleep 10 &
+[1] 3820
+% echo $!
+3820
+% set a b c
+% echo $#
+3
+% echo $ARGC
+3
+% ( exit 20 ) ; echo $?
+20
+% false; echo $status
+1
+\end
+(@$?@ and @$status@ are equivalent.)
+\beg
+% echo $HOST $HOSTTYPE
+dendrite sun4
+% echo $UID $GID
+701 60
+% cd /tmp
+% cd /home
+% echo $PWD $OLDPWD
+/home /tmp
+% ls $OLDPWD/.getwd 
+/tmp/.getwd
+\end
+@~+@ and @~-@ are short for @$PWD@ and @$OLDPWD@, respectively.
+\beg
+% ls ~-/.getwd
+/tmp/.getwd
+% ls -d ~+/learning
+/home/learning
+% echo $RANDOM
+4880
+% echo $RANDOM
+11785
+% echo $RANDOM
+2062
+% echo $TTY
+/dev/ttyp4
+% echo $VERSION
+zsh v2.00.03
+% echo $USERNAME
+pf
+\end
+\filbreak
+The @cdpath@ variable sets the search path for the @cd@ command.
+It is assumed that @.@ is the first component of the path.
+\beg
+% cdpath=( /usr ~ ~/zsh )
+% ls /usr
+5bin         dict         lang         net          sccs         sys
+5include     etc          lector       nserve       services     tmp
+5lib         export       lib          oed          share        ucb
+adm          games        local        old          skel         ucbinclude
+bin          geac         lost+found   openwin      spool        ucblib
+boot         hosts        macsyma_417  pat          src          xpg2bin
+demo         include      man          princeton    stand        xpg2include
+diag         kvm          mdec         pub          swap         xpg2lib
+% cd spool
+/usr/spool
+% cd bin
+/usr/bin
+% cd func
+~/func
+% cd 
+% cd pub
+% pwd
+/u/pfalstad/pub
+% ls -d /usr/pub
+/usr/pub
+\end
+\parm{PATH} and \parm{path} both set the search path for commands.
+These two variables are equivalent, except that one is a string
+and one is an array.  If the user modifies \parm{PATH}, the shell
+changes \parm{path} as well, and vice versa.
+\beg
+% PATH=/bin:/usr/bin:/tmp:.
+% echo $path
+/bin /usr/bin /tmp .
+% path=( /usr/bin . /usr/local/bin /usr/ucb )
+% echo $PATH
+/usr/bin:.:/usr/local/bin:/usr/ucb
+\end
+The same is true of \parm{CDPATH} and \parm{cdpath}:
+\beg
+% echo $CDPATH
+/usr:/u/pfalstad:/u/pfalstad/zsh
+% CDPATH=/u/subbarao:/usr/src:/tmp
+% echo $cdpath
+/u/subbarao /usr/src /tmp
+\end
+In general, parameters with names in all lowercase are arrays;
+assignments to them take the form:
+\begindisplay
+\hbox{{\it name}@=(@ {\it elem} \dot\ @)@}
+\enddisplay
+Parameters with names in all uppercase are strings.  If there is
+both an array and a string version of the same parameter, the
+string version is a colon-separated list, like \parm{PATH}.
+\par\filbreak
+\parm{HISTFILE} is the name of the history file, where the history
+is saved when a shell exits.
+\beg
+% zsh
+phoenix% HISTFILE=/tmp/history
+phoenix% SAVEHIST=20
+phoenix% echo foo
+foo
+phoenix% date
+Fri May 24 05:39:35 EDT 1991
+phoenix% uptime
+X  5:39am  up 4 days, 20:02,  40 users,  load average: 2.30, 2.20, 2.00
+phoenix% exit
+% cat /tmp/history
+HISTFILE=/tmp/history
+SAVEHIST=20
+echo foo
+date
+uptime
+exit
+% HISTSIZE=3
+% history
+X   28  rm /tmp/history
+X   29  HISTSIZE=3
+X   30  history
+\end
+\par
+In zsh, if you say
+\beg
+% >file
+\end
+the command @cat@ is normally assumed:
+\beg
+% >file
+foo!    
+^D
+% cat file
+foo!
+\end
+Thus, you can view a file simply by typing:
+\beg
+% <file
+foo!
+\end
+However, this is not csh or sh compatible.  To correct this,
+change the value of the parameter \parm{NULLCMD},
+which is @cat@ by default.
+\beg
+% NULLCMD=:
+% >file
+% ls -l file
+-rw-r--r--  1 pfalstad        0 May 24 05:41 file
+\end
+If @NULLCMD@ is unset, the shell reports an error if no
+command is specified (like csh).
+\beg
+% unset NULLCMD
+% >file
+zsh: redirection with no command
+\end
+\beginsection Prompting
+X
+The default prompt for zsh is:
+\beg
+phoenix% echo $PROMPT
+%m%# 
+\end
+The @%m@ stands for the short form of the current hostname,
+and the @%#@ stands for a @%@ or a @#@, depending on whether
+the shell is running as root or not.
+zsh supports many other control sequences
+in the \parm{PROMPT} variable.
+\beg
+% PROMPT='%/> '
+/u/pfalstad/etc/TeX/zsh>
+@space
+% PROMPT='%~> '   
+~/etc/TeX/zsh> 
+@space
+% PROMPT='%h %~> '
+6 ~/etc/TeX/zsh> 
+\end
+@%h@ represents the number of current history event.
+\beg
+% PROMPT='%h %~ %M> '
+10 ~/etc/TeX/zsh apple-gunkies.gnu.ai.mit.edu> 
+@space
+% PROMPT='%h %~ %m> '
+11 ~/etc/TeX/zsh apple-gunkies> 
+@space
+% PROMPT='%h %t> '
+12 6:11am> 
+@space
+% PROMPT='%n %w tty%l>'
+pfalstad Fri 24 ttyp0>
+\end
+Also available is the \parm{RPROMPT} parameter.
+If this is set, the shell puts a prompt on the {\it right} side
+of the screen.
+\par
+\halign{\indent#\hfill&\hfill#\cr
+@% RPROMPT='%t'@&\cr
+@%@&@6:14am@\cr
+&\cr
+@% RPROMPT='%~'@&\cr
+@%@&@~/etc/TeX/zsh@\cr
+&\cr
+@% PROMPT='%l %T %m[%h] ' RPROMPT=' %~'@&\cr
+@p0 6:15 phoenix[5]@&@~/etc/TeX/zsh@\cr}
+\par
+These special escape sequences can also be used with the
+@-P@ option to @print@:
+\beg
+% print -P %h tty%l
+15 ttyp1
+\end
+\beginsection Login/logout watching
+X
+You can specify login or logout events to monitor
+by setting the \parm{watch} variable.
+Normally, this is done by specifying a list of usernames.
+\beg
+% watch=( pfalstad subbarao sukthnkr egsirer )
+\end
+The @log@ command reports all people logged in
+that you are watching for.
+\beg
+% log
+pfalstad has logged on p0 from mickey.
+pfalstad has logged on p5 from mickey.
+% @dot
+subbarao has logged on p8 from phoenix.
+% @dot
+subbarao has logged off p8 from phoenix.
+% @dot
+sukthnkr has logged on p8 from dew.
+% @dot
+sukthnkr has logged off p8 from dew.
+\end
+If you specify hostnames with an @@ prepended,
+the shell will watch for all users logging in from
+the specified host.
+\beg
+% watch=( @@mickey @@phoenix )
+% log
+djthongs has logged on q2 from phoenix.
+pfalstad has logged on p0 from mickey.
+pfalstad has logged on p5 from mickey.
+\end
+If you give a tty name with a @%@ prepended, the shell
+will watch for all users logging in on that tty.
+\beg
+% watch=( %ttyp0 %console )
+% log
+root has logged on console from .
+pfalstad has logged on p0 from mickey.
+\end
+\vfill\eject
+The format of the reports may also be changed.
+\beg
+% watch=( pfalstad gettes eps djthongs jcorr bdavis )
+% log
+jcorr has logged on tf from 128.112.176.3:0.
+jcorr has logged on r0 from 128.112.176.3:0.
+gettes has logged on p4 from yo:0.0.
+djthongs has logged on pe from grumpy:0.0.
+djthongs has logged on q2 from phoenix.
+bdavis has logged on qd from BRUNO.
+eps has logged on p3 from csx30:0.0.
+pfalstad has logged on p0 from mickey.
+pfalstad has logged on p5 from mickey.
+% WATCHFMT='%n on tty%l from %M'
+% log
+jcorr on ttytf from 128.112.176.3:0.
+jcorr on ttyr0 from 128.112.176.3:0.
+gettes on ttyp4 from yo:0.0
+djthongs on ttype from grumpy:0.0
+djthongs on ttyq2 from phoenix.Princeto
+bdavis on ttyqd from BRUNO.pppl.gov
+eps on ttyp3 from csx30:0.0
+pfalstad on ttyp0 from mickey.Princeton
+pfalstad on ttyp5 from mickey.Princeton
+% WATCHFMT='%n fm %m'
+% log
+jcorr fm 128.112.176.3:0
+jcorr fm 128.112.176.3:0
+gettes fm yo:0.0
+djthongs fm grumpy:0.0
+djthongs fm phoenix
+bdavis fm BRUNO
+eps fm csx30:0.0
+pfalstad fm mickey
+pfalstad fm mickey
+% WATCHFMT='%n %a at %t %w.'
+% log
+jcorr logged on at 3:15pm Mon 20.
+jcorr logged on at 3:16pm Wed 22.
+gettes logged on at 6:54pm Wed 22.
+djthongs logged on at 7:19am Thu 23.
+djthongs logged on at 7:20am Thu 23.
+bdavis logged on at 12:40pm Thu 23.
+eps logged on at 4:19pm Thu 23.
+pfalstad logged on at 3:39am Fri 24.
+pfalstad logged on at 3:42am Fri 24.
+\end
+If you have a @.friends@ file in your home directory,
+a convenient way to make zsh watch for all your friends
+is to do this:
+\beg
+% watch=( $(< ~/.friends) )
+% echo $watch
+subbarao maruchck root sukthnkr @dot
+\end
+If watch is set to @all@, then all users logging in or out
+will be reported.
+\beginsection Options
+X
+Some options have already been mentioned; here are a few more:
+\beg
+% cd /
+% setopt autocd
+% bin
+% pwd
+/bin
+% ../etc
+% pwd
+/etc
+\end
+Using the \opt{AUTOCD} option, you can simply type the name
+of a directory, and it will become the current directory.
+\beg
+% setopt cdablevars
+% foo=/tmp
+% cd foo
+/tmp
+\end
+With \opt{CDABLEVARS}, if the argument to @cd@ is the name of a
+parameter whose value is a valid directory, it will become
+the current directory.
+\par
+\opt{CORRECT} turns on spelling correction for commands,
+and the \opt{CORRECTALL} option turns on spelling correction
+for all arguments.
+\beg
+% setopt correct
+% sl
+zsh: correct to `ls' (y/n)? y
+% setopt correctall
+% ls /usr/princton/src/x.v11r4
+zsh: correct to `/usr/princeton/src/X.V11R4' (y/n)? n
+/usr/princton/src/x.v11r4 not found
+% ls /etc/paswd
+zsh: correct to `/etc/passwd' (y/n)? y
+/etc/passwd
+\end
+Normally, a quoted expression may contain a newline:
+\beg
+% echo '
+> foo
+> '
+@space
+foo
+@space
+%
+\end
+With \opt{CSHJUNKIEQUOTES} set, this is illegal, as it is
+in csh.
+\beg
+% setopt cshjunkiequotes
+% ls 'foo
+zsh: unmatched '
+\end
+\opt{GLOBDOTS} lets files beginning with a @.@ be matched without
+explicitly specifying the dot.
+\beg
+% ls -d *x*
+Mailboxes
+% setopt globdots
+% ls -d *x*
+.exrc         .pnewsexpert  .xserverrc
+.mushexpert   .xinitrc      Mailboxes
+\end
+\opt{HISTIGNOREDUPS} prevents the current line from being
+saved in the history if it is the same as the previous one;
+\opt{HISTIGNORESPACE} prevents the current line from being
+saved if it begins with a space.
+\beg
+% PROMPT='%h> '
+39> setopt histignoredups
+40> echo foo
+foo
+41> echo foo
+foo
+41> echo foo
+foo
+41> echo bar
+bar
+42> setopt histignorespace
+43>  echo foo
+foo
+43>  echo fubar
+fubar
+43>  echo fubar
+fubar
+\end
+\opt{IGNOREBRACES} turns off csh-style brace expansion.
+\beg
+% echo x{y{z,a},{b,c}d}e
+xyze xyae xbde xcde
+% setopt ignorebraces
+% echo x{y{z,a},{b,c}d}e
+x{y{z,a},{b,c}d}e
+\end
+\opt{IGNOREEOF} forces the user to type @exit@ or @logout@,
+instead of just pressing \c{D}.
+\beg
+% setopt ignoreeof
+% ^D
+zsh: use 'exit' to exit.
+\end
+\opt{INTERACTIVECOMMENTS} turns on interactive comments;
+comments begin with a @#@.
+\beg
+% setopt interactivecomments
+% date # this is a comment
+Fri May 24 06:54:14 EDT 1991
+\end
+\opt{NOCLOBBER} prevents the I/O redirection operators from
+overwriting an existing file.
+\beg
+% setopt noclobber
+% cat /dev/null >~/.zshrc
+zsh: file exists: /u/pfalstad/.zshrc
+\end
+Finally,
+\opt{SUNKEYBOARDHACK} wins the award for the strangest option.
+If a line ends with @`@, and there are an odd number of them
+on the line, the shell will ignore the trailing @`@.  This
+is provided for keyboards whose RETURN key is too small,
+and too close to the @`@ key.
+\beg
+% setopt sunkeyboardhack
+% date`
+Fri May 24 06:55:38 EDT 1991
+\end
+\beginsection Closing Comments
+X
+I would be happy to receive mail
+if anyone has any tricks or ideas to add to this document, or
+if there are some points that could be made clearer or covered
+more thoroughly.  Please notify me of any errors in this
+document.
+\bye
+SHAR_EOF
+echo 'File doc/zshintro.tex is complete' &&
+chmod 0644 doc/zshintro.tex ||
+echo 'restore of doc/zshintro.tex failed'
+Wc_c="`wc -c < 'doc/zshintro.tex'`"
+test 56686 -eq "$Wc_c" ||
+	echo 'doc/zshintro.tex: original size 56686, current size' "$Wc_c"
+rm -f _shar_wnt_.tmp
+fi
+rm -f _shar_seq_.tmp
+echo You have unpacked the last part of zshintro.tex
+exit 0
+exit 0 # Just in case...
+-- 
+Kent Landfield                   INTERNET: kent@sparky.IMD.Sterling.COM
+Sterling Software, IMD           UUCP:     uunet!sparky!kent
+Phone:    (402) 291-8300         FAX:      (402) 291-4362
+Please send comp.sources.misc-related mail to kent@uunet.uu.net.

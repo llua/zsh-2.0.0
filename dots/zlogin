@@ -1,0 +1,60 @@
+#
+# login file for zsh 2.0
+#
+clear
+cd
+stty dec new cr0
+
+# find out where I logged in from
+FROM=$(who said that | sed 's/^.*(\([^.:]*\).*).*$/\1/')
+
+# find out what kind of host it is
+case "$FROM" in
+	learning*) FROMTYPE=SUNOS-4.1; stty rows 40; ;;
+	*) FROMTYPE="$(host -t hinfo $FROM | sed 's/^.*HINFO//')" ;;
+esac
+
+case "$FROMTYPE" in
+	*CISCO*)	eval $(tset -s vt100)
+				FROM=comserv
+				export PRINTER=madlw
+				48
+				BAUD=1800
+				unset RPROMPT ;;
+	*MAC-OS*|*MS-DOS*|*IBM*)	eval $(tset -s vt100)
+										export PRINTER=madlw
+										FROM=madison ;;
+	*SUNOS-4.1*)	eval $(tset -s xterm)
+						export DISPLAY=$FROM:0.0
+						FROM=sun
+						stty erase 
+						export PRINTER=ps1 ;;
+	*SGI*)	eval $(tset -s iris-ansi)
+				export PRINTER=disney
+				export DISPLAY=$FROM:0.0
+				FROM=iris
+				stty erase  ;;
+	*) eval $(tset -s -Q '?vt100') ;;
+esac
+
+# set up termcap for less
+LESSTERM=$(print -r $TERMCAP | sed 's/:ti=[^:]*:te=[^:]*:/:ti=:te=:/')
+
+stty -tabs
+umask 022
+export MAIL=/usr/spool/mail/$USER
+MAILCHECK=60
+# biff y
+mesg y
+uptime
+fortune
+
+# see who's logged on
+log
+
+# add myself to $watch
+watch=($watch pfalstad)
+
+from 2>/dev/null
+< notes
+msgs -q

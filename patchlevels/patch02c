@@ -1,0 +1,2214 @@
+Path: funic!news.funet.fi!sunic!mcsun!uunet!sparky!kent
+From: pfalstad@phoenix.princeton.edu (Paul Falstad)
+Newsgroups: comp.sources.misc
+Subject: v19i069:  zsh2.00 - The Z shell, Patch02c/6
+Message-ID: <1991May15.220214.7330@sparky.IMD.Sterling.COM>
+Date: 15 May 91 22:02:14 GMT
+Sender: kent@sparky.IMD.Sterling.COM (Kent Landfield)
+Organization: League For Fighting Chartered Accountancy
+Lines: 2202
+Approved: kent@sparky.imd.sterling.com
+X-Md4-Signature: 67d81ec2075c00a03952cada29949594
+
+Submitted-by: Paul Falstad <pfalstad@phoenix.princeton.edu>
+Posting-number: Volume 19, Issue 69
+Archive-name: zsh2.00/patch02c
+Patch-To: zsh2.00: Volume 18, Issue 84-98
+
+#!/bin/sh
+# this is zpatch.03 (part 3 of a multipart archive)
+# do not concatenate these parts, unpack them in order with /bin/sh
+# file patches continued
+#
+if test ! -r _shar_seq_.tmp; then
+	echo 'Please unpack part 1 first!'
+	exit 1
+fi
+(read Scheck
+ if test "$Scheck" != 3; then
+	echo Please unpack part "$Scheck" next!
+	exit 1
+ else
+	exit 0
+ fi
+) < _shar_seq_.tmp || exit 1
+echo 'x - continuing file patches'
+sed 's/^X//' << 'SHAR_EOF' >> 'patches' &&
+X  		}
+X  }
+X  
+! void savehistfile() /**/
+X  {
+! char *s,*t;
+X  Lknode n;
+X  Lklist l;
+X  FILE *out;
+X  
+! 	if (!(s = getsparam("HISTFILE")) || !interact)
+X  		return;
+X  	if (out = fdopen(open(s,O_CREAT|O_WRONLY|O_TRUNC,0600),"w"))
+X  		{
+--- 491,509 ----
+X  		fclose(in);
+X  		lastalloc();
+X  		}
++ 	else if (err)
++ 		zerr("can't read history file",s,0);
+X  }
+X  
+! void savehistfile(s,err) /**/
+! char *s;int err;
+X  {
+! char *t;
+X  Lknode n;
+X  Lklist l;
+X  FILE *out;
+X  
+! 	if (!s || !interact)
+X  		return;
+X  	if (out = fdopen(open(s,O_CREAT|O_WRONLY|O_TRUNC,0600),"w"))
+X  		{
+***************
+*** 495,499 ****
+--- 525,531 ----
+X  			}
+X  		fclose(out);
+X  		}
++ 	else if (err)
++ 		zerr("can't write history file: %s",s,0);
+X  }
+X  
+*** src/zsh0/zsh2.00/src/init.pro	Tue Apr 23 00:29:59 1991
+--- zsh2.00/src/init.pro	Tue May  7 22:53:26 1991
+***************
+*** 8,12 ****
+X  void addreswords DCLPROTO((void));
+X  void runscripts DCLPROTO((void));
+X  void ainit DCLPROTO((void));
+! void readhistfile DCLPROTO((void));
+! void savehistfile DCLPROTO((void));
+--- 8,12 ----
+X  void addreswords DCLPROTO((void));
+X  void runscripts DCLPROTO((void));
+X  void ainit DCLPROTO((void));
+! void readhistfile DCLPROTO((char *s,int err));
+! void savehistfile DCLPROTO((char *s,int err));
+*** src/zsh0/zsh2.00/src/jobs.c	Tue Apr 23 00:30:05 1991
+--- zsh2.00/src/jobs.c	Wed May  8 22:36:12 1991
+***************
+*** 31,37 ****
+X  */
+X  
+X  #include "zsh.h"
+- #include "funcs.h"
+X  #include <sys/errno.h>
+X  
+X  #define WCOREDUMPED(x) ((x)&0x80)
+--- 31,36 ----
+***************
+*** 162,167 ****
+--- 161,167 ----
+X  		if (!val)
+X  			{
+X  			gettyinfo(&shttyinfo);
++ 			sanetty(&shttyinfo);
+X  #ifdef TIOCSWINSZ
+X  			if (!(columns = shttyinfo.winsize.ws_col))
+X  				columns = 80;
+***************
+*** 213,219 ****
+X  Job jn;int lng;
+X  {
+X  int job = jn-jobtab,len = 9,sig = -1,sflag = 0,llen,printed = 0;
+! int conted = 0,lineleng = getlineleng(),doputnl = 0,skip = 0;
+X  struct process *pn;
+X  
+X  	if (lng < 0)
+--- 213,219 ----
+X  Job jn;int lng;
+X  {
+X  int job = jn-jobtab,len = 9,sig = -1,sflag = 0,llen,printed = 0;
+! int conted = 0,lineleng = getlineleng(),skip = 0,doputnl = 0;
+X  struct process *pn;
+X  
+X  	if (lng < 0)
+***************
+*** 238,244 ****
+X  					len = llen;
+X  				if (sig != SIGINT && sig != SIGPIPE)
+X  					sflag = 1;
+! 				if (sig == SIGINT && job == thisjob && interact)
+X  					doputnl = 1;
+X  				}
+X  			else if (WIFSTOPPED(SP(pn->statusp)))
+--- 238,246 ----
+X  					len = llen;
+X  				if (sig != SIGINT && sig != SIGPIPE)
+X  					sflag = 1;
+! 				else if (sig == SIGINT)
+! 					errflag = 1;
+! 				if (job == thisjob && sig == SIGINT)
+X  					doputnl = 1;
+X  				}
+X  			else if (WIFSTOPPED(SP(pn->statusp)))
+***************
+*** 246,252 ****
+X  				sig = WSTOPSIG(SP(pn->statusp));
+X  				if (strlen(sigmsg[sig]) > len)
+X  					len = strlen(sigmsg[sig]);
+! 				if (handling && (!waiting || sig == SIGSTOP))
+X  					doputnl = 1;
+X  				}
+X  			else if (isset(PRINTEXITVALUE) && WEXITSTATUS(SP(pn->statusp)))
+--- 248,254 ----
+X  				sig = WSTOPSIG(SP(pn->statusp));
+X  				if (strlen(sigmsg[sig]) > len)
+X  					len = strlen(sigmsg[sig]);
+! 				if (job == thisjob && sig == SIGTSTP)
+X  					doputnl = 1;
+X  				}
+X  			else if (isset(PRINTEXITVALUE) && WEXITSTATUS(SP(pn->statusp)))
+***************
+*** 324,331 ****
+X  			fline = 0;
+X  			}
+X  		printed = 1;
+- 		fflush(stderr);
+X  		}
+X  
+X  	/* print "(pwd now: foo)" messages */
+X  
+--- 326,335 ----
+X  			fline = 0;
+X  			}
+X  		printed = 1;
+X  		}
++ 	else if (doputnl && interact)
++ 		putc('\n',stderr);
++ 	fflush(stderr);
+X  
+X  	/* print "(pwd now: foo)" messages */
+X  
+***************
+*** 387,398 ****
+X  int t0;
+X  
+X  	for (t0 = MAXJOB-1; t0; t0--)
+! 		if (jobtab[t0].stat && jobtab[t0].stat & STAT_STOPPED &&
+X  				t0 != curjob && t0 != thisjob)
+X  			break;
+X  	if (!t0)
+X  		for (t0 = MAXJOB-1; t0; t0--)
+! 			if (jobtab[t0].stat && t0 != curjob && t0 != thisjob)
+X  				break;
+X  	prevjob = (t0) ? t0 : -1;
+X  }
+--- 391,402 ----
+X  int t0;
+X  
+X  	for (t0 = MAXJOB-1; t0; t0--)
+! 		if ((jobtab[t0].stat & STAT_INUSE) && (jobtab[t0].stat & STAT_STOPPED) &&
+X  				t0 != curjob && t0 != thisjob)
+X  			break;
+X  	if (!t0)
+X  		for (t0 = MAXJOB-1; t0; t0--)
+! 			if ((jobtab[t0].stat & STAT_INUSE) && t0 != curjob && t0 != thisjob)
+X  				break;
+X  	prevjob = (t0) ? t0 : -1;
+X  }
+*** src/zsh0/zsh2.00/src/loop.c	Tue Apr 23 00:30:05 1991
+--- zsh2.00/src/loop.c	Fri May  3 20:52:22 1991
+***************
+*** 30,36 ****
+X  */
+X  
+X  #include "zsh.h"
+- #include "funcs.h"
+X  
+X  int execfor(cmd) /**/
+X  Cmd cmd;
+--- 30,35 ----
+***************
+*** 235,241 ****
+X  struct ifcmd *node;
+X  int cj = thisjob;
+X  
+- 	lastval = 0;
+X  	node = cmd->u.ifcmd;
+X  	exiting = 0;
+X  	while (node)
+--- 234,239 ----
+*** src/zsh0/zsh2.00/src/math.c	Wed Apr 24 00:21:22 1991
+--- zsh2.00/src/math.c	Fri May  3 20:52:25 1991
+***************
+*** 31,37 ****
+X  */
+X  
+X  #include "zsh.h"
+- #include "funcs.h"
+X  
+X  static char *ptr;
+X  
+--- 31,36 ----
+***************
+*** 54,73 ****
+X  	RL = right-to-left associativity
+X  	BOO = short-circuiting boolean */
+X  
+! enum xtyp { LR,RL,BOOL };
+X  
+! enum xtok {
+! 	INPAR, OUTPAR, NOT, COMP, POSTPLUS,
+! 	POSTMINUS, UPLUS, UMINUS, AND, XOR,
+! 	OR, MUL, DIV, MOD, PLUS,
+! 	MINUS, SHLEFT, SHRIGHT, LES, LEQ,
+! 	GRE, GEQ, DEQ, NEQ, DAND,
+! 	DOR, DXOR, QUEST, COLON, EQ,
+! 	PLUSEQ, MINUSEQ, MULEQ, DIVEQ, MODEQ,
+! 	ANDEQ, XOREQ, OREQ, SHLEFTEQ, SHRIGHTEQ,
+! 	DANDEQ, DOREQ, DXOREQ, COMMA, EOI,
+! 	PREPLUS, PREMINUS, NUM, ID, TOKCOUNT
+! };
+X  
+X  /* precedences */
+X  
+--- 53,112 ----
+X  	RL = right-to-left associativity
+X  	BOO = short-circuiting boolean */
+X  
+! #define LR 0
+! #define RL 1
+! #define BOOL 2
+X  
+! #define INPAR 0
+! #define OUTPAR 1
+! #define NOT 2
+! #define COMP 3
+! #define POSTPLUS 4
+! #define POSTMINUS 5
+! #define UPLUS 6
+! #define UMINUS 7
+! #define AND 8
+! #define XOR 9
+! #define OR 10
+! #define MUL 11
+! #define DIV 12
+! #define MOD 13
+! #define PLUS 14
+! #define MINUS 15
+! #define SHLEFT 16
+! #define SHRIGHT 17
+! #define LES 18
+! #define LEQ 19
+! #define GRE 20
+! #define GEQ 21
+! #define DEQ 22
+! #define NEQ 23
+! #define DAND 24
+! #define DOR 25
+! #define DXOR 26
+! #define QUEST 27
+! #define COLON 28
+! #define EQ 29
+! #define PLUSEQ 30
+! #define MINUSEQ 31
+! #define MULEQ 32
+! #define DIVEQ 33
+! #define MODEQ 34
+! #define ANDEQ 35
+! #define XOREQ 36
+! #define OREQ 37
+! #define SHLEFTEQ 38
+! #define SHRIGHTEQ 39
+! #define DANDEQ 40
+! #define DOREQ 41
+! #define DXOREQ 42
+! #define COMMA 43
+! #define EOI 44
+! #define PREPLUS 45
+! #define PREMINUS 46
+! #define NUM 47
+! #define ID 48
+! #define TOKCOUNT 49
+X  
+X  /* precedences */
+X  
+***************
+*** 232,238 ****
+X  long setvar(s,v) /**/
+X  LV s;long v;
+X  {
+! 	if (s == -1)
+X  		{
+X  		zerr("lvalue required",NULL,0);
+X  		return 0;
+--- 271,277 ----
+X  long setvar(s,v) /**/
+X  LV s;long v;
+X  {
+! 	if (s == -1 || s >= lvc)
+X  		{
+X  		zerr("lvalue required",NULL,0);
+X  		return 0;
+*** src/zsh0/zsh2.00/src/params.c	Tue Apr 23 11:50:55 1991
+--- zsh2.00/src/params.c	Fri May  3 20:52:28 1991
+***************
+*** 31,40 ****
+X  */
+X  
+X  #include "zsh.h"
+- #include "funcs.h"
+X  #include <pwd.h>
+X  
+! #define new(X) (X=(void*)alloc(sizeof(*(X))))
+X  
+X  static Param argvparam;
+X  
+--- 31,39 ----
+X  */
+X  
+X  #include "zsh.h"
+X  #include <pwd.h>
+X  
+! #define new(X) (X=(vptr)alloc(sizeof(*(X))))
+X  
+X  static Param argvparam;
+X  
+***************
+*** 81,86 ****
+--- 80,86 ----
+X  	"!",&lastpid,				/* read only */
+X  	"$",&mypid,
+X  	"?",&lastval,
++ 	"status",&lastval,
+X  	"LINENO",&lineno,
+X  	"PPID",&ppid,
+X  	NULL,NULL,
+***************
+*** 109,115 ****
+X  	"USERNAME",&username,
+X  	NULL,NULL,
+X  
+! 	"OPTARG",&optarg,		/* read/write */
+X  	"MAIL",&mailfile,
+X  	"prompt",&prompt,
+X  	"PROMPT",&prompt,
+--- 109,116 ----
+X  	"USERNAME",&username,
+X  	NULL,NULL,
+X  
+! 	"FCEDIT",&fceditparam,	/* read/write */
+! 	"OPTARG",&optarg,
+X  	"MAIL",&mailfile,
+X  	"prompt",&prompt,
+X  	"PROMPT",&prompt,
+***************
+*** 265,271 ****
+X  static int unsetflag;
+X  
+X  struct param *createparam(name,value,flags) /**/
+! char *name;void *value;int flags;
+X  {
+X  struct param *pm;
+X  
+--- 266,272 ----
+X  static int unsetflag;
+X  
+X  struct param *createparam(name,value,flags) /**/
+! char *name;vptr value;int flags;
+X  {
+X  struct param *pm;
+X  
+***************
+*** 531,547 ****
+X  			else
+X  				{
+X  				char **ss = (v->pm->gets.afn)(v->pm);
+! 				int act;
+X  
+! 				act = arrlen(ss);
+! 				if (v->a < act)
+X  					{
+! 					free(ss[v->a]);
+! 					ss[v->a] = val;
+! 					(v->pm->sets.afn)(v->pm,ss);
+X  					}
+! 				else
+! 					zerr("illegal array assignment",NULL,0);
+X  				}
+X  			break;
+X  		}
+--- 532,553 ----
+X  			else
+X  				{
+X  				char **ss = (v->pm->gets.afn)(v->pm);
+! 				int ac,ad;
+X  
+! 				if (v->a >= (ac = arrlen(ss)))
+X  					{
+! 					char **st = ss;
+! 
+! 					ad = v->a+1;
+! 					ss = zalloc((ad+1)*sizeof *ss);
+! 					memcpy(ss,st,(ad+1)*sizeof *ss);
+! 					while (ac < ad)
+! 						ss[ac++] = ztrdup("");
+! 					ss[ac] = NULL;
+X  					}
+! 				if (ss[v->a]) free(ss[v->a]);
+! 				ss[v->a] = val;
+! 				(v->pm->sets.afn)(v->pm,ss);
+X  				}
+X  			break;
+X  		}
+***************
+*** 688,700 ****
+X  	switch (pmtype(pm))
+X  		{
+X  		case 0:
+! 			(pm->sets.cfn)(pm,NULL);
+X  			break;
+X  		case PMFLAG_i:
+X  			(pm->sets.ifn)(pm,0);
+X  			break;
+X  		case PMFLAG_A:
+! 			(pm->sets.afn)(pm,NULL);
+X  			break;
+X  		}
+X  	if (pmtype(pm) == PMFLAG_s && (pm->flags & PMFLAG_x))
+--- 694,706 ----
+X  	switch (pmtype(pm))
+X  		{
+X  		case 0:
+! 			(pm->sets.cfn)(pm,ztrdup(""));
+X  			break;
+X  		case PMFLAG_i:
+X  			(pm->sets.ifn)(pm,0);
+X  			break;
+X  		case PMFLAG_A:
+! 			(pm->sets.afn)(pm,mkarray(NULL));
+X  			break;
+X  		}
+X  	if (pmtype(pm) == PMFLAG_s && (pm->flags & PMFLAG_x))
+*** src/zsh0/zsh2.00/src/params.pro	Tue Apr 23 00:30:01 1991
+--- zsh2.00/src/params.pro	Tue May  7 22:53:28 1991
+***************
+*** 1,5 ****
+X  void setupparams DCLPROTO((void));
+! struct param *createparam DCLPROTO((char *name,void *value,int flags));
+X  int isident DCLPROTO((char *s));
+X  Value getvalue DCLPROTO((char **pptr,int bracks));
+X  char *getstrvalue DCLPROTO((Value v));
+--- 1,5 ----
+X  void setupparams DCLPROTO((void));
+! struct param *createparam DCLPROTO((char *name,vptr value,int flags));
+X  int isident DCLPROTO((char *s));
+X  Value getvalue DCLPROTO((char **pptr,int bracks));
+X  char *getstrvalue DCLPROTO((Value v));
+*** src/zsh0/zsh2.00/src/parse.y	Tue Apr 23 00:30:05 1991
+--- zsh2.00/src/parse.y	Mon May  6 06:18:51 1991
+***************
+*** 46,56 ****
+X  %right BANG
+X  %left OUTBRACE OUTANG OUTANGBANG DOUTANG DOUTANGBANG INANG DINANG
+X  %left INANGAMP OUTANGAMP OUTANGAMPBANG DOUTANGAMP DOUTANGAMPBANG
+! %left TRINANG
+X  %left BAR BARAMP DINBRACK DOUTBRACK STRING ENVSTRING
+X  %left ENVARRAY ENDINPUT INOUTPAR
+X  %left DO DONE ESAC THEN ELIF ELSE FI FOR CASE IF WHILE
+X  %left FUNC REPEAT TIME UNTIL EXEC COMMAND SELECT COPROC NOGLOB DASH
+X  %left DOITLATER
+X  
+X  %start event
+--- 46,57 ----
+X  %right BANG
+X  %left OUTBRACE OUTANG OUTANGBANG DOUTANG DOUTANGBANG INANG DINANG
+X  %left INANGAMP OUTANGAMP OUTANGAMPBANG DOUTANGAMP DOUTANGAMPBANG
+! %left TRINANG DINANGDASH
+X  %left BAR BARAMP DINBRACK DOUTBRACK STRING ENVSTRING
+X  %left ENVARRAY ENDINPUT INOUTPAR
+X  %left DO DONE ESAC THEN ELIF ELSE FI FOR CASE IF WHILE
+X  %left FUNC REPEAT TIME UNTIL EXEC COMMAND SELECT COPROC NOGLOB DASH
++ %left NOCORRECT
+X  %left DOITLATER
+X  
+X  %start event
+***************
+*** 83,89 ****
+X  %type <Fnode> redir
+X  %type <fds> redirop BAR
+X  %type <fds> OUTANG OUTANGBANG DOUTANG DOUTANGBANG
+! %type <fds> INANG DINANG INANGAMP OUTANGAMP TRINANG
+X  %type <fds> OUTANGAMPBANG DOUTANGAMP DOUTANGAMPBANG
+X  %type <str> STRING ENVSTRING ENVARRAY word
+X  %type <Table> optinword wordlist
+--- 84,90 ----
+X  %type <Fnode> redir
+X  %type <fds> redirop BAR
+X  %type <fds> OUTANG OUTANGBANG DOUTANG DOUTANGBANG
+! %type <fds> INANG DINANG INANGAMP OUTANGAMP TRINANG DINANGDASH
+X  %type <fds> OUTANGAMPBANG DOUTANGAMP DOUTANGAMPBANG
+X  %type <str> STRING ENVSTRING ENVARRAY word
+X  %type <Table> optinword wordlist
+***************
+*** 165,170 ****
+--- 166,173 ----
+X  						{ $$ = $2; $$->flags |= CFLAG_EXEC; }
+X  					| NOGLOB simplecommand
+X  						{ $$ = $2; $$->flags |= CFLAG_NOGLOB; }
++ 					| NOCORRECT { nocorrect = 1; } simplecommand
++ 						{ $$ = $3; }
+X  					| DASH simplecommand
+X  						{ $$ = $2; $$->flags |= CFLAG_DASH; }
+X  					| stufflist { $$ = $1;
+***************
+*** 206,213 ****
+X  				{ $$ = makecnode(SUBSH); $$->u.list = $2; }
+X  			| INBRACE list OUTBRACE
+X  				{ $$ = makecnode(CURSH); $$->u.list = $2; }
+! 			| FUNC wordlist INBRACE list OUTBRACE
+! 				{ $$ = makefuncdef($2,$4); }
+X  			| TIME sublist2
+X  				{ $$ = makecnode(ZCTIME); $$->u.pline = $2; }
+X  			| DINBRACK cond DOUTBRACK
+--- 209,216 ----
+X  				{ $$ = makecnode(SUBSH); $$->u.list = $2; }
+X  			| INBRACE list OUTBRACE
+X  				{ $$ = makecnode(CURSH); $$->u.list = $2; }
+! 			| FUNC wordlist optbreak INBRACE list OUTBRACE
+! 				{ $$ = makefuncdef($2,$5); }
+X  			| TIME sublist2
+X  				{ $$ = makecnode(ZCTIME); $$->u.pline = $2; }
+X  			| DINBRACK cond DOUTBRACK
+***************
+*** 249,254 ****
+--- 252,258 ----
+X  			| DOUTANGBANG { $$.fd1 = $1.fd1; $$.fd2 = APPNOW; }
+X  			| INANG { $$.fd1 = $1.fd1; $$.fd2 = READ; }
+X  			| DINANG { $$.fd1 = $1.fd1; $$.fd2 = HEREDOC; }
++ 			| DINANGDASH { $$.fd1 = $1.fd1; $$.fd2 = HEREDOCDASH; }
+X  			| INANGAMP { $$.fd1 = $1.fd1; $$.fd2 = MERGE; }
+X  			| OUTANGAMP { $$.fd1 = $1.fd1; $$.fd2 = MERGEOUT; }
+X  			| OUTANGAMPBANG { $$.fd1 = $1.fd1; $$.fd2 = MERGEOUTNOW; }
+***************
+*** 328,336 ****
+X  			}
+X  		fn->name = toks;
+X  		}
+! 	else if (fn->type == HEREDOC)
+X  		{
+! 		fn->name = gethere(toks);
+X  		fn->type = HERESTR;
+X  		}
+X  	else if (fn->type >= MERGEOUT && fn->type <= ERRAPPNOW &&
+--- 332,340 ----
+X  			}
+X  		fn->name = toks;
+X  		}
+! 	else if (fn->type == HEREDOC || fn->type == HEREDOCDASH)
+X  		{
+! 		fn->name = gethere(toks,fn->type);
+X  		fn->type = HERESTR;
+X  		}
+X  	else if (fn->type >= MERGEOUT && fn->type <= ERRAPPNOW &&
+*** src/zsh0/zsh2.00/src/subst.c	Tue Apr 23 00:30:05 1991
+--- zsh2.00/src/subst.c	Fri May 10 06:25:22 1991
+***************
+*** 31,37 ****
+X  */
+X  
+X  #include "zsh.h"
+- #include "funcs.h"
+X  #include <pwd.h>
+X  
+X  /* do substitutions before fork */
+--- 31,36 ----
+***************
+*** 68,74 ****
+X  				if (str[1] != Inpar)
+X  					if (str[1] == Inbrack)
+X  						{
+! 						arithsubst((void **) &str,&str3);	/* $[...] */
+X  						setdata(node,str3);
+X  						}
+X  					else
+--- 67,73 ----
+X  				if (str[1] != Inpar)
+X  					if (str[1] == Inbrack)
+X  						{
+! 						arithsubst((vptr*) &str,&str3);	/* $[...] */
+X  						setdata(node,str3);
+X  						}
+X  					else
+***************
+*** 162,169 ****
+X  
+X  /* strdup, but returns "Nularg" if this is a null string */
+X  
+! void *nstrdup(s) /**/
+! void *s;
+X  {
+X  char *t = s;
+X  char u[2];
+--- 161,168 ----
+X  
+X  /* strdup, but returns "Nularg" if this is a null string */
+X  
+! vptr nstrdup(s) /**/
+! vptr s;
+X  {
+X  char *t = s;
+X  char u[2];
+***************
+*** 257,263 ****
+X  		char *ptr,*s,*ds;
+X  		int val;
+X  		
+- 		untokenize(str);
+X  		if (ialpha(str[1]))		/* =foo */
+X  			{
+X  			struct cmdnam *chn;
+--- 256,261 ----
+***************
+*** 267,273 ****
+X  			for (pp = str+1; *pp && *pp != ':'; pp++);
+X  			sav = *pp;
+X  			*pp = '\0';
+! 			if ((t = gethnode(str+1,aliastab)) && t->cmd)
+X  				if (t->cmd >= 0)
+X  					cnam = strdup(t->text);
+X  				else
+--- 265,271 ----
+X  			for (pp = str+1; *pp && *pp != ':'; pp++);
+X  			sav = *pp;
+X  			*pp = '\0';
+! 			if ((t = (Alias) gethnode(str+1,aliastab)) && t->cmd)
+X  				if (t->cmd >= 0)
+X  					cnam = strdup(t->text);
+X  				else
+***************
+*** 276,282 ****
+X  					errflag = 1;
+X  					return 0;
+X  					}
+! 		 	else if (chn = gethnode(str+1,cmdnamtab))
+X  				if (chn->type != BUILTIN && chn->type != SHFUNC)
+X  					cnam = strdup(chn->u.nam);
+X  				else
+--- 274,280 ----
+X  					errflag = 1;
+X  					return 0;
+X  					}
+! 		 	else if (chn = (Cmdnam) gethnode(str+1,cmdnamtab))
+X  				if (chn->type != BUILTIN && chn->type != SHFUNC)
+X  					cnam = strdup(chn->u.nam);
+X  				else
+***************
+*** 328,333 ****
+--- 326,333 ----
+X  char sav,*str;
+X  struct passwd *pw;
+X   
++ 	if (len == 0)
++ 		return strdup(home);
+X  	sav = user[len];
+X  	user[len] = '\0';
+X  	if (str = getsparamval(user,len))
+***************
+*** 480,491 ****
+X  				case PMFLAG_l:
+X  					t = val;
+X  					for (;*t;t++)
+! 						*t = tolower(*t);
+X  					break;
+X  				case PMFLAG_u:
+X  					t = val;
+X  					for (;*t;t++)
+! 						*t = toupper(*t);
+X  					break;
+X  				}
+X  			}
+--- 480,491 ----
+X  				case PMFLAG_l:
+X  					t = val;
+X  					for (;*t;t++)
+! 						*t = tulower(*t);
+X  					break;
+X  				case PMFLAG_u:
+X  					t = val;
+X  					for (;*t;t++)
+! 						*t = tuupper(*t);
+X  					break;
+X  				}
+X  			}
+***************
+*** 517,523 ****
+X  			while (*s++);
+X  			s--;
+X  			}
+! 		*s = '\0';
+X  		if (colf && !vunset)
+X  			vunset = !*val;
+X  		switch (u[-1])
+--- 517,523 ----
+X  			while (*s++);
+X  			s--;
+X  			}
+! 		*s++ = '\0';
+X  		if (colf && !vunset)
+X  			vunset = !*val;
+X  		switch (u[-1])
+***************
+*** 638,643 ****
+--- 638,646 ----
+X  			val = spacejoin(aval);
+X  		isarr = 1;
+X  		aval = spacesplit(val);
++ 		/* if only one member, not really an array */
++ 		if (!aval[1])
++ 			isarr = 0;
+X  		}
+X  	if (isarr)
+X  		if (plan9)
+***************
+*** 688,694 ****
+X  /* arithmetic substitution */
+X  
+X  void arithsubst(aptr,bptr) /**/
+! void **aptr;char **bptr;
+X  {
+X  char *s = *aptr,*t,buf[16];
+X  long v;
+--- 691,697 ----
+X  /* arithmetic substitution */
+X  
+X  void arithsubst(aptr,bptr) /**/
+! vptr *aptr;char **bptr;
+X  {
+X  char *s = *aptr,*t,buf[16];
+X  long v;
+***************
+*** 785,791 ****
+X  struct alias *mkanode(txt,cmflag) /**/
+X  char *txt;int cmflag;
+X  {
+! struct alias *ptr = (void *) zcalloc(sizeof *ptr);
+X  
+X  	ptr->text  = txt;
+X  	ptr->cmd = cmflag;
+--- 788,794 ----
+X  struct alias *mkanode(txt,cmflag) /**/
+X  char *txt;int cmflag;
+X  {
+! struct alias *ptr = (Alias) zcalloc(sizeof *ptr);
+X  
+X  	ptr->text  = txt;
+X  	ptr->cmd = cmflag;
+*** src/zsh0/zsh2.00/src/table.c	Tue Apr 23 00:30:05 1991
+--- zsh2.00/src/table.c	Fri May  3 20:52:32 1991
+***************
+*** 32,38 ****
+X  
+X  #define TABLE_C
+X  #include "zsh.h"
+- #include "funcs.h"
+X  
+X  /* get an empty linked list header */
+X  
+--- 32,37 ----
+***************
+*** 40,46 ****
+X  {
+X  Lklist list;
+X   
+! 	list = alloc(sizeof *list);
+X  	list->first = 0;
+X  	list->last = (Lknode) list;
+X  	return list;
+--- 39,45 ----
+X  {
+X  Lklist list;
+X   
+! 	list = (Lklist) alloc(sizeof *list);
+X  	list->first = 0;
+X  	list->last = (Lknode) list;
+X  	return list;
+***************
+*** 53,61 ****
+X  {
+X  Hashtab ret;
+X   
+! 	ret = zcalloc(sizeof *ret);
+X  	ret->hsize = size;
+! 	ret->nodes = zcalloc(size*sizeof(Hashnode));
+X  	return ret;
+X  }
+X   
+--- 52,60 ----
+X  {
+X  Hashtab ret;
+X   
+! 	ret = (Hashtab) zcalloc(sizeof *ret);
+X  	ret->hsize = size;
+! 	ret->nodes = (Hashnode*) zcalloc(size*sizeof(Hashnode));
+X  	return ret;
+X  }
+X   
+***************
+*** 81,87 ****
+X  /* add a node to a hash table */
+X  
+X  void Addhnode(nam,dat,ht,freefunc,canfree) /**/
+! char *nam;void *dat;Hashtab ht;FFunc freefunc;int canfree;
+X  {
+X  int hval = hasher(nam) % ht->hsize;
+X  struct hashnode *hp = ht->nodes[hval],*hn;
+--- 80,86 ----
+X  /* add a node to a hash table */
+X  
+X  void Addhnode(nam,dat,ht,freefunc,canfree) /**/
+! char *nam;vptr dat;Hashtab ht;FFunc freefunc;int canfree;
+X  {
+X  int hval = hasher(nam) % ht->hsize;
+X  struct hashnode *hp = ht->nodes[hval],*hn;
+***************
+*** 102,108 ****
+X  			hp->canfree = canfree;
+X  			return;
+X  			}
+! 	hn = (void *) zcalloc(sizeof *hn);
+X  	hn->nam = nam;
+X  	hn->dat = dat;
+X  	hn->canfree = canfree;
+--- 101,107 ----
+X  			hp->canfree = canfree;
+X  			return;
+X  			}
+! 	hn = (Hashnode) zcalloc(sizeof *hn);
+X  	hn->nam = nam;
+X  	hn->dat = dat;
+X  	hn->canfree = canfree;
+***************
+*** 122,128 ****
+X  
+X  	ht->hsize = nsize;
+X  	arr = ht->nodes;
+! 	ht->nodes = zcalloc(nsize*sizeof(struct hashnode *));
+X  	for (ha = arr; osize; osize--,ha++)
+X  		for (hn = *ha; hn; )
+X  			{
+--- 121,127 ----
+X  
+X  	ht->hsize = nsize;
+X  	arr = ht->nodes;
+! 	ht->nodes = (Hashnode*) zcalloc(nsize*sizeof(struct hashnode *));
+X  	for (ha = arr; osize; osize--,ha++)
+X  		for (hn = *ha; hn; )
+X  			{
+***************
+*** 136,142 ****
+X  
+X  /* get an entry in a hash table */
+X  
+! void *gethnode(nam,ht) /**/
+X  char *nam;Hashtab ht;
+X  {
+X  int hval = hasher(nam) % ht->hsize;
+--- 135,141 ----
+X  
+X  /* get an entry in a hash table */
+X  
+! vptr gethnode(nam,ht) /**/
+X  char *nam;Hashtab ht;
+X  {
+X  int hval = hasher(nam) % ht->hsize;
+***************
+*** 166,177 ****
+X  
+X  /* remove a hash table entry and return a pointer to it */
+X  
+! void *remhnode(nam,ht) /**/
+X  char *nam;Hashtab ht;
+X  {
+X  int hval = hasher(nam) % ht->hsize;
+X  struct hashnode *hn = ht->nodes[hval],*hp;
+! void *dat;
+X  
+X  	if (!hn)
+X  		return NULL;
+--- 165,176 ----
+X  
+X  /* remove a hash table entry and return a pointer to it */
+X  
+! vptr remhnode(nam,ht) /**/
+X  char *nam;Hashtab ht;
+X  {
+X  int hval = hasher(nam) % ht->hsize;
+X  struct hashnode *hn = ht->nodes[hval],*hp;
+! vptr dat;
+X  
+X  	if (!hn)
+X  		return NULL;
+***************
+*** 202,213 ****
+X  /* insert a node in a linked list after 'llast' */
+X  
+X  void insnode(list,llast,dat) /**/
+! Lklist list;Lknode llast;void *dat;
+X  {
+X  Lknode tmp;
+X   
+X  	tmp = llast->next;
+! 	llast->next = alloc(sizeof *tmp);
+X  	llast->next->last = llast;
+X  	llast->next->dat = dat;
+X  	llast->next->next = tmp;
+--- 201,212 ----
+X  /* insert a node in a linked list after 'llast' */
+X  
+X  void insnode(list,llast,dat) /**/
+! Lklist list;Lknode llast;vptr dat;
+X  {
+X  Lknode tmp;
+X   
+X  	tmp = llast->next;
+! 	llast->next = (Lknode) alloc(sizeof *tmp);
+X  	llast->next->last = llast;
+X  	llast->next->dat = dat;
+X  	llast->next->next = tmp;
+***************
+*** 217,228 ****
+X  		list->last = llast->next;
+X  }
+X  
+X  /* remove a node from a linked list */
+X  
+! void *remnode(list,nd) /**/
+X  Lklist list;Lknode nd;
+X  {
+! void *dat;
+X  
+X  	nd->last->next = nd->next;
+X  	if (nd->next)
+--- 216,244 ----
+X  		list->last = llast->next;
+X  }
+X  
++ void addnodeinorder(x,dat) /**/
++ Lklist x; char *dat;
++ {
++ Lknode y, l = NULL;
++ 
++ 	for (y = firstnode(x); y; incnode(y)) {
++ 		if (forstrcmp(&y->dat, &dat) >= 0) 
++ 			break;
++ 		l = y;
++ 	}
++ 	if (l == NULL)
++ 		insnode(x, x, dat);
++ 	else
++ 		insnode(x, l, dat);
++ }
++ 
++ 
+X  /* remove a node from a linked list */
+X  
+! vptr remnode(list,nd) /**/
+X  Lklist list;Lknode nd;
+X  {
+! vptr dat;
+X  
+X  	nd->last->next = nd->next;
+X  	if (nd->next)
+***************
+*** 236,245 ****
+X  
+X  /* remove a node from a linked list */
+X  
+! void *uremnode(list,nd) /**/
+X  Lklist list;Lknode nd;
+X  {
+! void *dat;
+X  
+X  	nd->last->next = nd->next;
+X  	if (nd->next)
+--- 252,261 ----
+X  
+X  /* remove a node from a linked list */
+X  
+! vptr uremnode(list,nd) /**/
+X  Lklist list;Lknode nd;
+X  {
+! vptr dat;
+X  
+X  	nd->last->next = nd->next;
+X  	if (nd->next)
+***************
+*** 261,270 ****
+X  
+X  /* get top node in a linked list */
+X  
+! void *getnode(list) /**/
+X  Lklist list;
+X  {
+! void *dat;
+X  Lknode node = list->first;
+X   
+X  	if (!node)
+--- 277,286 ----
+X  
+X  /* get top node in a linked list */
+X  
+! vptr getnode(list) /**/
+X  Lklist list;
+X  {
+! vptr dat;
+X  Lknode node = list->first;
+X   
+X  	if (!node)
+***************
+*** 281,290 ****
+X  
+X  /* get top node in a linked list without freeing */
+X  
+! void *ugetnode(list) /**/
+X  Lklist list;
+X  {
+! void *dat;
+X  Lknode node = list->first;
+X   
+X  	if (!node)
+--- 297,306 ----
+X  
+X  /* get top node in a linked list without freeing */
+X  
+! vptr ugetnode(list) /**/
+X  Lklist list;
+X  {
+! vptr dat;
+X  Lknode node = list->first;
+X   
+X  	if (!node)
+*** src/zsh0/zsh2.00/src/text.c	Tue Apr 23 00:30:05 1991
+--- zsh2.00/src/text.c	Fri May  3 20:52:34 1991
+***************
+*** 31,37 ****
+X  */
+X  
+X  #include "zsh.h"
+- #include "funcs.h"
+X  
+X  static char *tptr,*tbuf,*tlim;
+X  static int tsiz,tindent,tnewlins;
+--- 31,36 ----
+*** src/zsh0/zsh2.00/src/utils.c	Tue Apr 23 11:42:30 1991
+--- zsh2.00/src/utils.c	Tue May  7 23:02:59 1991
+***************
+*** 30,36 ****
+X  */
+X  
+X  #include "zsh.h"
+- #include "funcs.h"
+X  #include <pwd.h>
+X  #include <errno.h>
+X  #include <sys/dir.h>
+--- 30,35 ----
+***************
+*** 126,133 ****
+X  						errflag = 1;
+X  						return;
+X  						}
+! 					fputc(tolower(sys_errlist[num][0]),stderr);
+! 					fputs(sys_errlist[num]+1,stderr);
+X  					break;
+X  				}
+X  			}
+--- 125,137 ----
+X  						errflag = 1;
+X  						return;
+X  						}
+! 					if (num == EIO)
+! 						fputs(sys_errlist[num],stderr);
+! 					else
+! 						{
+! 						fputc(tulower(sys_errlist[num][0]),stderr);
+! 						fputs(sys_errlist[num]+1,stderr);
+! 						}
+X  					break;
+X  				}
+X  			}
+***************
+*** 156,167 ****
+X  {
+X  	if (itok(c))
+X  		{
+! 		if (c >= Pound && c <= Qtick)
+X  			putc(ztokens[c-Pound],f);
+X  		return;
+X  		}
+X  	c &= 0x7f;
+! 	if (c >= ' ' && c < '\x7f')
+X  		putc(c,f);
+X  	else if (c == '\n')
+X  		{
+--- 160,171 ----
+X  {
+X  	if (itok(c))
+X  		{
+! 		if (c >= Pound && c <= Comma)
+X  			putc(ztokens[c-Pound],f);
+X  		return;
+X  		}
+X  	c &= 0x7f;
+! 	if (c >= ' ' && c < 0x7f)
+X  		putc(c,f);
+X  	else if (c == '\n')
+X  		{
+***************
+*** 626,632 ****
+X  					ct++;
+X  					}
+X  				closedir(lock);
+! 				ap = arr = alloc(ct*sizeof(char *));
+X  				while (*ap++ = ugetnode(l));
+X  				checkmailpath(arr);
+X  				popheap();
+--- 630,636 ----
+X  					ct++;
+X  					}
+X  				closedir(lock);
+! 				ap = arr = (char **) alloc(ct*sizeof(char *));
+X  				while (*ap++ = ugetnode(l));
+X  				checkmailpath(arr);
+X  				popheap();
+***************
+*** 675,681 ****
+X  
+X  	if (y->type == SHFUNC)
+X  		{
+! 		cc = zcalloc(sizeof *cc);
+X  		*cc = *y;
+X  		y->u.list = NULL;
+X  		addhnode(ztrdup(x),cc,cmdnamtab,freecmdnam);
+--- 679,685 ----
+X  
+X  	if (y->type == SHFUNC)
+X  		{
+! 		cc = (Cmdnam) zcalloc(sizeof *cc);
+X  		*cc = *y;
+X  		y->u.list = NULL;
+X  		addhnode(ztrdup(x),cc,cmdnamtab,freecmdnam);
+***************
+*** 724,730 ****
+X  			readdir(dir); readdir(dir);
+X  			while (de = readdir(dir))
+X  				{
+! 				cc = zcalloc(sizeof *cc);
+X  				cc->type = (dot) ? EXCMD_POSTDOT : EXCMD_PREDOT;
+X  				cc->u.nam = tricat(path[t0],"/",de->d_name);
+X  				addhnode(ztrdup(de->d_name),cc,cmdnamtab,freecmdnam);
+--- 728,734 ----
+X  			readdir(dir); readdir(dir);
+X  			while (de = readdir(dir))
+X  				{
+! 				cc = (Cmdnam) zcalloc(sizeof *cc);
+X  				cc->type = (dot) ? EXCMD_POSTDOT : EXCMD_PREDOT;
+X  				cc->u.nam = tricat(path[t0],"/",de->d_name);
+X  				addhnode(ztrdup(de->d_name),cc,cmdnamtab,freecmdnam);
+***************
+*** 742,748 ****
+X  }
+X  
+X  void freecmdnam(a) /**/
+! void *a;
+X  {
+X  struct cmdnam *c = (struct cmdnam *) a;
+X  
+--- 746,752 ----
+X  }
+X  
+X  void freecmdnam(a) /**/
+! vptr a;
+X  {
+X  struct cmdnam *c = (struct cmdnam *) a;
+X  
+***************
+*** 757,769 ****
+X  }
+X  
+X  void freestr(a) /**/
+! void *a;
+X  {
+X  	free(a);
+X  }
+X  
+X  void freeanode(a) /**/
+! void *a;
+X  {
+X  struct alias *c = (struct alias *) a;
+X  
+--- 761,773 ----
+X  }
+X  
+X  void freestr(a) /**/
+! vptr a;
+X  {
+X  	free(a);
+X  }
+X  
+X  void freeanode(a) /**/
+! vptr a;
+X  {
+X  struct alias *c = (struct alias *) a;
+X  
+***************
+*** 772,780 ****
+X  }
+X  
+X  void freepm(a) /**/
+! void *a;
+X  {
+! struct param *pm = a;
+X  
+X  	free(pm);
+X  }
+--- 776,784 ----
+X  }
+X  
+X  void freepm(a) /**/
+! vptr a;
+X  {
+! struct param *pm = (Param) a;
+X  
+X  	free(pm);
+X  }
+***************
+*** 787,807 ****
+X  void gettyinfo(ti) /**/
+X  struct ttyinfo *ti;
+X  {
+! 	if (jobbing)
+X  		{
+X  #ifdef TERMIOS
+! 		ioctl(SHTTY,TCGETS,&ti->termios);
+X  #else
+X  #ifdef TERMIO
+X  		ioctl(SHTTY,TCGETA,&ti->termio);
+X  #else
+X  		ioctl(SHTTY,TIOCGETP,&ti->sgttyb);
+X  		ioctl(SHTTY,TIOCGETC,&ti->tchars);
+X  		ioctl(SHTTY,TIOCGLTC,&ti->ltchars);
+X  #endif
+X  #endif
+X  #ifdef TIOCGWINSZ
+! 		ioctl(SHTTY,TIOCGWINSZ,&ti->winsize);
+X  #endif
+X  		}
+X  }
+--- 791,814 ----
+X  void gettyinfo(ti) /**/
+X  struct ttyinfo *ti;
+X  {
+! 	if (SHTTY != -1)
+X  		{
+X  #ifdef TERMIOS
+! 		if (ioctl(SHTTY,TCGETS,&ti->termios) == -1)
+! 			zerr("bad tcgets: %e",NULL,errno);
+X  #else
+X  #ifdef TERMIO
+X  		ioctl(SHTTY,TCGETA,&ti->termio);
+X  #else
+X  		ioctl(SHTTY,TIOCGETP,&ti->sgttyb);
++ 		ioctl(SHTTY,TIOCLGET,&ti->lmodes);
+X  		ioctl(SHTTY,TIOCGETC,&ti->tchars);
+X  		ioctl(SHTTY,TIOCGLTC,&ti->ltchars);
+X  #endif
+X  #endif
+X  #ifdef TIOCGWINSZ
+! 		if (ioctl(SHTTY,TIOCGWINSZ,&ti->winsize) == -1)
+! 			zerr("bad tiocgwinsz: %e",NULL,errno);
+X  #endif
+X  		}
+X  }
+***************
+*** 809,823 ****
+X  void settyinfo(ti) /**/
+X  struct ttyinfo *ti;
+X  {
+! 	if (jobbing)
+X  		{
+X  #ifdef TERMIOS
+! 		ioctl(SHTTY,TCSETS,&ti->termios);
+X  #else
+X  #ifdef TERMIO
+X  		ioctl(SHTTY,TCSETA,&ti->termio);
+X  #else
+X  		ioctl(SHTTY,TIOCSETN,&ti->sgttyb);
+X  		ioctl(SHTTY,TIOCSETC,&ti->tchars);
+X  		ioctl(SHTTY,TIOCSLTC,&ti->ltchars);
+X  #endif
+--- 816,832 ----
+X  void settyinfo(ti) /**/
+X  struct ttyinfo *ti;
+X  {
+! 	if (SHTTY != -1)
+X  		{
+X  #ifdef TERMIOS
+! 		if (ioctl(SHTTY,TCSETS,&ti->termios) == -1)
+! 			zerr("settyinfo: %e",NULL,errno);
+X  #else
+X  #ifdef TERMIO
+X  		ioctl(SHTTY,TCSETA,&ti->termio);
+X  #else
+X  		ioctl(SHTTY,TIOCSETN,&ti->sgttyb);
++ 		ioctl(SHTTY,TIOCLSET,&ti->lmodes);
+X  		ioctl(SHTTY,TIOCSETC,&ti->tchars);
+X  		ioctl(SHTTY,TIOCSLTC,&ti->ltchars);
+X  #endif
+***************
+*** 824,835 ****
+X  #endif
+X  #ifdef TIOCGWINSZ
+X  		signal(SIGWINCH,SIG_IGN);
+! 		ioctl(SHTTY,TIOCSWINSZ,&ti->winsize);
+X  		signal(SIGWINCH,handler);
+X  #endif
+X  		}
+X  }
+X  
+X  void adjustwinsize() /**/
+X  {
+X  #ifdef TIOCGWINSZ
+--- 833,876 ----
+X  #endif
+X  #ifdef TIOCGWINSZ
+X  		signal(SIGWINCH,SIG_IGN);
+! 		if (ioctl(SHTTY,TIOCSWINSZ,&ti->winsize) == -1)
+! 			zerr("settyinfo: %e",NULL,errno);
+X  		signal(SIGWINCH,handler);
+X  #endif
+X  		}
+X  }
+X  
++ #define SANEKEY(X) \
++ 	if (ti->X == -1 && savedttyinfo.X != -1) ti->X = savedttyinfo.X;
++ 
++ void sanetty(ti) /**/
++ struct ttyinfo *ti;
++ {
++ int t0;
++ 
++ #ifdef TERMIOS
++ 	ti->termios.c_lflag |= ICANON|ECHO;
++ 	for (t0 = 0; t0 != NCCS; t0++)
++ 		if (!ti->termios.c_cc[t0] && savedttyinfo.termios.c_cc[t0])
++ 			ti->termios.c_cc[t0] = savedttyinfo.termios.c_cc[t0];
++ #else
++ #ifdef TERMIO
++ 	ti->termio.c_lflag |= ICANON|ECHO;
++ 	for (t0 = 0; t0 != NCC; t0++)
++ 		if (!ti->termio.c_cc[t0] && savedttyinfo.termio.c_cc[t0])
++ 			ti->termio.c_cc[t0] = savedttyinfo.termio.c_cc[t0];
++ #else
++ 	ti->sgttyb.sg_flags = (ti->sgttyb.sg_flags & ~CBREAK) | ECHO;
++ 	SANEKEY(tchars.t_quitc);
++ 	SANEKEY(tchars.t_startc);
++ 	SANEKEY(tchars.t_stopc);
++ 	SANEKEY(ltchars.t_suspc);
++ 	SANEKEY(ltchars.t_dsuspc);
++ 	SANEKEY(ltchars.t_lnextc);
++ #endif
++ #endif
++ }
++ 
+X  void adjustwinsize() /**/
+X  {
+X  #ifdef TIOCGWINSZ
+***************
+*** 963,969 ****
+X  			signal(t0,handler);
+X  		sigtrapped[t0] = 1;
+X  		permalloc();
+! 		sigfuncs[t0] = dupstruct(l);
+X  		heapalloc();
+X  		}
+X  }
+--- 1004,1010 ----
+X  			signal(t0,handler);
+X  		sigtrapped[t0] = 1;
+X  		permalloc();
+! 		sigfuncs[t0] = (List) dupstruct(l);
+X  		heapalloc();
+X  		}
+X  }
+***************
+*** 1068,1075 ****
+X  
+X  /* spellcheck a word */
+X  
+! void spckword(s,cmd) /**/
+! char **s;int cmd;
+X  {
+X  char *t,*u;
+X  int x;
+--- 1109,1116 ----
+X  
+X  /* spellcheck a word */
+X  
+! void spckword(s,s2,cmd,ask) /**/
+! char **s;char **s2;int cmd;int ask;
+X  {
+X  char *t,*u;
+X  int x;
+***************
+*** 1100,1111 ****
+X  		}
+X  	if (best && strlen(best) > 1)
+X  		{
+! 		fprintf(stderr,"zsh: correct to `%s' (y/n)? ",best);
+! 		fflush(stderr);
+! 		feep();
+! 		x = getquery();
+X  		if (x == 'y')
+X  			*s = strdup(best);
+X  		}
+X  }
+X  
+--- 1141,1160 ----
+X  		}
+X  	if (best && strlen(best) > 1)
+X  		{
+! 		if (ask) {
+! 			fprintf(stderr,"zsh: correct to `%s' (y/n)? ",best);
+! 			fflush(stderr);
+! 			feep();
+! 			x = getquery();
+! 		}
+! 		else
+! 			x = 'y';
+X  		if (x == 'y')
++ 			{
+X  			*s = strdup(best);
++ 			if (s2)
++ 				*s2 = strdup(best);
++ 			}
+X  		}
+X  }
+X  
+***************
+*** 1245,1251 ****
+X  	t = s;
+X  	do
+X  		{
+! 		for (s = t; *t && !iblank(*t); t++);
+X  		*ptr = zalloc((t-s)+1);
+X  		strncpy(*ptr,s,(t-s)+1);
+X  		(*ptr++)[t-s] = '\0';
+--- 1294,1300 ----
+X  	t = s;
+X  	do
+X  		{
+! 		for (s = t; *t && !inblank(*t); t++);
+X  		*ptr = zalloc((t-s)+1);
+X  		strncpy(*ptr,s,(t-s)+1);
+X  		(*ptr++)[t-s] = '\0';
+***************
+*** 1258,1264 ****
+X  List getshfunc(nam) /**/
+X  char *nam;
+X  {
+! Cmdnam x = gethnode(nam,cmdnamtab);
+X  
+X  	return (x && x->type == SHFUNC) ? x->u.list : NULL;
+X  }
+--- 1307,1313 ----
+X  List getshfunc(nam) /**/
+X  char *nam;
+X  {
+! Cmdnam x = (Cmdnam) gethnode(nam,cmdnamtab);
+X  
+X  	return (x && x->type == SHFUNC) ? x->u.list : NULL;
+X  }
+***************
+*** 1265,1275 ****
+X  
+X  /* allocate a tree element */
+X  
+! void *allocnode(type) /**/
+X  int type;
+X  {
+X  int t0;
+! struct node *n = alloc(sizeof *n);
+X  static int typetab[N_COUNT][4] = {
+X  	NT_NODE,NT_NODE,0,0,
+X  	NT_NODE,NT_NODE,0,0,
+--- 1314,1324 ----
+X  
+X  /* allocate a tree element */
+X  
+! vptr allocnode(type) /**/
+X  int type;
+X  {
+X  int t0;
+! struct node *n = (struct node *) alloc(sizeof *n);
+X  static int typetab[N_COUNT][4] = {
+X  	NT_NODE,NT_NODE,0,0,
+X  	NT_NODE,NT_NODE,0,0,
+***************
+*** 1287,1299 ****
+X  	n->type = type;
+X  	for (t0 = 0; t0 != 4; t0++)
+X  		n->types[t0] = typetab[type][t0];
+! 	return n;
+X  }
+X  
+X  /* duplicate a syntax tree */
+X  
+! void *dupstruct(a) /**/
+! void *a;
+X  {
+X  struct node *n = a,*m;
+X  int t0;
+--- 1336,1348 ----
+X  	n->type = type;
+X  	for (t0 = 0; t0 != 4; t0++)
+X  		n->types[t0] = typetab[type][t0];
+! 	return (vptr) n;
+X  }
+X  
+X  /* duplicate a syntax tree */
+X  
+! vptr dupstruct(a) /**/
+! vptr a;
+X  {
+X  struct node *n = a,*m;
+X  int t0;
+***************
+*** 1314,1328 ****
+X  						((useheap) ? strdup : ztrdup));
+X  					break;
+X  				}
+! 	return (void *) m;
+X  }
+X  
+X  /* free a syntax tree */
+X  
+X  void freestruct(a) /**/
+! void *a;
+X  {
+! struct node *n = a;
+X  int t0;
+X  
+X  	for (t0 = 0; t0 != 4; t0++)
+--- 1363,1377 ----
+X  						((useheap) ? strdup : ztrdup));
+X  					break;
+X  				}
+! 	return (vptr) m;
+X  }
+X  
+X  /* free a syntax tree */
+X  
+X  void freestruct(a) /**/
+! vptr a;
+X  {
+! struct node *n = (struct node *) a;
+X  int t0;
+X  
+X  	for (t0 = 0; t0 != 4; t0++)
+***************
+*** 1424,1430 ****
+X  		typtab[t0] = IDIGIT|IALNUM|IWORD|IIDENT|IUSER;
+X  	for (t0 = 'a'; t0 <= 'z'; t0++)
+X  		typtab[t0] = typtab[t0-'a'+'A'] = IALPHA|IALNUM|IIDENT|IUSER|IWORD;
+! 	typtab['_'] = IIDENT;
+X  	typtab['-'] = IUSER;
+X  	typtab[' '] |= IBLANK|INBLANK;
+X  	typtab['\t'] |= IBLANK|INBLANK;
+--- 1473,1481 ----
+X  		typtab[t0] = IDIGIT|IALNUM|IWORD|IIDENT|IUSER;
+X  	for (t0 = 'a'; t0 <= 'z'; t0++)
+X  		typtab[t0] = typtab[t0-'a'+'A'] = IALPHA|IALNUM|IIDENT|IUSER|IWORD;
+! 	for (t0 = 0240; t0 != 0400; t0++)
+! 		typtab[t0] = IALPHA|IALNUM|IIDENT|IUSER|IWORD;
+! 	typtab['_'] = IIDENT|IUSER;
+X  	typtab['-'] = IUSER;
+X  	typtab[' '] |= IBLANK|INBLANK;
+X  	typtab['\t'] |= IBLANK|INBLANK;
+***************
+*** 1446,1452 ****
+X  {
+X  char **x,**y;
+X  
+! 	y = x = ncalloc(sizeof(char *)*(arrlen(s)+1));
+X  	while (*x++ = strdup(*s++));
+X  	return y;
+X  }
+--- 1497,1503 ----
+X  {
+X  char **x,**y;
+X  
+! 	y = x = (char **) ncalloc(sizeof(char *)*(arrlen(s)+1));
+X  	while (*x++ = strdup(*s++));
+X  	return y;
+X  }
+***************
+*** 1527,1539 ****
+X  	if (!strcmp(s,t))
+X  		return 0;
+X  	/* any number of upper/lower mistakes allowed (dist = 1) */
+! 	for (p = s, q = t; *p && tolower(*p) == tolower(*q); p++,q++);
+X  	if (!*p && !*q)
+X  		return 1;
+X  	if (!thresh)
+X  		return 200;
+X  	for (p = s, q = t; *p && *q; p++,q++)
+! 		if (p[1] == q[0] && q[1] == p[0])  /* transpositions */
+X  			return spdist(p+2,q+2,thresh-1)+1;
+X  		else if (p[1] == q[0])	/* missing letter */
+X  			return spdist(p+1,q+0,thresh-1)+2;
+--- 1578,1591 ----
+X  	if (!strcmp(s,t))
+X  		return 0;
+X  	/* any number of upper/lower mistakes allowed (dist = 1) */
+! 	for (p = s, q = t; *p && tulower(*p) == tulower(*q); p++,q++);
+X  	if (!*p && !*q)
+X  		return 1;
+X  	if (!thresh)
+X  		return 200;
+X  	for (p = s, q = t; *p && *q; p++,q++)
+! 		if (*p == *q) continue;	/* don't consider "aa" transposed, ash */
+! 		else if (p[1] == q[0] && q[1] == p[0])  /* transpositions */
+X  			return spdist(p+2,q+2,thresh-1)+1;
+X  		else if (p[1] == q[0])	/* missing letter */
+X  			return spdist(p+1,q+0,thresh-1)+2;
+***************
+*** 1579,1583 ****
+--- 1631,1647 ----
+X  			return p+1;
+X  		}
+X  	return NULL;
++ }
++ 
++ int tulower(c) /**/
++ int c;
++ {
++ 	return (c >= 'A' && c <= 'Z') ? c-'A'+'a' : c;
++ }
++ 
++ int tuupper(c) /**/
++ int c;
++ {
++ 	return (c >= 'a' && c <= 'z') ? c-'a'+'A' : c;
+X  }
+X  
+*** src/zsh0/zsh2.00/src/watch.c	Tue Apr 23 00:30:05 1991
+--- zsh2.00/src/watch.c	Wed May  8 21:48:28 1991
+***************
+*** 31,37 ****
+X  */
+X  
+X  #include "zsh.h"
+- #include "funcs.h"
+X  #include <utmp.h>
+X  
+X  static int wtabsz;
+--- 31,36 ----
+***************
+*** 285,291 ****
+X  			{
+X  			uptr++;
+X  			if (++wtabsz == wtabmax)
+! 				uptr = (wtab = (struct utmp *) realloc((void *) wtab,(wtabmax*=2)*
+X  					sizeof(struct utmp)))+wtabsz;
+X  			}
+X  	fclose(in);
+--- 284,290 ----
+X  			{
+X  			uptr++;
+X  			if (++wtabsz == wtabmax)
+! 				uptr = (wtab = (struct utmp *) realloc((vptr) wtab,(wtabmax*=2)*
+X  					sizeof(struct utmp)))+wtabsz;
+X  			}
+X  	fclose(in);
+***************
+*** 314,320 ****
+X  		return;
+X  		}
+X  	uptr = utab = (struct utmp *) zalloc(utabmax*sizeof(struct utmp));
+! 	in = fopen(UTMP_FILE,"r");
+X  	while (fread(uptr,sizeof *uptr,1,in))
+X  #ifdef USER_PROCESS
+X  		if (uptr->ut_type == USER_PROCESS)
+--- 313,323 ----
+X  		return;
+X  		}
+X  	uptr = utab = (struct utmp *) zalloc(utabmax*sizeof(struct utmp));
+! 	if (!(in = fopen(UTMP_FILE,"r")))
+! 		{
+! 		free(utab);
+! 		return;
+! 		}
+X  	while (fread(uptr,sizeof *uptr,1,in))
+X  #ifdef USER_PROCESS
+X  		if (uptr->ut_type == USER_PROCESS)
+***************
+*** 324,330 ****
+X  			{
+X  			uptr++;
+X  			if (++utabsz == utabmax)
+! 				uptr = (utab = (struct utmp *) realloc((void *) utab,(utabmax*=2)*
+X  					sizeof(struct utmp)))+utabsz;
+X  			}
+X  	fclose(in);
+--- 327,333 ----
+X  			{
+X  			uptr++;
+X  			if (++utabsz == utabmax)
+! 				uptr = (utab = (struct utmp *) realloc((vptr) utab,(utabmax*=2)*
+X  					sizeof(struct utmp)))+utabsz;
+X  			}
+X  	fclose(in);
+*** src/zsh0/zsh2.00/src/zle.h	Mon Apr 22 20:37:46 1991
+--- zsh2.00/src/zle.h	Wed May  8 22:34:07 1991
+***************
+*** 73,78 ****
+--- 73,81 ----
+X  
+X  #endif
+X  
++ /* last named command done */
++ ZLEXTERN int lastnamed;
++ 
+X  /* != 0 if we're done */
+X  ZLEXTERN int done;
+X  
+***************
+*** 175,299 ****
+X  ZLEXTERN char *kring[KRINGCT];
+X  ZLEXTERN int kringnum;
+X  
+! enum xbindings {
+! z_acceptandhold,
+! z_acceptandinfernexthistory,
+! z_acceptline,
+! z_acceptlineanddownhistory,
+! z_backwardchar,
+! z_backwarddeletechar,
+! z_backwarddeleteword,
+! z_backwardkillline,
+! z_backwardkillword,
+! z_backwardword,
+! z_beginningofbufferorhistory,
+! z_beginningofhistory,
+! z_beginningofline,
+! z_capitalizeword,
+! z_clearscreen,
+! z_completeword,
+! z_copyprevword,
+! z_copyregionaskill,
+! z_deletechar,
+! z_deletecharorlist,
+! z_deleteword,
+! z_digitargument,
+! z_downcaseword,
+! z_downhistory,
+! z_downlineorhistory,
+! z_endofbufferorhistory,
+! z_endofhistory,
+! z_endofline,
+! z_exchangepointandmark,
+! z_expandhistory,
+! z_expandorcomplete,
+! z_expandword,
+! z_forwardchar,
+! z_forwardword,
+! z_getline,
+! z_gosmacstransposechars,
+! z_historyincrementalsearchbackward,
+! z_historyincrementalsearchforward,
+! z_historysearchbackward,
+! z_historysearchforward,
+! z_infernexthistory,
+! z_insertlastword,
+! z_killbuffer,
+! z_killline,
+! z_killregion,
+! z_killwholeline,
+! z_listchoices,
+! z_listexpand,
+! z_magicspace,
+! z_menucompleteword,
+! z_menuexpandorcomplete,
+! z_metafynext,
+! z_overwritemode,
+! z_pushline,
+! z_quotedinsert,
+! z_quoteline,
+! z_quoteregion,
+! z_redisplay,
+! z_reversemenucomplete,
+! z_runhelp,
+! z_selfinsert,
+! z_selfinsertunmeta,
+! z_sendbreak,
+! z_sendstring,
+! z_sequenceleadin,
+! z_setmarkcommand,
+! z_spellword,
+! z_toggleliteralhistory,
+! z_transposechars,
+! z_transposewords,
+! z_undefinedkey,
+! z_undo,
+! z_universalargument,
+! z_upcaseword,
+! z_uphistory,
+! z_uplineorhistory,
+! z_viaddeol,
+! z_viaddnext,
+! z_vicapslockpanic,
+! z_vichange,
+! z_vichangeeol,
+! z_vichangewholeline,
+! z_vicmdmode,
+! z_videlete,
+! z_vidigitorbeginningofline,
+! z_vifetchhistory,
+! z_vifindnextchar,
+! z_vifindnextcharskip,
+! z_vifindprevchar,
+! z_vifindprevcharskip,
+! z_vifirstnonblank,
+! z_viforwardwordend,
+! z_vigotocolumn,
+! z_vihistorysearchbackward,
+! z_vihistorysearchforward,
+! z_viinsert,
+! z_viinsertbol,
+! z_vijoin,
+! z_vimatchbracket,
+! z_viopenlineabove,
+! z_viopenlinebelow,
+! z_vioperswapcases,
+! z_viputafter,
+! z_virepeatfind,
+! z_virepeatsearch,
+! z_vireplace,
+! z_vireplacechars,
+! z_virevrepeatfind,
+! z_virevrepeatsearch,
+! z_viswapcase,
+! z_viundo,
+! z_viyank,
+! z_viyankeol,
+! z_whichcommand,
+! z_yank,
+! z_yankpop,
+! ZLECMDCOUNT
+! };
+X  
+X  extern struct zlecmd zlecmds[];
+X  
+--- 178,304 ----
+X  ZLEXTERN char *kring[KRINGCT];
+X  ZLEXTERN int kringnum;
+X  
+! #define z_acceptandhold 0
+! #define z_acceptandinfernexthistory 1
+! #define z_acceptandmenucomplete 2
+! #define z_acceptline 3
+! #define z_acceptlineanddownhistory 4
+! #define z_backwardchar 5
+! #define z_backwarddeletechar 6
+! #define z_backwarddeleteword 7
+! #define z_backwardkillline 8
+! #define z_backwardkillword 9
+! #define z_backwardword 10
+! #define z_beginningofbufferorhistory 11
+! #define z_beginningofhistory 12
+! #define z_beginningofline 13
+! #define z_beginningoflinehist 14
+! #define z_capitalizeword 15
+! #define z_clearscreen 16
+! #define z_completeword 17
+! #define z_copyprevword 18
+! #define z_copyregionaskill 19
+! #define z_deletechar 20
+! #define z_deletecharorlist 21
+! #define z_deleteword 22
+! #define z_digitargument 23
+! #define z_downcaseword 24
+! #define z_downhistory 25
+! #define z_downlineorhistory 26
+! #define z_endofbufferorhistory 27
+! #define z_endofhistory 28
+! #define z_endofline 29
+! #define z_endoflinehist 30
+! #define z_exchangepointandmark 31
+! #define z_executelastnamedcmd 32
+! #define z_executenamedcmd 33
+! #define z_expandhistory 34
+! #define z_expandorcomplete 35
+! #define z_expandword 36
+! #define z_forwardchar 37
+! #define z_forwardword 38
+! #define z_getline 39
+! #define z_gosmacstransposechars 40
+! #define z_historyincrementalsearchbackward 41
+! #define z_historyincrementalsearchforward 42
+! #define z_historysearchbackward 43
+! #define z_historysearchforward 44
+! #define z_infernexthistory 45
+! #define z_insertlastword 46
+! #define z_killbuffer 47
+! #define z_killline 48
+! #define z_killregion 49
+! #define z_killwholeline 50
+! #define z_listchoices 51
+! #define z_listexpand 52
+! #define z_magicspace 53
+! #define z_menucompleteword 54
+! #define z_menuexpandorcomplete 55
+! #define z_overwritemode 56
+! #define z_pushline 57
+! #define z_quotedinsert 58
+! #define z_quoteline 59
+! #define z_quoteregion 60
+! #define z_redisplay 61
+! #define z_reversemenucomplete 62
+! #define z_runhelp 63
+! #define z_selfinsert 64
+! #define z_selfinsertunmeta 65
+! #define z_sendbreak 66
+! #define z_sendstring 67
+! #define z_sequenceleadin 68
+! #define z_setmarkcommand 69
+! #define z_spellword 70
+! #define z_toggleliteralhistory 71
+! #define z_transposechars 72
+! #define z_transposewords 73
+! #define z_undefinedkey 74
+! #define z_undo 75
+! #define z_universalargument 76
+! #define z_upcaseword 77
+! #define z_uphistory 78
+! #define z_uplineorhistory 79
+! #define z_viaddeol 80
+! #define z_viaddnext 81
+! #define z_vicapslockpanic 82
+! #define z_vichange 83
+! #define z_vichangeeol 84
+! #define z_vichangewholeline 85
+! #define z_vicmdmode 86
+! #define z_videlete 87
+! #define z_vidigitorbeginningofline 88
+! #define z_vifetchhistory 89
+! #define z_vifindnextchar 90
+! #define z_vifindnextcharskip 91
+! #define z_vifindprevchar 92
+! #define z_vifindprevcharskip 93
+! #define z_vifirstnonblank 94
+! #define z_viforwardwordend 95
+! #define z_vigotocolumn 96
+! #define z_vihistorysearchbackward 97
+! #define z_vihistorysearchforward 98
+! #define z_viinsert 99
+! #define z_viinsertbol 100
+! #define z_vijoin 101
+! #define z_vimatchbracket 102
+! #define z_viopenlineabove 103
+! #define z_viopenlinebelow 104
+! #define z_vioperswapcases 105
+! #define z_viputafter 106
+! #define z_virepeatfind 107
+! #define z_virepeatsearch 108
+! #define z_vireplace 109
+! #define z_vireplacechars 110
+! #define z_virevrepeatfind 111
+! #define z_virevrepeatsearch 112
+! #define z_viswapcase 113
+! #define z_viundo 114
+! #define z_viyank 115
+! #define z_viyankeol 116
+! #define z_whichcommand 117
+! #define z_yank 118
+! #define z_yankpop 119
+! #define ZLECMDCOUNT 120
+X  
+X  extern struct zlecmd zlecmds[];
+X  
+*** src/zsh0/zsh2.00/src/zle_bindings.c	Tue Apr 23 00:30:05 1991
+--- zsh2.00/src/zle_bindings.c	Fri May 10 14:34:23 1991
+***************
+*** 32,42 ****
+X  
+X  #define ZLE
+X  #include "zsh.h"
+- #include "funcs.h"
+X  
+X  struct zlecmd zlecmds[] = {
+X  "accept-and-hold",acceptandhold,0,
+X  "accept-and-infer-next-history",acceptandinfernexthistory,0,
+X  "accept-line",acceptline,0,
+X  "accept-line-and-down-history",acceptlineanddownhistory,ZLE_MOD,
+X  "backward-char",backwardchar,ZLE_MOVE,
+--- 32,43 ----
+X  
+X  #define ZLE
+X  #include "zsh.h"
+X  
++ 
+X  struct zlecmd zlecmds[] = {
+X  "accept-and-hold",acceptandhold,0,
+X  "accept-and-infer-next-history",acceptandinfernexthistory,0,
++ "accept-and-menu-complete", acceptandmenucomplete, ZLE_MOD|ZLE_MENUCMP,
+X  "accept-line",acceptline,0,
+X  "accept-line-and-down-history",acceptlineanddownhistory,ZLE_MOD,
+X  "backward-char",backwardchar,ZLE_MOVE,
+***************
+*** 48,53 ****
+--- 49,55 ----
+X  "beginning-of-buffer-or-history",beginningofbufferorhistory,ZLE_LINEMOVE,
+X  "beginning-of-history",beginningofhistory,ZLE_MOD,
+X  "beginning-of-line",beginningofline,ZLE_MOVE,
++ "beginning-of-line-hist",beginningoflinehist,ZLE_LINEMOVE,
+X  "capitalize-word",capitalizeword,ZLE_MOD,
+X  "clear-screen",clearscreen,0,
+X  "complete-word",completeword,ZLE_MOD|ZLE_MENUCMP,
+***************
+*** 54,60 ****
+X  "copy-prev-word",copyprevword,ZLE_MOD,
+X  "copy-region-as-kill",copyregionaskill,ZLE_KILL,
+X  "delete-char",deletechar,ZLE_INSMOD,
+! "delete-char-or-list",deletecharorlist,ZLE_INSMOD,
+X  "delete-word",deleteword,ZLE_MOD,
+X  "digit-argument",digitargument,ZLE_ARG,
+X  "down-case-word",downcaseword,ZLE_MOD,
+--- 56,62 ----
+X  "copy-prev-word",copyprevword,ZLE_MOD,
+X  "copy-region-as-kill",copyregionaskill,ZLE_KILL,
+X  "delete-char",deletechar,ZLE_INSMOD,
+! "delete-char-or-list",deletecharorlist,ZLE_INSMOD|ZLE_MENUCMP,
+X  "delete-word",deleteword,ZLE_MOD,
+X  "digit-argument",digitargument,ZLE_ARG,
+X  "down-case-word",downcaseword,ZLE_MOD,
+***************
+*** 63,69 ****
+--- 65,74 ----
+X  "end-of-buffer-or-history",endofbufferorhistory,ZLE_LINEMOVE,
+X  "end-of-history",endofhistory,ZLE_MOD,
+X  "end-of-line",endofline,ZLE_MOVE,
++ "end-of-line-hist",endoflinehist,ZLE_LINEMOVE,
+X  "exchange-point-and-mark",exchangepointandmark,ZLE_MOVE,
++ "execute-last-named-cmd",NULL,0,
++ "execute-named-cmd",NULL,0,
+X  "expand-history",expandhistory,ZLE_MOD,
+X  "expand-or-complete",expandorcomplete,ZLE_MOD|ZLE_MENUCMP,
+X  "expand-word",expandword,ZLE_MOD,
+***************
+*** 82,92 ****
+X  "kill-region",killregion,ZLE_MOD|ZLE_KILL,
+X  "kill-whole-line",killwholeline,ZLE_MOD|ZLE_KILL,
+X  "list-choices",listchoices,0,
+! "list-expand",listexpand,0,
+X  "magic-space",magicspace,ZLE_MOD,
+! "menu-complete-word",menucompleteword,ZLE_MOD|ZLE_MENUCMP,
+X  "menu-expand-or-complete",menuexpandorcomplete,ZLE_MOD|ZLE_MENUCMP,
+- "metafy-next",metafynext,0,
+X  "overwrite-mode",overwritemode,0,
+X  "push-line",pushline,ZLE_MOD,
+X  "quoted-insert",quotedinsert,ZLE_INSMOD,
+--- 87,96 ----
+X  "kill-region",killregion,ZLE_MOD|ZLE_KILL,
+X  "kill-whole-line",killwholeline,ZLE_MOD|ZLE_KILL,
+X  "list-choices",listchoices,0,
+! "list-expand",listexpand,ZLE_MENUCMP,
+X  "magic-space",magicspace,ZLE_MOD,
+! "menu-complete",menucompleteword,ZLE_MOD|ZLE_MENUCMP,
+X  "menu-expand-or-complete",menuexpandorcomplete,ZLE_MOD|ZLE_MENUCMP,
+X  "overwrite-mode",overwritemode,0,
+X  "push-line",pushline,ZLE_MOD,
+X  "quoted-insert",quotedinsert,ZLE_INSMOD,
+***************
+*** 182,188 ****
+X  /* ^X */ z_sequenceleadin,
+X  /* ^Y */ z_yank,
+X  /* ^Z */ z_undefinedkey,
+! /* ^[ */ z_metafynext,
+X  /* ^\ */ z_undefinedkey,
+X  /* ^] */ z_undefinedkey,
+X  /* ^^ */ z_undefinedkey,
+--- 186,192 ----
+X  /* ^X */ z_sequenceleadin,
+X  /* ^Y */ z_yank,
+X  /* ^Z */ z_undefinedkey,
+! /* ^[ */ z_sequenceleadin,
+X  /* ^\ */ z_undefinedkey,
+X  /* ^] */ z_undefinedkey,
+X  /* ^^ */ z_undefinedkey,
+***************
+*** 329,336 ****
+X  /* M-+ */ z_undefinedkey,
+X  /* M-, */ z_undefinedkey,
+X  /* M-- */ z_undefinedkey,
+! /* M-. */ z_undefinedkey,
+! /* M-/ z_*/ z_undefinedkey,
+X  /* M-0 */ z_digitargument,
+X  /* M-1 */ z_digitargument,
+X  /* M-2 */ z_digitargument,
+--- 333,340 ----
+X  /* M-+ */ z_undefinedkey,
+X  /* M-, */ z_undefinedkey,
+X  /* M-- */ z_undefinedkey,
+! /* M-. */ z_insertlastword,
+! /* M-/ */ z_undefinedkey,
+X  /* M-0 */ z_digitargument,
+X  /* M-1 */ z_digitargument,
+X  /* M-2 */ z_digitargument,
+***************
+*** 403,411 ****
+X  /* M-u */ z_upcaseword,
+X  /* M-v */ z_undefinedkey,
+X  /* M-w */ z_copyregionaskill,
+! /* M-x */ z_undefinedkey,
+X  /* M-y */ z_yankpop,
+! /* M-z */ z_undefinedkey,
+X  /* M-{ */ z_undefinedkey,
+X  /* M-| */ z_vigotocolumn,
+X  /* M-} */ z_undefinedkey,
+--- 407,415 ----
+X  /* M-u */ z_upcaseword,
+X  /* M-v */ z_undefinedkey,
+X  /* M-w */ z_copyregionaskill,
+! /* M-x */ z_executenamedcmd,
+X  /* M-y */ z_yankpop,
+! /* M-z */ z_executelastnamedcmd,
+X  /* M-{ */ z_undefinedkey,
+X  /* M-| */ z_vigotocolumn,
+X  /* M-} */ z_undefinedkey,
+***************
+*** 476,482 ****
+X  /* ^X */ z_expandorcomplete,
+X  /* ^Y */ z_undefinedkey,
+X  /* ^Z */ z_undefinedkey,
+! /* ^[ */ z_metafynext,
+X  /* ^\ */ z_undefinedkey,
+X  /* ^] */ z_undefinedkey,
+X  /* ^^ */ z_undefinedkey,
+SHAR_EOF
+true || echo 'restore of patches failed'
+echo 'End of  part 3'
+echo 'File patches is continued in part 4'
+echo 4 > _shar_seq_.tmp
+exit 0
+              Paul Falstad  pfalstad@phoenix.princeton.edu
+         And on the roads, too, vicious gangs of KEEP LEFT signs!
+     If Princeton knew my opinions, they'd have expelled me long ago.
+
+exit 0 # Just in case...
+-- 
+Kent Landfield                   INTERNET: kent@sparky.IMD.Sterling.COM
+Sterling Software, IMD           UUCP:     uunet!sparky!kent
+Phone:    (402) 291-8300         FAX:      (402) 291-4362
+Please send comp.sources.misc-related mail to kent@uunet.uu.net.

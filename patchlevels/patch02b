@@ -1,0 +1,2452 @@
+Path: funic!fuug!sics.se!sunic!mcsun!uunet!sparky!kent
+From: pfalstad@phoenix.princeton.edu (Paul Falstad)
+Newsgroups: comp.sources.misc
+Subject: v19i068:  zsh2.00 - The Z shell, Patch02b/6
+Message-ID: <1991May15.214836.6981@sparky.IMD.Sterling.COM>
+Date: 15 May 91 21:48:36 GMT
+Sender: kent@sparky.IMD.Sterling.COM (Kent Landfield)
+Organization: League For Fighting Chartered Accountancy
+Lines: 2440
+Approved: kent@sparky.imd.sterling.com
+X-Md4-Signature: 3b3d6a436c1fd14b3a08c7736bcec723
+
+Submitted-by: Paul Falstad <pfalstad@phoenix.princeton.edu>
+Posting-number: Volume 19, Issue 68
+Archive-name: zsh2.00/patch02b
+Patch-To: zsh2.00: Volume 18, Issue 84-98
+
+#!/bin/sh
+# this is zpatch.02 (part 2 of a multipart archive)
+# do not concatenate these parts, unpack them in order with /bin/sh
+# file patches continued
+#
+if test ! -r _shar_seq_.tmp; then
+	echo 'Please unpack part 1 first!'
+	exit 1
+fi
+(read Scheck
+ if test "$Scheck" != 2; then
+	echo Please unpack part "$Scheck" next!
+	exit 1
+ else
+	exit 0
+ fi
+) < _shar_seq_.tmp || exit 1
+echo 'x - continuing file patches'
+sed 's/^X//' << 'SHAR_EOF' >> 'patches' &&
+X  			else if (on & PMFLAG_u)
+X  				{
+! 				cc = (Cmdnam) zcalloc(sizeof *cc);
+X  				cc->type = SHFUNC;
+X  				cc->flags = on;
+X  				addhnode(ztrdup(*argv),cc,cmdnamtab,freecmdnam);
+***************
+*** 1649,1655 ****
+X  		}
+X  	else while (asg = getasg(*argv++))
+X  		{
+! 		pm = gethnode(asg->name,paramtab);
+X  		if (pm)
+X  			{
+X  			if (!on && !roff && !asg->value)
+--- 1684,1690 ----
+X  		}
+X  	else while (asg = getasg(*argv++))
+X  		{
+! 		pm = (Param) gethnode(asg->name,paramtab);
+X  		if (pm)
+X  			{
+X  			if (!on && !roff && !asg->value)
+***************
+*** 1685,1691 ****
+X  				}
+X  			createparam(ztrdup(asg->name),
+X  				ztrdup((asg->value) ? asg->value : ""),on);
+! 			pm = gethnode(asg->name,paramtab);
+X  			pm->ct = auxlen;
+X  			}
+X  		}
+--- 1720,1726 ----
+X  				}
+X  			createparam(ztrdup(asg->name),
+X  				ztrdup((asg->value) ? asg->value : ""),on);
+! 			pm = (Param) gethnode(asg->name,paramtab);
+X  			pm->ct = auxlen;
+X  			}
+X  		}
+***************
+*** 1705,1710 ****
+--- 1740,1746 ----
+X  				{
+X  				case 'b': putchar('\b'); break;
+X  				case 'c': nnl = 1; break;
++ 				case 'e': putchar('\033'); break;
+X  				case 'f': putchar('\f'); break;
+X  				case 'n': putchar('\n'); break;
+X  				case 'r': putchar('\r'); break;
+***************
+*** 1799,1805 ****
+X  char *name;char **argv;char *ops;int func;
+X  {
+X  int ret = 0;
+! void *dat;
+X  
+X  	while (*argv)
+X  		{
+--- 1835,1841 ----
+X  char *name;char **argv;char *ops;int func;
+X  {
+X  int ret = 0;
+! vptr dat;
+X  
+X  	while (*argv)
+X  		{
+***************
+*** 1817,1823 ****
+X  char *name;char **argv;char *ops;int func;
+X  {
+X  int retval = 0;
+! void *dat;
+X  
+X  	while (*argv)
+X  		{
+--- 1853,1859 ----
+X  char *name;char **argv;char *ops;int func;
+X  {
+X  int retval = 0;
+! vptr dat;
+X  
+X  	while (*argv)
+X  		{
+***************
+*** 1864,1871 ****
+X  char *reply,*pmpt;
+X  int bsiz,c,gotnl = 0;
+X  char *buf,*bptr;
+- char cc;
+X  
+X  	if (*args)
+X  		reply = *args++;
+X  	else
+--- 1900,1907 ----
+X  char *reply,*pmpt;
+X  int bsiz,c,gotnl = 0;
+X  char *buf,*bptr;
+X  
++ 	attachtty(mypgrp);
+X  	if (*args)
+X  		reply = *args++;
+X  	else
+***************
+*** 1974,1980 ****
+X  struct bincmd *b;
+X  char ops[128],*arg,*pp,*name,**argv,**oargv;
+X  int t0,flags,sense,argc = 0,retval,op;
+- void *data;
+X  Lknode n;
+X  
+X  	auxdata = NULL;
+--- 2010,2015 ----
+***************
+*** 2006,2015 ****
+X  	arg = ugetnode(args);
+X  	if (b->optstr)
+X  		while (arg &&
+! 				((sense = *arg == '-') ||  fset(BINF_PLUSOPTS) && *arg == '+') &&
+! 				!atoi(arg))
+X  			{
+X  			pp = arg;
+X  			if (!arg[1])
+X  				{
+X  				ops['-'] = 1;
+--- 2041,2052 ----
+X  	arg = ugetnode(args);
+X  	if (b->optstr)
+X  		while (arg &&
+! 				((sense = *arg == '-') || fset(BINF_PLUSOPTS) && *arg == '+') &&
+! 				(fset(BINF_PLUSOPTS) || !atoi(arg)))
+X  			{
+X  			pp = arg;
++ 			if (arg[1] == '-')
++ 				arg++;
+X  			if (!arg[1])
+X  				{
+X  				ops['-'] = 1;
+***************
+*** 2020,2026 ****
+X  				ops['@'] = 1;
+X  			while (*++arg)
+X  				if (strchr(b->optstr,op = *arg))
+! 					ops[*arg] = (sense) ? 1 : -1;
+X  				else
+X  					break;
+X  			if (*arg)
+--- 2057,2063 ----
+X  				ops['@'] = 1;
+X  			while (*++arg)
+X  				if (strchr(b->optstr,op = *arg))
+! 					ops[*arg] = (sense) ? 1 : 2;
+X  				else
+X  					break;
+X  			if (*arg)
+***************
+*** 2080,2086 ****
+X  	if (*argv++ = arg)
+X  		while (*argv++ = ugetnode(args));
+X  	argv = oargv;
+- 	data = argv;
+X  	if (errflag)
+X  		return 1;
+X  	if (argc < b->minargs || (argc > b->maxargs && b->maxargs != -1))
+--- 2117,2122 ----
+***************
+*** 2090,2096 ****
+X  		retval = 1;
+X  		}
+X  	else
+! 		retval = (*(b->handlerfunc))(name,data,ops,b->funcid);
+X  	return retval;
+X  }
+X  
+--- 2126,2132 ----
+X  		retval = 1;
+X  		}
+X  	else
+! 		retval = (*(b->handlerfunc))(name,argv,ops,b->funcid);
+X  	return retval;
+X  }
+X  
+***************
+*** 2101,2106 ****
+--- 2137,2147 ----
+X  
+X  	if (!s)
+X  		return NULL;
++ 	if (*s == '=')
++ 		{
++ 		zerr("bad assignment",NULL,0);
++ 		return NULL;
++ 		}
+X  	asg.name = s;
+X  	for (; *s && *s != '='; s++);
+X  	if (*s)
+***************
+*** 2209,2215 ****
+X  {
+X  struct tms buf;
+X  
+! 	if (times(&buf))
+X  		return 1;
+X  	pttime(buf.tms_utime);
+X  	putchar(' ');
+--- 2250,2256 ----
+X  {
+X  struct tms buf;
+X  
+! 	if (times(&buf) == -1)
+X  		return 1;
+X  	pttime(buf.tms_utime);
+X  	putchar(' ');
+***************
+*** 2242,2248 ****
+X  		}
+X  	if (optind >= arrlen(args))
+X  		return 1;
+! 	str = args[optind-1];
+X  	if (*str != '+' && *str != '-' || optcind >= strlen(str) ||
+X  			!strcmp("--",str))
+X  		{
+--- 2283,2289 ----
+X  		}
+X  	if (optind >= arrlen(args))
+X  		return 1;
+! 	str = args[optind];
+X  	if (*str != '+' && *str != '-' || optcind >= strlen(str) ||
+X  			!strcmp("--",str))
+X  		{
+***************
+*** 2254,2260 ****
+X  	if (!optcind)
+X  		optcind = 1;
+X  	*opch = str[optcind++];
+! 	if (!args[optcind])
+X  		{
+X  		optind++;
+X  		optcind = 0;
+--- 2295,2301 ----
+X  	if (!optcind)
+X  		optcind = 1;
+X  	*opch = str[optcind++];
+! 	if (!args[optind][optcind])
+X  		{
+X  		optind++;
+X  		optcind = 0;
+***************
+*** 2276,2282 ****
+X  	setsparam(var,ztrdup(opch-(*str == '+')));
+X  	if (optstr[1] == ':')
+X  		{
+! 		if (!args[optind-1])
+X  			{
+X  			if (quiet)
+X  				{
+--- 2317,2323 ----
+X  	setsparam(var,ztrdup(opch-(*str == '+')));
+X  	if (optstr[1] == ':')
+X  		{
+! 		if (!args[optind])
+X  			{
+X  			if (quiet)
+X  				{
+***************
+*** 2326,2332 ****
+X  					printf("TRAP%s () {}\n",sigs[t0]);
+X  				else
+X  					{
+! 					char *s = gettext((void *) sigfuncs[t0],1);
+X  					printf("TRAP%s () {\n\t%s\n}\n",sigs[t0],s);
+X  					free(s);
+X  					}
+--- 2367,2373 ----
+X  					printf("TRAP%s () {}\n",sigs[t0]);
+X  				else
+X  					{
+! 					char *s = gettext((vptr) sigfuncs[t0],1);
+X  					printf("TRAP%s () {\n\t%s\n}\n",sigs[t0],s);
+X  					free(s);
+X  					}
+*** src/zsh0/zsh2.00/src/cond.c	Tue Apr 23 11:34:17 1991
+--- zsh2.00/src/cond.c	Fri May 10 06:25:49 1991
+***************
+*** 31,37 ****
+X  */
+X  
+X  #include "zsh.h"
+- #include "funcs.h"
+X  
+X  #ifndef F_OK
+X  #define F_OK 00
+--- 31,36 ----
+***************
+*** 53,64 ****
+X  		}
+X  	singsub((char **) &c->left);
+X  	untokenize(c->left);
+! 	if (c->type != COND_STREQ && c->type != COND_STRNEQ)
+! 		if (c->right)
+! 			{
+! 			singsub((char **) &c->right);
+X  			untokenize(c->right);
+! 			}
+X  	switch (c->type)
+X  		{
+X  		case COND_STREQ: return matchpat(c->left,c->right);
+--- 52,63 ----
+X  		}
+X  	singsub((char **) &c->left);
+X  	untokenize(c->left);
+! 	if (c->right)
+! 		{
+! 		singsub((char **) &c->right);
+! 		if (c->type != COND_STREQ && c->type != COND_STRNEQ)
+X  			untokenize(c->right);
+! 		}
+X  	switch (c->type)
+X  		{
+X  		case COND_STREQ: return matchpat(c->left,c->right);
+***************
+*** 82,88 ****
+X  		case 'w': return(doaccess(c->left,W_OK));
+X  		case 'x': return(doaccess(c->left,X_OK));
+X  		case 'z': return(!strlen(c->left));
+! 		case 'L': return(S_ISLNK(dostat(c->left)));
+X  		case 'O': return((st = getstat(c->left)) && st->st_uid == geteuid());
+X  		case 'G': return((st = getstat(c->left)) && st->st_gid == getegid());
+X  		case 't': return isatty(matheval(c->left));
+--- 81,87 ----
+X  		case 'w': return(doaccess(c->left,W_OK));
+X  		case 'x': return(doaccess(c->left,X_OK));
+X  		case 'z': return(!strlen(c->left));
+! 		case 'L': return(S_ISLNK(dolstat(c->left)));
+X  		case 'O': return((st = getstat(c->left)) && st->st_uid == geteuid());
+X  		case 'G': return((st = getstat(c->left)) && st->st_gid == getegid());
+X  		case 't': return isatty(matheval(c->left));
+***************
+*** 126,142 ****
+X  	return !access(s,c);
+X  }
+X  
+X  struct stat *getstat(s) /**/
+X  char *s;
+X  {
+- static struct stat st;
+- 
+X  	if (!strncmp(s,"/dev/fd/",8))
+X  		{
+X  		if (fstat(atoi(s+8),&st))
+X  			return NULL;
+X  		}
+! 	else if (lstat(s,&st))
+X  		return NULL;
+X  	return &st;
+X  }
+--- 125,141 ----
+X  	return !access(s,c);
+X  }
+X  
++ static struct stat st;
++ 
+X  struct stat *getstat(s) /**/
+X  char *s;
+X  {
+X  	if (!strncmp(s,"/dev/fd/",8))
+X  		{
+X  		if (fstat(atoi(s+8),&st))
+X  			return NULL;
+X  		}
+! 	else if (stat(s,&st))
+X  		return NULL;
+X  	return &st;
+X  }
+***************
+*** 149,154 ****
+--- 148,163 ----
+X  	if (!(st = getstat(s)))
+X  		return 0;
+X  	return st->st_mode;
++ }
++ 
++ /* pem@aaii.oz; needed since dostat now uses "stat" */
++ 
++ unsigned short dolstat(s) /**/
++ char *s;
++ {
++ 	if (lstat(s, &st) < 0)
++ 		return 0;
++ 	return st.st_mode;
+X  }
+X  
+X  int optison(s) /**/
+*** src/zsh0/zsh2.00/src/cond.pro	Tue Apr 23 00:29:58 1991
+--- zsh2.00/src/cond.pro	Tue May  7 22:53:25 1991
+***************
+*** 2,5 ****
+--- 2,6 ----
+X  int doaccess DCLPROTO((char *s,int c));
+X  struct stat *getstat DCLPROTO((char *s));
+X  unsigned short dostat DCLPROTO((char *s));
++ unsigned short dolstat DCLPROTO((char *s));
+X  int optison DCLPROTO((char *s));
+*** src/zsh0/zsh2.00/src/exec.c	Tue Apr 23 11:53:10 1991
+--- zsh2.00/src/exec.c	Fri May 10 06:55:08 1991
+***************
+*** 31,37 ****
+X  */
+X  
+X  #include "zsh.h"
+- #include "funcs.h"
+X  #include <sys/errno.h>
+X  #include <sys/dir.h>
+X  
+--- 31,36 ----
+***************
+*** 78,84 ****
+X  void newrunlist(l) /**/
+X  List l;
+X  {
+! 	List a = dupstruct(l); runlist(a);
+X  }
+X  
+X  /* fork and set limits */
+--- 77,83 ----
+X  void newrunlist(l) /**/
+X  List l;
+X  {
+! 	List a = (List) dupstruct(l); runlist(a);
+X  }
+X  
+X  /* fork and set limits */
+***************
+*** 167,174 ****
+X  						}
+X  					else
+X  						{
+! 						argv[-1] = MYSELF;
+! 						execve(MYSELF,argv-1,environ);
+X  						}
+X  				else
+X  					{
+--- 166,173 ----
+X  						}
+X  					else
+X  						{
+! 						argv[-1] = "sh";
+! 						execve("/bin/sh",argv-1,environ);
+X  						}
+X  				else
+X  					{
+***************
+*** 208,214 ****
+X  Cmdnam cn;
+X  int tl,ee = 0;
+X  
+! 	cn = gethnode(peekfirst(args),cmdnamtab);
+X  	if (s = zgetenv("STTY"))
+X  		zyztem("stty",s);
+X  	arg0 = peekfirst(args);
+--- 207,213 ----
+X  Cmdnam cn;
+X  int tl,ee = 0;
+X  
+! 	cn = (Cmdnam) gethnode(peekfirst(args),cmdnamtab);
+X  	if (s = zgetenv("STTY"))
+X  		zyztem("stty",s);
+X  	arg0 = peekfirst(args);
+***************
+*** 275,281 ****
+X  {
+X  char *s,buf[MAXPATHLEN];
+X  int tl;
+! struct cmdnam *cn = gethnode(arg0,cmdnamtab);
+X  char **pp = path;
+X  
+X  	if (cn && (cn->type == EXCMD_POSTDOT || cn->type == EXCMD_PREDOT))
+--- 274,280 ----
+X  {
+X  char *s,buf[MAXPATHLEN];
+X  int tl;
+! struct cmdnam *cn = (Cmdnam) gethnode(arg0,cmdnamtab);
+X  char **pp = path;
+X  
+X  	if (cn && (cn->type == EXCMD_POSTDOT || cn->type == EXCMD_PREDOT))
+***************
+*** 440,446 ****
+X  				char *s,*text;
+X  
+X  				close(pipes[0]);
+! 				text = s = gettext((void *) pline->right,0);
+X  				addproc(pid,text)->lastfg = 1;
+X  				pline->right = NULL;
+X  				}
+--- 439,445 ----
+X  				char *s,*text;
+X  
+X  				close(pipes[0]);
+! 				text = s = gettext((vptr) pline->right,0);
+X  				addproc(pid,text)->lastfg = 1;
+X  				pline->right = NULL;
+X  				}
+***************
+*** 512,520 ****
+X  	for (node = firstnode(l); node; node = next)
+X  		{
+X  		next = nextnode(node);
+! 		if (*(char *) getdata(node))
+! 			untokenize(getdata(node));
+! 		else
+X  			uremnode(l,node);
+X  		}
+X  }
+--- 511,518 ----
+X  	for (node = firstnode(l); node; node = next)
+X  		{
+X  		next = nextnode(node);
+! 		untokenize(getdata(node));
+! 		if (!*(char *) getdata(node))
+X  			uremnode(l,node);
+X  		}
+X  }
+***************
+*** 589,595 ****
+X  
+X  	if (!mfds[fd1])	/* starting a new multio */
+X  		{
+! 		mfds[fd1] = alloc(sizeof(struct multio));
+X  		if (!forked && fd1 != fd2 && fd1 < 10)
+X  			save[fd1] = movefd(fd1);
+X  		redup(fd2,fd1);
+--- 587,593 ----
+X  
+X  	if (!mfds[fd1])	/* starting a new multio */
+X  		{
+! 		mfds[fd1] = (struct multio *) alloc(sizeof(struct multio));
+X  		if (!forked && fd1 != fd2 && fd1 < 10)
+X  			save[fd1] = movefd(fd1);
+X  		redup(fd2,fd1);
+***************
+*** 628,634 ****
+X  		{
+X  		char **arr,**ptr;
+X  
+! 		v = ugetnode(l);
+X  		singsub(&v->name);
+X  		if (errflag)
+X  			return;
+--- 626,632 ----
+X  		{
+X  		char **arr,**ptr;
+X  
+! 		v = (struct varasg *) ugetnode(l);
+X  		singsub(&v->name);
+X  		if (errflag)
+X  			return;
+***************
+*** 646,652 ****
+X  		postfork(vl,1);
+X  		if (errflag)
+X  			return;
+! 		if (v->type == PMFLAG_s)
+X  			{
+X  			Param pm;
+X  			char *val;
+--- 644,650 ----
+X  		postfork(vl,1);
+X  		if (errflag)
+X  			return;
+! 		if (v->type == PMFLAG_s && (!full(vl) || !nextnode(firstnode(vl))))
+X  			{
+X  			Param pm;
+X  			char *val;
+***************
+*** 662,671 ****
+X  				addenv(v->name,val);
+X  			continue;
+X  			}
+! 		ptr = arr = (char **) zalloc(sizeof(char **)*(countnodes(v->arr)+1));
+! 		while (full(v->arr))
+X  			{
+! 			*ptr = ztrdup(ugetnode(v->arr));
+X  			untokenize(*ptr++);
+X  			}
+X  		*ptr = NULL;
+--- 660,669 ----
+X  				addenv(v->name,val);
+X  			continue;
+X  			}
+! 		ptr = arr = (char **) zalloc(sizeof(char **)*(countnodes(vl)+1));
+! 		while (full(vl))
+X  			{
+! 			*ptr = ztrdup(ugetnode(vl));
+X  			untokenize(*ptr++);
+X  			}
+X  		*ptr = NULL;
+***************
+*** 707,713 ****
+X  		insnode(args,(Lknode) args,strdup((bkg) ? "bg" : "fg"));
+X  		bkg = 0;
+X  		}
+! 	if (isset(AUTORESUME) && !full(cmd->redir) && full(args) &&
+X  			type == SIMPLE && !nextnode(firstnode(args)) &&
+X  			findjobnam(peekfirst(args)) != -1)
+X  		pushnode(args,strdup("fg"));
+--- 705,711 ----
+X  		insnode(args,(Lknode) args,strdup((bkg) ? "bg" : "fg"));
+X  		bkg = 0;
+X  		}
+! 	if (isset(AUTORESUME) && !bkg && !full(cmd->redir) && full(args) &&
+X  			type == SIMPLE && !nextnode(firstnode(args)) &&
+X  			findjobnam(peekfirst(args)) != -1)
+X  		pushnode(args,strdup("fg"));
+***************
+*** 723,729 ****
+X  	if (jobbing)	/* get the text associated with this command */
+X  		{
+X  		char *s;
+! 		s = text = gettext((void *) cmd,0);
+X  		}
+X  	else
+X  		text = NULL;
+--- 721,727 ----
+X  	if (jobbing)	/* get the text associated with this command */
+X  		{
+X  		char *s;
+! 		s = text = gettext((vptr) cmd,0);
+X  		}
+X  	else
+X  		text = NULL;
+***************
+*** 734,746 ****
+X  		return;
+X  		}
+X  	if (full(args) && !(cmd->flags & CFLAG_COMMAND))
+! 		chn = gethnode(peekfirst(args),cmdnamtab);
+X  	if (!pathsuppress && !chn && isset(AUTOCD) && full(args) &&
+X  			!full(cmd->redir) &&
+X  			!nextnode(firstnode(args)) && cancd(peekfirst(args)))
+X  		{
+X  		pushnode(args,strdup("cd"));
+! 		chn = gethnode("cd",cmdnamtab);
+X  		}
+X  
+X  	/* this is nonzero if cmd is a current shell procedure */
+--- 732,744 ----
+X  		return;
+X  		}
+X  	if (full(args) && !(cmd->flags & CFLAG_COMMAND))
+! 		chn = (Cmdnam) gethnode(peekfirst(args),cmdnamtab);
+X  	if (!pathsuppress && !chn && isset(AUTOCD) && full(args) &&
+X  			!full(cmd->redir) &&
+X  			!nextnode(firstnode(args)) && cancd(peekfirst(args)))
+X  		{
+X  		pushnode(args,strdup("cd"));
+! 		chn = (Cmdnam) gethnode("cd",cmdnamtab);
+X  		}
+X  
+X  	/* this is nonzero if cmd is a current shell procedure */
+***************
+*** 757,767 ****
+--- 755,774 ----
+X  	if (bkg || !(iscursh || (cmd->flags & CFLAG_EXEC)) ||
+X  			(chn && (chn->type == BUILTIN || chn->type == SHFUNC) && output))
+X  		{
++ 		int synch[2];
++ 
++ 		pipe(synch);
+X  		pid = (last1 && execok()) ? 0 : phork();
+X  		if (pid == -1)
++ 			{
++ 			close(synch[0]);
++ 			close(synch[1]);
+X  			return;
++ 			}
+X  		if (pid)
+X  			{
++ 			close(synch[1]);
++ 			read(synch[0],"foo",1);
+X  			if (pid == -1)
+X  				zerr("%e",NULL,errno);
+X  			else
+***************
+*** 768,774 ****
+--- 775,783 ----
+X  				( void ) addproc(pid,text);
+X  			return;
+X  			}
++ 		close(synch[0]);
+X  		entersubsh(bkg);
++ 		close(synch[1]);
+X  		forked = 1;
+X  		}
+X  	if (bkg && isset(BGNICE))	/* stupid */
+***************
+*** 779,785 ****
+X  		addfd(forked,save,mfds,1,output,1);
+X  	spawnpipes(cmd->redir);		/* do process substitutions */
+X  	while (full(cmd->redir))
+! 		if ((fn = ugetnode(cmd->redir))->type == INPIPE)
+X  			{
+X  			if (fn->fd2 == -1)
+X  				execerr();
+--- 788,794 ----
+X  		addfd(forked,save,mfds,1,output,1);
+X  	spawnpipes(cmd->redir);		/* do process substitutions */
+X  	while (full(cmd->redir))
+! 		if ((fn = (struct redir*) ugetnode(cmd->redir))->type == INPIPE)
+X  			{
+X  			if (fn->fd2 == -1)
+X  				execerr();
+***************
+*** 821,831 ****
+X  				}
+X  			else if (fn->type == CLOSE)
+X  				{
+! 				if (!forked && fn->fd1 < 3)
+! 					{
+! 					zerr("can't close fd %d without forking",NULL,fn->fd1);
+! 					execerr();
+! 					}
+X  				closemn(mfds,fn->fd1);
+X  				close(fn->fd1);
+X  				}
+--- 830,837 ----
+X  				}
+X  			else if (fn->type == CLOSE)
+X  				{
+! 				if (!forked && fn->fd1 < 10)
+! 					save[fn->fd1] = movefd(fn->fd1);
+X  				closemn(mfds,fn->fd1);
+X  				close(fn->fd1);
+X  				}
+***************
+*** 989,996 ****
+X  
+X  /* convert here document into a here string */
+X  
+! char *gethere(str) /**/
+! char *str;
+X  {
+X  char pbuf[256];
+X  int qt = 0,siz = 0,l,strip = 0;
+--- 995,1002 ----
+X  
+X  /* convert here document into a here string */
+X  
+! char *gethere(str,typ) /**/
+! char *str;int typ;
+X  {
+X  char pbuf[256];
+X  int qt = 0,siz = 0,l,strip = 0;
+***************
+*** 1000,1008 ****
+X  		if (*s == Nularg)
+X  			qt = 1;
+X  	untokenize(str);
+! 	if (*str == '-')
+X  		{
+- 		str++;
+X  		strip = 1;
+X  		while (*str == '\t')
+X  			str++;
+--- 1006,1013 ----
+X  		if (*s == Nularg)
+X  			qt = 1;
+X  	untokenize(str);
+! 	if (typ == HEREDOCDASH)
+X  		{
+X  		strip = 1;
+X  		while (*str == '\t')
+X  			str++;
+***************
+*** 1247,1252 ****
+--- 1252,1259 ----
+X  			}
+X  	if (qt && ptr != buf && ptr[-1] == '\n')
+X  		ptr[-1] = '\0';
++ 	else
++ 		*ptr = '\0';
+X  	if (cnt)
+X  		addnode(ret,ztrdup(buf));
+X  	free(buf);
+***************
+*** 1557,1567 ****
+X  Lklist l;
+X  {
+X  Lknode n = firstnode(l);
+! struct redir *f;
+X  
+X  	for (; n; incnode(n))
+X  		{
+! 		f = getdata(n);
+X  		if (f->type == OUTPIPE)
+X  			{
+X  			char *str = f->name;
+--- 1564,1574 ----
+X  Lklist l;
+X  {
+X  Lknode n = firstnode(l);
+! Redir f;
+X  
+X  	for (; n; incnode(n))
+X  		{
+! 		f = (Redir) getdata(n);
+X  		if (f->type == OUTPIPE)
+X  			{
+X  			char *str = f->name;
+***************
+*** 1598,1607 ****
+X  	permalloc();
+X  	while (s = ugetnode(cmd->args))
+X  		{
+! 		cc = zalloc(sizeof *cc);
+X  		cc->type = SHFUNC;
+X  		cc->flags = 0;
+! 		cc->u.list = dupstruct(cmd->u.list);
+X  		addhnode(ztrdup(s),cc,cmdnamtab,freecmdnam);
+X  		if (!strncmp(s,"TRAP",4))
+X  			{
+--- 1605,1614 ----
+X  	permalloc();
+X  	while (s = ugetnode(cmd->args))
+X  		{
+! 		cc = (Cmdnam) zalloc(sizeof *cc);
+X  		cc->type = SHFUNC;
+X  		cc->flags = 0;
+! 		cc->u.list = (List) dupstruct(cmd->u.list);
+X  		addhnode(ztrdup(s),cc,cmdnamtab,freecmdnam);
+X  		if (!strncmp(s,"TRAP",4))
+X  			{
+***************
+*** 1648,1654 ****
+X  			}
+X  		cn->flags &= ~PMFLAG_u;
+X  		permalloc();
+! 		cn->u.list = dupstruct(l);
+X  		heapalloc();
+X  		}
+X  	flags = cn->flags;
+--- 1655,1661 ----
+X  			}
+X  		cn->flags &= ~PMFLAG_u;
+X  		permalloc();
+! 		cn->u.list = (List) dupstruct(l);
+X  		heapalloc();
+X  		}
+X  	flags = cn->flags;
+***************
+*** 1656,1664 ****
+X  	xexitfn = sigfuncs[SIGEXIT];
+X  	tab = pparams;
+X  	oargv0 = argzero;
+X  	if (flags & PMFLAG_t)
+X  		opts[XTRACE] = OPT_SET;
+! 	pparams = x = zcalloc(((sizeof *x)*(1+countnodes(cmd->args))));
+X  	argzero = ztrdup(ugetnode(cmd->args));
+X  	while (*x = ugetnode(cmd->args))
+X  		*x = ztrdup(*x), x++;
+--- 1663,1672 ----
+X  	xexitfn = sigfuncs[SIGEXIT];
+X  	tab = pparams;
+X  	oargv0 = argzero;
++ 	optind = 0;
+X  	if (flags & PMFLAG_t)
+X  		opts[XTRACE] = OPT_SET;
+! 	pparams = x = (char **) zcalloc(((sizeof *x)*(1+countnodes(cmd->args))));
+X  	argzero = ztrdup(ugetnode(cmd->args));
+X  	while (*x = ugetnode(cmd->args))
+X  		*x = ztrdup(*x), x++;
+***************
+*** 1679,1685 ****
+X  	pparams = tab;
+X  	if (sigtrapped[SIGEXIT])
+X  		dotrap(SIGEXIT);
+! 	if (sigfuncs[SIGEXIT])
+X  		freestruct(sigfuncs[SIGEXIT]);
+X  	sigtrapped[SIGEXIT] = xexittr;
+X  	sigfuncs[SIGEXIT] = xexitfn;
+--- 1687,1693 ----
+X  	pparams = tab;
+X  	if (sigtrapped[SIGEXIT])
+X  		dotrap(SIGEXIT);
+! 	if (sigfuncs[SIGEXIT] && sigfuncs[SIGEXIT] != xexitfn)
+X  		freestruct(sigfuncs[SIGEXIT]);
+X  	sigtrapped[SIGEXIT] = xexittr;
+X  	sigfuncs[SIGEXIT] = xexitfn;
+***************
+*** 1730,1746 ****
+X  int cancd(s)
+X  char *s;
+X  {
+! char *t;
+! 
+! 	for (t = s; *t; t++)
+! 		if (*t == '/')
+! 			break;
+! 	if (!*t)
+X  		{
+X  		char sbuf[MAXPATHLEN],**cp;
+X  
+X  		if (cancd2(s))
+X  			return 1;
+X  		for (cp = cdpath; *cp; cp++)
+X  			{
+X  			sprintf(sbuf,"%s/%s",*cp,s);
+--- 1738,1751 ----
+X  int cancd(s)
+X  char *s;
+X  {
+! 	if (*s != '/')
+X  		{
+X  		char sbuf[MAXPATHLEN],**cp;
+X  
+X  		if (cancd2(s))
+X  			return 1;
++ 		if (access(s,X_OK) == 0)
++ 			return 0;
+X  		for (cp = cdpath; *cp; cp++)
+X  			{
+X  			sprintf(sbuf,"%s/%s",*cp,s);
+***************
+*** 1757,1762 ****
+X  {
+X  struct stat buf;
+X  
+! 	return !(access(s,X_OK) || lstat(s,&buf) || !S_ISDIR(buf.st_mode));
+X  }
+X  
+--- 1762,1767 ----
+X  {
+X  struct stat buf;
+X  
+! 	return !(access(s,X_OK) || stat(s,&buf) || !S_ISDIR(buf.st_mode));
+X  }
+X  
+*** src/zsh0/zsh2.00/src/exec.pro	Tue Apr 23 00:29:58 1991
+--- zsh2.00/src/exec.pro	Tue May  7 22:53:25 1991
+***************
+*** 22,28 ****
+X  void fixfds DCLPROTO((int *save));
+X  void entersubsh DCLPROTO((int bkg));
+X  void closem DCLPROTO((void));
+! char *gethere DCLPROTO((char *str));
+X  int getherestr DCLPROTO((struct redir *fn));
+X  void catproc DCLPROTO((struct multio *mn));
+X  void teeproc DCLPROTO((struct multio *mn));
+--- 22,28 ----
+X  void fixfds DCLPROTO((int *save));
+X  void entersubsh DCLPROTO((int bkg));
+X  void closem DCLPROTO((void));
+! char *gethere DCLPROTO((char *str,int typ));
+X  int getherestr DCLPROTO((struct redir *fn));
+X  void catproc DCLPROTO((struct multio *mn));
+X  void teeproc DCLPROTO((struct multio *mn));
+*** src/zsh0/zsh2.00/src/glob.c	Sat Apr 27 00:15:09 1991
+--- zsh2.00/src/glob.c	Fri May 10 07:16:44 1991
+***************
+*** 31,37 ****
+X  */
+X  
+X  #include "zsh.h"
+- #include "funcs.h"
+X  #include <sys/dir.h>
+X  #include <sys/errno.h>
+X  
+--- 31,36 ----
+***************
+*** 103,116 ****
+X  					func = qualflags;
+X  					data = 0;
+X  					while (idigit(*s))
+! 						data = data*010+(*s-'0');
+X  					}
+X  				else switch (*s++)
+X  					{
+! 					case Hat: sense = 1-sense; break;
+X  					case '@': func = qualmode; data = S_IFLNK; break;
+X  					case '=': func = qualmode; data = S_IFSOCK; break;
+X  					case 'p': func = qualmode; data = S_IFIFO; break;
+X  					case '/': func = qualmode; data = S_IFDIR; break;
+X  					case '.': func = qualmode; data = S_IFREG; break;
+X  					case '%': func = qualisdev; break;
+--- 102,117 ----
+X  					func = qualflags;
+X  					data = 0;
+X  					while (idigit(*s))
+! 						data = data*010+(*s++-'0');
+X  					}
+X  				else switch (*s++)
+X  					{
+! 					case Hat: case '^': sense = 1-sense; break;
+X  					case '@': func = qualmode; data = S_IFLNK; break;
+X  					case '=': func = qualmode; data = S_IFSOCK; break;
++ #ifdef S_IFIFO
+X  					case 'p': func = qualmode; data = S_IFIFO; break;
++ #endif
+X  					case '/': func = qualmode; data = S_IFDIR; break;
+X  					case '.': func = qualmode; data = S_IFREG; break;
+X  					case '%': func = qualisdev; break;
+***************
+*** 246,256 ****
+X  		char *t;
+X  		int ll = strlen(s);
+X  
+! 		t = zalloc(ll+2);
+X  		strcpy(t,s);
+X  		t[ll] = '/';
+X  		t[ll+1] = '\0';
+- 		free(s);
+X  		s = t;
+X  		}
+X  	*matchptr++ = s;
+--- 247,256 ----
+X  		char *t;
+X  		int ll = strlen(s);
+X  
+! 		t = ncalloc(ll+2);
+X  		strcpy(t,s);
+X  		t[ll] = '/';
+X  		t[ll+1] = '\0';
+X  		s = t;
+X  		}
+X  	*matchptr++ = s;
+***************
+*** 491,499 ****
+X  char *a;char *b;
+X  {
+X  Comp c;
+! int val;
+X  
+! 	c = parsereg(b);
+X  	if (!c)
+X  		{
+X  		zerr("bad pattern: %s",b,0);
+--- 491,506 ----
+X  char *a;char *b;
+X  {
+X  Comp c;
+! int val,len;
+! char *b2;
+X  
+! 	len = strlen(b);
+! 	b2 = alloc(len+3);
+! 	strcpy(b2+1,b);
+! 	b2[0] = Inpar;
+! 	b2[len+1] = Outpar;
+! 	b2[len+2] = '\0';
+! 	c = parsereg(b2);
+X  	if (!c)
+X  		{
+X  		zerr("bad pattern: %s",b,0);
+***************
+*** 625,631 ****
+X  			char *fn;
+X  			int dirs = !!q->next;
+X  			struct direct *de;
+! 			DIR *lock = opendir(pathbuf);
+X  			 
+X  			if (lock == NULL)
+X  				return;
+--- 632,638 ----
+X  			char *fn;
+X  			int dirs = !!q->next;
+X  			struct direct *de;
+! 			DIR *lock = opendir((*pathbuf) ? pathbuf : ".");
+X  			 
+X  			if (lock == NULL)
+X  				return;
+***************
+*** 720,725 ****
+--- 727,733 ----
+X  }
+X  
+X  static char *pptr;
++ static Comp tail = 0;
+X  static int first;
+X  
+X  int domatch(str,c,fist) /**/
+***************
+*** 737,743 ****
+X  {
+X  char *pat = c->str;
+X  
+! 	if (c->closure)
+X  		{
+X  		char *saves = pptr;
+X  		int savei = first;
+--- 745,751 ----
+X  {
+X  char *pat = c->str;
+X  
+! 	if (c->closure == 1)
+X  		{
+X  		char *saves = pptr;
+X  		int savei = first;
+***************
+*** 969,974 ****
+--- 977,984 ----
+X  Comp c = (Comp) alloc(sizeof *c),c1,c2;
+X  char *s = c->str = alloc(MAXPATHLEN*2),*ls = NULL;
+X  
++ 	c->next = tail;
++ 
+X  	while (*pptr && (mode || *pptr != '/') && *pptr != Bar &&
+X  			*pptr != Outpar)
+X  		{
+***************
+*** 995,1014 ****
+X  			}
+X  		if (*pptr == Inpar)
+X  			{
+! 			*s++ = '\0';
+! 			pptr++;
+! 			c->next = (Comp) alloc(sizeof *c);
+! 			c->next->left = c1 = parsecompsw();
+! 			if (*pptr != Outpar)
+X  				{
+X  				errflag = 1;
+X  				return NULL;
+X  				}
+- 			pptr++;
+X  			if (*pptr == Pound)
+X  				{
+! 				int dpnd = 1;
+! 
+X  				pptr++;
+X  				if (*pptr == Pound)
+X  					{
+--- 1005,1028 ----
+X  			}
+X  		if (*pptr == Inpar)
+X  			{
+! 			int pars = 1;
+! 			char *startp = pptr, *endp;
+! 			Comp stail = tail;
+! 			int dpnd = 0;
+! 
+! 			for (pptr = pptr+1; *pptr && pars; pptr++)
+! 				if (*pptr == Inpar)
+! 					pars++;
+! 				else if (*pptr == Outpar)
+! 					pars--;
+! 			if (pptr[-1] != Outpar)
+X  				{
+X  				errflag = 1;
+X  				return NULL;
+X  				}
+X  			if (*pptr == Pound)
+X  				{
+! 				dpnd = 1;
+X  				pptr++;
+X  				if (*pptr == Pound)
+X  					{
+***************
+*** 1015,1026 ****
+X  					pptr++;
+X  					dpnd = 2;
+X  					}
+- 				c->next->closure = dpnd;
+X  				}
+! 			c2 = parsecomp();
+! 			if (!c2)
+X  				return NULL;
+! 			c->next->next = c2;
+X  			return c;
+X  			}
+X  		if (*pptr == Pound)
+--- 1029,1049 ----
+X  					pptr++;
+X  					dpnd = 2;
+X  					}
+X  				}
+! 			c1 = parsecomp();
+! 			if (!c1)
+X  				return NULL;
+! 			tail = c1;
+! 			endp = pptr;
+! 			pptr = startp;
+! 			pptr++;
+! 			*s++ = '\0';
+! 			c->next = (Comp) alloc(sizeof *c);
+! 			c->next->left = parsecompsw();
+! 			c->next->closure = dpnd;
+! 			c->next->next = (Comp) alloc(sizeof *c);
+! 			pptr = endp;
+! 			tail = stail;
+X  			return c;
+X  			}
+X  		if (*pptr == Pound)
+***************
+*** 1029,1039 ****
+X  			pptr++;
+X  			if (!ls)
+X  				return NULL;
+! 			c->next = c1 = (Comp) alloc(sizeof *c);
+! 			c1->str = strdup(ls);
+! 			c1->closure = 1;
+! 			c1->next = parsecomp();
+! 			if (!c1->next)
+X  				return NULL;
+X  			*ls++ = '\0';
+X  			return c;
+--- 1052,1070 ----
+X  			pptr++;
+X  			if (!ls)
+X  				return NULL;
+! 			if (*pptr == Pound) 
+! 				{
+! 				pptr++;
+! 				c->next = c1 = (Comp) alloc(sizeof *c);
+! 				c1->str = strdup(ls);
+! 				}
+! 			else
+! 				c1 = c;
+! 			c1->next = c2 = (Comp) alloc(sizeof *c);
+! 			c2->str = strdup(ls);
+! 			c2->closure = 1;
+! 			c2->next = parsecomp();
+! 			if (!c2->next)
+X  				return NULL;
+X  			*ls++ = '\0';
+X  			return c;
+*** src/zsh0/zsh2.00/src/hist.c	Tue Apr 23 00:30:05 1991
+--- zsh2.00/src/hist.c	Fri May 10 06:37:00 1991
+***************
+*** 31,37 ****
+X  */
+X  
+X  #include "zsh.h"
+- #include "funcs.h"
+X  
+X  static int lastc;
+X  
+--- 31,36 ----
+***************
+*** 40,49 ****
+X  void hwaddc(c) /**/
+X  int c;
+X  {
+! 	if (hlastw && hline && (!errflag || c == HISTSPACE))
+X  		{
+- 		if (c == EOF || c == HERR)
+- 			c = ' ';
+X  		*hptr++ = c;
+X  		if (hptr-hline >= hlinesz)
+X  			{
+--- 39,46 ----
+X  void hwaddc(c) /**/
+X  int c;
+X  {
+! 	if (hlastw && hline && (!(errflag || lexstop) || c == HISTSPACE))
+X  		{
+X  		*hptr++ = c;
+X  		if (hptr-hline >= hlinesz)
+X  			{
+***************
+*** 61,67 ****
+X  		}
+X  }
+X  
+! #define habort() { errflag = 1; return HERR; }
+X  
+X  /* get a character after performing history substitution */
+X  
+--- 58,64 ----
+X  		}
+X  }
+X  
+! #define habort() { errflag = lexstop = 1; return ' '; }
+X  
+X  /* get a character after performing history substitution */
+X  
+***************
+*** 73,79 ****
+X  
+X  tailrec:
+X  	c = hgetch();
+! 	if (stophist)
+X  		{
+X  		hwaddc(c);
+X  		return c;
+--- 70,76 ----
+X  
+X  tailrec:
+X  	c = hgetch();
+! 	if (stophist || alstackind)
+X  		{
+X  		hwaddc(c);
+X  		return c;
+***************
+*** 81,87 ****
+X  	if (isfirstch && c == hatchar)
+X  		{
+X  		isfirstch = 0;
+! 		hungets(":s^");
+X  		c = bangchar;
+X  		goto hatskip;
+X  		}
+--- 78,85 ----
+X  	if (isfirstch && c == hatchar)
+X  		{
+X  		isfirstch = 0;
+! 		hungetch(hatchar);
+! 		hungets(":s");
+X  		c = bangchar;
+X  		goto hatskip;
+X  		}
+***************
+*** 108,361 ****
+X  	*hptr = '\0';
+X  	if ((c = hgetch()) == '{')
+X  		{
+! 			bflag = cflag = 1;
+X  			c = hgetch();
+X  			}
+! 		if (c == '\"')
+X  			{
+! 			stophist = 1;
+! 			goto tailrec;
+X  			}
+! 		if (!cflag && inblank(c) || c == '=' || c == '(' || c == EOF)
+X  			{
+! 			hungetch(c);
+! 			hwaddc(bangchar);
+! 			return bangchar;
+! 			}
+! 		cflag = 0;
+! 		ptr = buf;
+! 
+! 		/* get event number */
+! 
+! 		if (c == '?')
+! 			{
+! 			for(;;)
+X  				{
+X  				c = hgetch();
+! 				if (c == '?' || c == '\n' || c == -1)
+! 					break;
+! 				else
+! 					*ptr++ = c;
+X  				}
+! 			if (c != '\n' && c != -1)
+! 				c = hgetch();
+! 			*ptr = '\0';
+! 			ev = hconsearch(hsubl = ztrdup(buf),&marg);
+! 			if (ev == -1)
+! 				{
+! 				herrflush();
+! 				zerr("no such event: %s",buf,0);
+! 				habort();
+! 				}
+X  			}
+! 		else
+X  			{
+! 			int t0;
+! 	 
+! 			for (;;)
+! 				{
+! 				if (inblank(c) || c == ':' || c == '^' || c == '$' || c == '*'
+! 						|| c == '%' || c == '}' || c == -1)
+! 					break;
+! 				if (ptr != buf && c == '-')
+! 					break;
+! 				*ptr++ = c;
+! 				if (c == '#' || c == '!')
+! 					{
+! 					c = hgetch();
+! 					break;
+! 					}
+X  				c = hgetch();
+! 				}
+! 			*ptr = 0;
+! 			if (!*buf)
+! 				ev = defev;
+! 			else if (t0 = atoi(buf))
+! 				ev = (t0 < 0) ? curhist+t0 : t0;
+! 			else if (*buf == '!')
+! 				ev = curhist-1;
+! 			else if (*buf == '#')
+! 				ev = curhist;
+! 			else if ((ev = hcomsearch(buf)) == -1)
+! 				{
+! 				zerr("event not found: %s",buf,0);
+! 				while (c != '\n' && c != -1)
+! 					c = hgetch();
+! 				habort();
+! 				}
+X  			}
+X  
+! 		/* get the event */
+X  
+! 		if (!(eline = getevent(defev = ev)))
+! 			habort();
+X  
+! 		/* extract the relevant arguments */
+X  
+! 		argc = getargc(eline);
+! 		if (c == ':')
+! 			{
+! 			cflag = 1;
+! 			c = hgetch();
+! 			}
+X  		if (c == '*')
+X  			{
+- 			farg = 1;
+- 			larg = argc;
+X  			cflag = 0;
+X  			}
+! 		else
+X  			{
+! 			hungetch(c);
+! 			larg = farg = getargspec(argc,marg);
+X  			if (larg == -2)
+X  				habort();
+! 			if (farg != -1)
+! 				cflag = 0;
+! 			c = hgetch();
+! 			if (c == '*')
+! 				{
+! 				cflag = 0;
+! 				larg = argc;
+! 				}
+! 			else if (c == '-')
+! 				{
+! 				cflag = 0;
+! 				larg = getargspec(argc,marg);
+! 				if (larg == -2)
+! 					habort();
+! 				if (larg == -1)
+! 					larg = argc-1;
+! 				}
+! 			else
+! 				hungetch(c);
+X  			}
+! 		if (farg == -1)
+! 			farg = 0;
+! 		if (larg == -1)
+! 			larg = argc;
+! 		if (!(sline = getargs(eline,farg,larg)))
+! 			habort();
+X  
+! 		/* do the modifiers */
+X  
+! 		for(;;)
+X  			{
+! 			c = (cflag) ? ':' : hgetch();
+! 			cflag = 0;
+! 			if (c == ':')
+X  				{
+! 				int gbal = 0;
+! 			
+! 				if ((c = hgetch()) == 'g')
+X  					{
+! 					gbal = 1;
+! 					c = hgetch();
+X  					}
+! 				switch(c)
+! 					{
+! 					case 'p':
+! 						histdone = 2;
+! 						break;
+! 					case 'h':
+! 						if (!remtpath(&sline))
+! 							{
+! 							herrflush();
+! 							zerr("modifier failed: h",NULL,0);
+! 							habort();
+! 							}
+! 						break;
+! 					case 'e':
+! 						if (!rembutext(&sline))
+! 							{
+! 							herrflush();
+! 							zerr("modifier failed: e",NULL,0);
+! 							habort();
+! 							}
+! 						break;
+! 					case 'r':
+! 						if (!remtext(&sline))
+! 							{
+! 							herrflush();
+! 							zerr("modifier failed: r",NULL,0);
+! 							habort();
+! 							}
+! 						break;
+! 					case 't':
+! 						if (!remlpaths(&sline))
+! 							{
+! 							herrflush();
+! 							zerr("modifier failed: t",NULL,0);
+! 							habort();
+! 							}
+! 						break;
+! 					case 's':
+X  						{
+! 						int del;
+! 						char *ptr1,*ptr2;
+! 					
+! 						del = hgetch();
+! 						ptr1 = hdynread(del);
+! 						if (!ptr1)
+X  							habort();
+- 						ptr2 = hdynread2(del);
+- 						if (strlen(ptr1))
+- 							{
+- 							if (hsubl)
+- 								free(hsubl);
+- 							hsubl = ptr1;
+- 							}
+- 						if (hsubr)
+- 							free(hsubr);
+- 						hsubr = ptr2;
+X  						}
+! 					case '&':
+! 						if (hsubl && hsubr)
+! 							{
+! 							if (subst(&sline,hsubl,hsubr,gbal))
+! 								habort();
+! 							}
+! 						else
+! 							{
+! 							herrflush();
+! 							zerr("no previous substitution with &",NULL,0);
+! 							habort();
+! 							}
+! 						break;
+! 					case 'q':
+! 						quote(&sline);
+! 						break;
+! 					case 'x':
+! 						quotebreak(&sline);
+! 						break;
+! 					case 'l':
+! 						downcase(&sline);
+! 						break;
+! 					case 'u':
+! 						upcase(&sline);
+! 						break;
+! 					default:
+X  						herrflush();
+! 						zerr("illegal modifier: %c",NULL,c);
+! 					habort();
+X  					break;
+! 				}
+X  			}
+! 		else
+X  			{
+! 			if (c != '}' || !bflag)
+! 				hungetch(c);
+! 			if (c != '}' && bflag)
+! 				{
+! 				zerr("'}' expected",NULL,0);
+! 				habort();
+! 				}
+! 			break;
+X  			}
+X  		}
+! 	
+X  	/* stuff the resulting string in the input queue and start over */
+X  
+X  	if (alstackind != MAXAL)
+X  		{
+X  		hungets(HISTMARK);
+--- 106,363 ----
+X  	*hptr = '\0';
+X  	if ((c = hgetch()) == '{')
+X  		{
+! 		bflag = cflag = 1;
+! 		c = hgetch();
+! 		}
+! 	if (c == '\"')
+! 		{
+! 		stophist = 1;
+! 		goto tailrec;
+! 		}
+! 	if (!cflag && inblank(c) || c == '=' || c == '(' || lexstop)
+! 		{
+! 		if (lexstop)
+! 			lexstop = 0;
+! 		else
+! 			hungetch(c);
+! 		hwaddc(bangchar);
+! 		return bangchar;
+! 		}
+! 	cflag = 0;
+! 	ptr = buf;
+! 
+! 	/* get event number */
+! 
+! 	if (c == '?')
+! 		{
+! 		for(;;)
+! 			{
+X  			c = hgetch();
++ 			if (c == '?' || c == '\n' || lexstop)
++ 				break;
++ 			else
++ 				*ptr++ = c;
+X  			}
+! 		if (c != '\n' && !lexstop)
+! 			c = hgetch();
+! 		*ptr = '\0';
+! 		ev = hconsearch(hsubl = ztrdup(buf),&marg);
+! 		if (ev == -1)
+X  			{
+! 			herrflush();
+! 			zerr("no such event: %s",buf,0);
+! 			habort();
+X  			}
+! 		}
+! 	else
+! 		{
+! 		int t0;
+!  
+! 		for (;;)
+X  			{
+! 			if (inblank(c) || c == ':' || c == '^' || c == '$' || c == '*'
+! 					|| c == '%' || c == '}' || lexstop)
+! 				break;
+! 			if (ptr != buf && c == '-')
+! 				break;
+! 			*ptr++ = c;
+! 			if (c == '#' || c == bangchar)
+X  				{
+X  				c = hgetch();
+! 				break;
+X  				}
+! 			c = hgetch();
+X  			}
+! 		*ptr = 0;
+! 		if (!*buf)
+! 			ev = defev;
+! 		else if (t0 = atoi(buf))
+! 			ev = (t0 < 0) ? curhist+t0 : t0;
+! 		else if (*buf == bangchar)
+! 			ev = curhist-1;
+! 		else if (*buf == '#')
+! 			ev = curhist;
+! 		else if ((ev = hcomsearch(buf)) == -1)
+X  			{
+! 			zerr("event not found: %s",buf,0);
+! 			while (c != '\n' && !lexstop)
+X  				c = hgetch();
+! 			habort();
+X  			}
++ 		}
+X  
+! 	/* get the event */
+X  
+! 	if (!(eline = getevent(defev = ev)))
+! 		habort();
+X  
+! 	/* extract the relevant arguments */
+X  
+! 	argc = getargc(eline);
+! 	if (c == ':')
+! 		{
+! 		cflag = 1;
+! 		c = hgetch();
+! 		}
+! 	if (c == '*')
+! 		{
+! 		farg = 1;
+! 		larg = argc;
+! 		cflag = 0;
+! 		}
+! 	else
+! 		{
+! 		hungetch(c);
+! 		larg = farg = getargspec(argc,marg);
+! 		if (larg == -2)
+! 			habort();
+! 		if (farg != -1)
+! 			cflag = 0;
+! 		c = hgetch();
+X  		if (c == '*')
+X  			{
+X  			cflag = 0;
++ 			larg = argc;
+X  			}
+! 		else if (c == '-')
+X  			{
+! 			cflag = 0;
+! 			larg = getargspec(argc,marg);
+X  			if (larg == -2)
+X  				habort();
+! 			if (larg == -1)
+! 				larg = argc-1;
+X  			}
+! 		else
+! 			hungetch(c);
+! 		}
+! 	if (farg == -1)
+! 		farg = 0;
+! 	if (larg == -1)
+! 		larg = argc;
+! 	if (!(sline = getargs(eline,farg,larg)))
+! 		habort();
+X  
+! 	/* do the modifiers */
+X  
+! 	for(;;)
+! 		{
+! 		c = (cflag) ? ':' : hgetch();
+! 		cflag = 0;
+! 		if (c == ':')
+X  			{
+! 			int gbal = 0;
+! 		
+! 			if ((c = hgetch()) == 'g')
+X  				{
+! 				gbal = 1;
+! 				c = hgetch();
+! 				}
+! 			switch(c)
+! 				{
+! 				case 'p':
+! 					histdone = 2;
+! 					break;
+! 				case 'h':
+! 					if (!remtpath(&sline))
+! 						{
+! 						herrflush();
+! 						zerr("modifier failed: h",NULL,0);
+! 						habort();
+! 						}
+! 					break;
+! 				case 'e':
+! 					if (!rembutext(&sline))
+! 						{
+! 						herrflush();
+! 						zerr("modifier failed: e",NULL,0);
+! 						habort();
+! 						}
+! 					break;
+! 				case 'r':
+! 					if (!remtext(&sline))
+! 						{
+! 						herrflush();
+! 						zerr("modifier failed: r",NULL,0);
+! 						habort();
+! 						}
+! 					break;
+! 				case 't':
+! 					if (!remlpaths(&sline))
+! 						{
+! 						herrflush();
+! 						zerr("modifier failed: t",NULL,0);
+! 						habort();
+! 						}
+! 					break;
+! 				case 's':
+X  					{
+! 					int del;
+! 					char *ptr1,*ptr2;
+! 				
+! 					del = hgetch();
+! 					ptr1 = hdynread(del);
+! 					if (!ptr1)
+! 						habort();
+! 					ptr2 = hdynread2(del);
+! 					if (strlen(ptr1))
+! 						{
+! 						if (hsubl)
+! 							free(hsubl);
+! 						hsubl = ptr1;
+! 						}
+! 					if (hsubr)
+! 						free(hsubr);
+! 					hsubr = ptr2;
+X  					}
+! 				case '&':
+! 					if (hsubl && hsubr)
+X  						{
+! 						if (subst(&sline,hsubl,hsubr,gbal))
+X  							habort();
+X  						}
+! 					else
+! 						{
+X  						herrflush();
+! 						zerr("no previous substitution with &",NULL,0);
+! 						habort();
+! 						}
+X  					break;
+! 				case 'q':
+! 					quote(&sline);
+! 					break;
+! 				case 'x':
+! 					quotebreak(&sline);
+! 					break;
+! 				case 'l':
+! 					downcase(&sline);
+! 					break;
+! 				case 'u':
+! 					upcase(&sline);
+! 					break;
+! 				default:
+! 					herrflush();
+! 					zerr("illegal modifier: %c",NULL,c);
+! 				habort();
+! 				break;
+X  			}
+! 		}
+! 	else
+! 		{
+! 		if (c != '}' || !bflag)
+! 			hungetch(c);
+! 		if (c != '}' && bflag)
+X  			{
+! 			zerr("'}' expected",NULL,0);
+! 			habort();
+X  			}
++ 		break;
+X  		}
+! 	}
+! 
+X  	/* stuff the resulting string in the input queue and start over */
+X  
++ 	lexstop = 0;
+X  	if (alstackind != MAXAL)
+X  		{
+X  		hungets(HISTMARK);
+***************
+*** 385,391 ****
+X  			if (!alstackind)
+X  				{
+X  				zerr("alias stack underflow",NULL,0);
+! 				return lastc = HERR;
+X  				}
+X  			ix = alstack[--alstackind];
+X  			if (ix)
+--- 387,394 ----
+X  			if (!alstackind)
+X  				{
+X  				zerr("alias stack underflow",NULL,0);
+! 				errflag = lexstop = 1;
+! 				return lastc = ' ';
+X  				}
+X  			ix = alstack[--alstackind];
+X  			if (ix)
+***************
+*** 399,410 ****
+X  				}
+X  			goto start;
+X  			}
+X  		return lastc;
+X  		}
+! 	if (strin)
+! 		return lastc = EOF;
+! 	if (errflag)
+! 		return lastc = HERR;
+X  	if (interact && isset(SHINSTDIN))
+X  		if (!isfirstln)
+X  			pmpt = putprompt(prompt2,&plen);
+--- 402,416 ----
+X  				}
+X  			goto start;
+X  			}
++ 		if (itok(lastc))
++ 			goto start;
+X  		return lastc;
+X  		}
+! 	if (strin || errflag)
+! 		{
+! 		lexstop = 1;
+! 		return lastc = ' ';
+! 		}
+X  	if (interact && isset(SHINSTDIN))
+X  		if (!isfirstln)
+X  			pmpt = putprompt(prompt2,&plen);
+***************
+*** 424,430 ****
+X  	else
+X  		line = zleread(pmpt,pmpt2,plen);
+X  	if (!line)
+! 		return lastc = EOF;
+X  	if (interact && isset(SHINSTDIN))
+X  		{
+X  		char *s = getdata(lastnode(lithistlist));
+--- 430,444 ----
+X  	else
+X  		line = zleread(pmpt,pmpt2,plen);
+X  	if (!line)
+! 		{
+! 		lexstop = 1;
+! 		return lastc = ' ';
+! 		}
+! 	if (errflag)
+! 		{
+! 		lexstop = errflag = 1;
+! 		return lastc = ' ';
+! 		}
+X  	if (interact && isset(SHINSTDIN))
+X  		{
+X  		char *s = getdata(lastnode(lithistlist));
+***************
+*** 513,519 ****
+X  void hungetc(c) /**/
+X  int c;
+X  {
+! 	if (c == -1)
+X  		return;
+X  	if (hlastw)
+X  		{
+--- 527,533 ----
+X  void hungetc(c) /**/
+X  int c;
+X  {
+! 	if (lexstop)
+X  		return;
+X  	if (hlastw)
+X  		{
+***************
+*** 528,534 ****
+X  void hungetch(c) /**/
+X  int c;
+X  {
+! 	if (c == -1)
+X  		return;
+X  	if (inbufct == inbufsz)
+X  		{
+--- 542,548 ----
+X  void hungetch(c) /**/
+X  int c;
+X  {
+! 	if (lexstop)
+X  		return;
+X  	if (inbufct == inbufsz)
+X  		{
+***************
+*** 808,814 ****
+X  {
+X  int t0;
+X  Lknode node;
+- char *s,*t;
+X  
+X  	if (curhist-firsthist < 1)
+X  		return -1;
+--- 822,827 ----
+***************
+*** 880,886 ****
+X  char *str = *junkptr;
+X  
+X  	for (; *str; str++)
+! 		*str = toupper(*str);
+X  	return 1;
+X  }
+X  
+--- 893,899 ----
+X  char *str = *junkptr;
+X  
+X  	for (; *str; str++)
+! 		*str = tuupper(*str);
+X  	return 1;
+X  }
+X  
+***************
+*** 890,896 ****
+X  char *str = *junkptr;
+X  
+X  	for (; *str; str++)
+! 		*str = tolower(*str);
+X  	return 1;
+X  }
+X  
+--- 903,909 ----
+X  char *str = *junkptr;
+X  
+X  	for (; *str; str++)
+! 		*str = tulower(*str);
+X  	return 1;
+X  }
+X  
+***************
+*** 1046,1052 ****
+X  char *pp = *(char **) x;
+X  
+X  	for (; *pp; pp++)
+! 		*pp = toupper(*pp);
+X  }
+X  
+X  void downcase(x) /**/
+--- 1059,1065 ----
+X  char *pp = *(char **) x;
+X  
+X  	for (; *pp; pp++)
+! 		*pp = tuupper(*pp);
+X  }
+X  
+X  void downcase(x) /**/
+***************
+*** 1055,1061 ****
+X  char *pp = *(char **) x;
+X  
+X  	for (; *pp; pp++)
+! 		*pp = tolower(*pp);
+X  }
+X  
+X  int quote(tr) /**/
+--- 1068,1074 ----
+X  char *pp = *(char **) x;
+X  
+X  	for (; *pp; pp++)
+! 		*pp = tulower(*pp);
+X  }
+X  
+X  int quote(tr) /**/
+***************
+*** 1140,1146 ****
+X  {
+X  char *ss,*ttyname DCLPROTO((int)),*bl0;
+X  static char buf1[256],buf2[256],*buf;
+! int t0;
+X  struct tm *tm = NULL;
+X  time_t timet;
+X  
+--- 1153,1159 ----
+X  {
+X  char *ss,*ttyname DCLPROTO((int)),*bl0;
+X  static char buf1[256],buf2[256],*buf;
+! int t0,bracepos = 0;
+X  struct tm *tm = NULL;
+X  time_t timet;
+X  
+***************
+*** 1200,1205 ****
+--- 1213,1220 ----
+X  				case 'b': tstradd("me");
+X  				case 'U': tstradd("us");
+X  				case 'u': tstradd("ue");
++ 				case '{': bracepos = bp-buf; break;
++ 				case '}': lensb += (bp-buf)-bracepos; break;
+X  				case 't': case '@':
+X  					timet = time(NULL);
+X  					tm = localtime(&timet);
+***************
+*** 1281,1287 ****
+X  {
+X  	if (strin)
+X  		hflush();
+! 	else while (lastc != '\n' && lastc != HERR)
+X  		hgetch();
+X  }
+X  
+--- 1296,1302 ----
+X  {
+X  	if (strin)
+X  		hflush();
+! 	else while (lastc != '\n' && !lexstop)
+X  		hgetch();
+X  }
+X  
+***************
+*** 1294,1300 ****
+X  char *buf = zalloc(bsiz),*ptr;
+X   
+X  	ptr = buf;
+! 	while ((c = hgetch()) != stop && c != '\n' && c != EOF && c != HERR)
+X  		{
+X  		if (c == '\\')
+X  			c = hgetch();
+--- 1309,1315 ----
+X  char *buf = zalloc(bsiz),*ptr;
+X   
+X  	ptr = buf;
+! 	while ((c = hgetch()) != stop && c != '\n' && !lexstop)
+X  		{
+X  		if (c == '\\')
+X  			c = hgetch();
+***************
+*** 1323,1329 ****
+X  char *buf = zalloc(bsiz),*ptr;
+X   
+X  	ptr = buf;
+! 	while ((c = hgetch()) != stop && c != '\n' && c != EOF && c != HERR)
+X  		{
+X  		if (c == '\n')
+X  			{
+--- 1338,1344 ----
+X  char *buf = zalloc(bsiz),*ptr;
+X   
+X  	ptr = buf;
+! 	while ((c = hgetch()) != stop && c != '\n' && !lexstop)
+X  		{
+X  		if (c == '\n')
+X  			{
+***************
+*** 1394,1400 ****
+X  int arg = pgrp;
+X  
+X  	if (jobbing)
+! #ifdef TCSETPGRP
+X  		if (SHTTY != -1 && tcsetpgrp(SHTTY,pgrp) == -1 && !ep)
+X  #else
+X  		if (SHTTY != -1 && ioctl(SHTTY,TIOCSPGRP,&arg) == -1 && !ep)
+--- 1409,1415 ----
+X  int arg = pgrp;
+X  
+X  	if (jobbing)
+! #ifndef TIOCSPGRP
+X  		if (SHTTY != -1 && tcsetpgrp(SHTTY,pgrp) == -1 && !ep)
+X  #else
+X  		if (SHTTY != -1 && ioctl(SHTTY,TIOCSPGRP,&arg) == -1 && !ep)
+*** src/zsh0/zsh2.00/src/init.c	Tue Apr 23 01:29:26 1991
+--- zsh2.00/src/init.c	Fri May 10 06:46:07 1991
+***************
+*** 32,38 ****
+X  
+X  #define GLOBALS
+X  #include "zsh.h"
+- #include "funcs.h"
+X  #include <pwd.h>
+X  
+X  extern int yydebug;
+--- 32,37 ----
+***************
+*** 132,138 ****
+X  {
+X  int c;
+X  
+! 	for (c = 0; c != 128; c++)
+X  		opts[c] = OPT_INVALID;
+X  	for (c = 'a'; c <= 'z'; c++)
+X  		opts[c] = opts[c-'a'+'A'] = OPT_UNSET;
+--- 131,139 ----
+X  {
+X  int c;
+X  
+! 	for (c = 0; c != 32; c++)
+! 		opts[c] = OPT_UNSET;
+! 	for (c = 32; c != 128; c++)
+X  		opts[c] = OPT_INVALID;
+X  	for (c = 'a'; c <= 'z'; c++)
+X  		opts[c] = opts[c-'a'+'A'] = OPT_UNSET;
+***************
+*** 185,194 ****
+X  				{
+X  				int c;
+X  
+! 				argv++;
+X  				c = optlookup(*argv);
+X  				if (c == -1)
+! 					zerr("no such option: %s",argv[-1],0);
+X  				else
+X  					opts[c] = action;
+X  				break;
+--- 186,201 ----
+X  				{
+X  				int c;
+X  
+! 				if (!*++*argv)
+! 					argv++;
+! 				if (!*argv)
+! 					{
+! 					zerr("string expected after -o",NULL,0);
+! 					exit(1);
+! 					}
+X  				c = optlookup(*argv);
+X  				if (c == -1)
+! 					zerr("no such option: %s",*argv,0);
+X  				else
+X  					opts[c] = action;
+X  				break;
+***************
+*** 227,232 ****
+--- 234,240 ----
+X  	setbuffer(stdout,malloc(BUFSIZ),BUFSIZ);
+X  	setbuffer(stderr,malloc(BUFSIZ),BUFSIZ);
+X  	subsh = 0;
++ #ifdef JOB_CONTROL
+X  	opts[MONITOR] = (interact) ? OPT_SET : OPT_UNSET;
+X  	if (jobbing)
+X  		{
+***************
+*** 234,245 ****
+--- 242,265 ----
+X  		if (SHTTY == -1)
+X  			opts[MONITOR] = OPT_UNSET;
+X  		else
++ 			{
+X  			gettyinfo(&shttyinfo);	/* get tty state */
++ 			savedttyinfo = shttyinfo;
++ 			}
+X  		if ((mypgrp = getpgrp(0)) <= 0)
+X  			opts[MONITOR] = OPT_UNSET;
+X  		}
+X  	else
+X  		SHTTY = -1;
++ #else
++ 	opts[MONITOR] = OPT_UNSET;
++ 	SHTTY = movefd((isatty(0)) ? dup(0) : open("/dev/tty",O_RDWR));
++ 	if (SHTTY != -1)
++ 		{
++ 		gettyinfo(&shttyinfo);
++ 		savedttyinfo = shttyinfo;
++ 		}
++ #endif
+X  }
+X  
+X  void setupvals() /**/
+***************
+*** 269,284 ****
+X  	paramtab = newhtable(151);
+X  	cmdnamtab = newhtable(13);
+X  	initxbindtab();
+! 	if (interact)
+! 		{
+! 		prompt = ztrdup("%m%# ");
+! 		prompt2 = ztrdup("> ");
+! 		prompt3 = ztrdup("?# ");
+! 		prompt4 = ztrdup("+ ");
+! 		}
+X  	ppid = getppid();
+X  #ifdef TERMIOS
+! 	baud = bauds[cfgetospeed(&shttyinfo.termios)];
+X  #else
+X  #ifdef TERMIO
+X  	baud = bauds[shttyinfo.termio.c_cflag & CBAUD];
+--- 289,301 ----
+X  	paramtab = newhtable(151);
+X  	cmdnamtab = newhtable(13);
+X  	initxbindtab();
+! 	prompt = ztrdup("%m%# ");
+! 	prompt2 = ztrdup("> ");
+! 	prompt3 = ztrdup("?# ");
+! 	prompt4 = ztrdup("+ ");
+X  	ppid = getppid();
+X  #ifdef TERMIOS
+! 	baud = bauds[shttyinfo.termios.c_cflag & CBAUD];
+X  #else
+X  #ifdef TERMIO
+X  	baud = bauds[shttyinfo.termio.c_cflag & CBAUD];
+***************
+*** 295,301 ****
+X  	columns = 80;
+X  	lines = 24;
+X  #endif
+- 	home = ztrdup("/");
+X  	ifs = ztrdup(" \t\n");
+X  	if (pwd = getpwuid(getuid()))
+X  		{
+--- 312,317 ----
+***************
+*** 311,316 ****
+--- 327,333 ----
+X  	watchfmt = ztrdup(DEFWATCHFMT);
+X  	ttystrname = ztrdup(ttyname(SHTTY));
+X  	wordchars = ztrdup(DEFWORDCHARS);
++ 	fceditparam = ztrdup(DEFFCEDIT);
+X  	if (ispwd(home))
+X  		cwd = ztrdup(home);
+X  	else if ((ptr = zgetenv("PWD")) && ispwd(ptr))
+***************
+*** 334,340 ****
+X  	userdirsz = 2;
+X  	userdirct = 0;
+X  	optarg = ztrdup("");
+! 	optind = 1;
+X  	path = (char **) zalloc(4*sizeof *path);
+X  	path[0] = ztrdup("/bin"); path[1] = ztrdup("/usr/bin");
+X  	path[2] = ztrdup("/usr/ucb"); path[3] = NULL;
+--- 351,358 ----
+X  	userdirsz = 2;
+X  	userdirct = 0;
+X  	optarg = ztrdup("");
+! 	optind = 0;
+! 	schedcmds = NULL;
+X  	path = (char **) zalloc(4*sizeof *path);
+X  	path[0] = ztrdup("/bin"); path[1] = ztrdup("/usr/bin");
+X  	path[2] = ztrdup("/usr/ucb"); path[3] = NULL;
+***************
+*** 341,346 ****
+--- 359,365 ----
+X  	for (ptr = hostm; *ptr && *ptr != '.'; ptr++);
+X  	*ptr = '\0';
+X  	inittyptab();
++ 	initlextabs();
+X  	setupparams();
+X  	setparams();
+X  	inittyptab();
+***************
+*** 363,369 ****
+X  	inbuf = zalloc(inbufsz = 256);
+X  	inbufptr = inbuf+inbufsz;
+X  	inbufct = 0;
+! 	/*signal(SIGQUIT,SIG_IGN);*/
+X  	for (t0 = 0; t0 != RLIM_NLIMITS; t0++)
+X  		getrlimit(t0,limits+t0);
+X  	hsubl = hsubr = NULL;
+--- 382,388 ----
+X  	inbuf = zalloc(inbufsz = 256);
+X  	inbufptr = inbuf+inbufsz;
+X  	inbufct = 0;
+! 	signal(SIGQUIT,SIG_IGN);
+X  	for (t0 = 0; t0 != RLIM_NLIMITS; t0++)
+X  		getrlimit(t0,limits+t0);
+X  	hsubl = hsubr = NULL;
+***************
+*** 392,398 ****
+X  static char *reswds[] = {
+X  	"do", "done", "esac", "then", "elif", "else", "fi", "for", "case",
+X  	"if", "while", "function", "repeat", "time", "until", "exec", "command",
+! 	"select", "coproc", "noglob", "-", NULL
+X  	};
+X  int t0;
+X  
+--- 411,417 ----
+X  static char *reswds[] = {
+X  	"do", "done", "esac", "then", "elif", "else", "fi", "for", "case",
+X  	"if", "while", "function", "repeat", "time", "until", "exec", "command",
+! 	"select", "coproc", "noglob", "-", "nocorrect", NULL
+X  	};
+X  int t0;
+X  
+***************
+*** 402,408 ****
+X  
+X  void runscripts() /**/
+X  {
+! 	if (interact && opts[NORCS] == OPT_UNSET)
+X  		{
+X  #ifdef GLOBALZSHRC
+X  		source(GLOBALZSHRC);
+--- 421,430 ----
+X  
+X  void runscripts() /**/
+X  {
+! 	if (opts[NORCS] == OPT_SET)
+! 		return;
+! 	sourcehome(".zshenv");
+! 	if (interact)
+X  		{
+X  #ifdef GLOBALZSHRC
+X  		source(GLOBALZSHRC);
+***************
+*** 417,423 ****
+X  			}
+X  		}
+X  	if (interact)
+! 		readhistfile();
+X  	if (opts['c'] == OPT_SET)
+X  		{
+X  		if (SHIN >= 10)
+--- 439,445 ----
+X  			}
+X  		}
+X  	if (interact)
+! 		readhistfile(getsparam("HISTFILE"),0);
+X  	if (opts['c'] == OPT_SET)
+X  		{
+X  		if (SHIN >= 10)
+***************
+*** 441,452 ****
+X  	isfirstln = 1;
+X  }
+X  
+! void readhistfile() /**/
+X  {
+! char *s,buf[1024];
+X  FILE *in;
+X  
+! 	if (!(s = getsparam("HISTFILE")))
+X  		return;
+X  	if (in = fopen(s,"r"))
+X  		{
+--- 463,475 ----
+X  	isfirstln = 1;
+X  }
+X  
+! void readhistfile(s,err) /**/
+! char *s;int err;
+X  {
+! char buf[1024];
+X  FILE *in;
+X  
+! 	if (!s)
+X  		return;
+X  	if (in = fopen(s,"r"))
+X  		{
+***************
+*** 454,462 ****
+--- 477,489 ----
+X  		while (fgets(buf,1024,in))
+X  			{
+X  			int l = strlen(buf);
++ 			char *pt = buf;
+X  
+X  			if (l && buf[l-1] == '\n')
+X  				buf[l-1] = '\0';
++ 			for (;*pt;pt++)
++ 			    if (*pt == ' ')
++ 				*pt = HISTSPACE;
+X  			addnode(histlist,ztrdup(buf));
+X  			addnode(lithistlist,ztrdup(buf));
+X  			curhist++;
+***************
+*** 464,479 ****
+X  		fclose(in);
+X  		lastalloc();
+SHAR_EOF
+true || echo 'restore of patches failed'
+echo 'End of  part 2'
+echo 'File patches is continued in part 3'
+echo 3 > _shar_seq_.tmp
+exit 0
+              Paul Falstad  pfalstad@phoenix.princeton.edu
+         And on the roads, too, vicious gangs of KEEP LEFT signs!
+     If Princeton knew my opinions, they'd have expelled me long ago.
+
+exit 0 # Just in case...
+-- 
+Kent Landfield                   INTERNET: kent@sparky.IMD.Sterling.COM
+Sterling Software, IMD           UUCP:     uunet!sparky!kent
+Phone:    (402) 291-8300         FAX:      (402) 291-4362
+Please send comp.sources.misc-related mail to kent@uunet.uu.net.

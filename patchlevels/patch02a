@@ -1,0 +1,1818 @@
+Path: funic!fuug!sics.se!sunic!mcsun!uunet!sparky!kent
+From: pfalstad@phoenix.princeton.edu (Paul Falstad)
+Newsgroups: comp.sources.misc
+Subject: v19i067:  zsh2.00 - The Z shell, Patch02a/6
+Message-ID: <1991May15.214518.6856@sparky.IMD.Sterling.COM>
+Date: 15 May 91 21:45:18 GMT
+Sender: kent@sparky.IMD.Sterling.COM (Kent Landfield)
+Organization: League For Fighting Chartered Accountancy
+Lines: 1806
+Approved: kent@sparky.imd.sterling.com
+X-Md4-Signature: b0000a78df894269abd0188fa3537090
+
+Submitted-by: Paul Falstad <pfalstad@phoenix.princeton.edu>
+Posting-number: Volume 19, Issue 67
+Archive-name: zsh2.00/patch02a
+Patch-To: zsh2.00: Volume 18, Issue 84-98
+
+This is zsh 2.00.02.  This is part of the README file for patchlevel 02:
+
+To get this shell running, cd into the src directory and type
+"buildzsh".  I tested it on the following machines, where it compiled
+just by running this script:
+
+Sun SPARCServer 4/490 running SunOS 4.1.1
+
+Past versions have been tested successfully on the following machines:
+
+Sun 3/60C running SunOS 4.1.1
+NeXTstation running Mach 2.0
+SGI-4D/25 running IRIX 3.3.1
+hp9000 running BSD 4.3
+DECSystem-5000 running ULTRIX 4.0
+
+...
+
+01-02:
+   - added script to convert most csh aliases to zsh aliases or functions
+   - fc -l (history) now appears in the history itself; HISTNOSTORE
+     option added to get old behavior
+   - the POSIX process group race has been fixed; so 'w | more' should
+     no longer hang
+   - FCEDIT added, to match the documentation
+   - %{...%} in the prompt added
+   - execute-named-cmd and execute-last-named-cmd bindings added
+   - sources ~/.zshenv in all shells, even if not interactive, unless
+     -f is given
+   - ^ and # are no longer `magic' by default; use EXTENDEDGLOB option
+     to use them
+   - now checks for tty sanity before each command
+   - if the right side of a variable assignment expands to more than
+     one word, array assignment is assumed; so foo=*.c now works
+   - ~foo is no longer expanded in completion
+   - select now works even if the argument list is not sorted
+   - menucompletebeep option added
+   - emacs mode is now 8-bit clean by default; use bindkey -em
+     to get your meta key back
+   - fc -R, fc -W added
+   - nocorrect added
+   - lines from history file are now split into words at spaces
+   - glob-complete, accept-and-menu-complete,
+     beginning-of-line-hist, end-of-line-hist bindings added
+   - insert-last-word bound to M-. in emacs mode by default; now moves
+     back through the history if run repeatedly
+   - J and K now bound to history search in vi mode
+   - delete-char no longer core dumps on an empty line
+   - menu-complete works better
+   - the editor checks the settings of VISUAL and EDITOR to set
+     default bindings
+   - using [[ ... ]] expressions on a symbolic link works as expected
+   - various problems with globbing were fixed
+   - xx is now the same as !! if HISTCHARS=x
+   - added config.h entry for compilers that don't know about void *
+   - lexical analysis made more efficient
+   - "if echo $? ; then : ; fi" no longer always prints 0
+   - removed all enums, '\x7f's from code
+   - in "case foo in bar) xxx ;; esac", foo and bar are no longer subject
+     to command alias expansion
+   - works on platforms where toupper('A') != 'A'
+   - \e sequence added to echo
+   - + options now work with set
+   - AUTORESUME and AUTOCD work better
+   - getopts works better (?)
+   - spell checking works better
+   - "let 2+3=" no longer crashes the shell
+   - "foo=bar; echo ${=foo}" no longer crashes the shell
+   - "zsh -c" or "zsh -o" no longer causes a core dump
+   - "unset MAIL; echo $MAIL" no longer causes a core dump
+   - "(xterm&xterm&)&" no longer causes a core dump
+   - "echo $HOM[tab]" beeps instead of deleting "$HOM"
+   - incremental history search works better
+   - the pwd of a fg'd job is now printed _before_ resuming it
+   - rv=`echo -n foo` no longer puts garbage in $rv
+   - "=1/*" now works as expected
+   - ^Z can now be bound to something
+   - the STTY parameter and the builtin builtin are now documented
+   - IFS=x; foo=`echo foo` no longer puts a newline in $foo
+   - $status added for csh compatibility
+   - arrays are automatically expanded if you say 'foo[1234]=x'
+   - shell now ignores SIGQUIT (it was commented out before :-)
+   - the times builtin works on systems where times() returns > 0
+   - no longer hangs the terminal if you ^S before flow control
+     is turned off
+   - "date ; read foo" now works in interactive shells
+   - <<-foo is now parsed as <<- foo, not << -foo
+   - fixed various errors in the documentation
+
+Stuff that needs to be done
+   - port zsh to more places
+   - improve vi emulation
+
+Known Bugs
+   - terminal acts weird under OpenWindows cmdtool
+   - xterm run in background inherits bad terminal modes
+   - here documents don't appear in the history, and cannot be
+     used inside eval statements
+
+Paul Falstad  pfalstad@phoenix.princeton.edu
+---
+#!/bin/sh
+# This is a shell archive (produced by shar 3.49)
+# To extract the files from this archive, save it to a file, remove
+# everything above the "!/bin/sh" line above, and type "sh file_name".
+#
+# made 05/11/1991 06:08 UTC by pf@learning
+# Source directory /home/learning/pf
+#
+# existing files WILL be overwritten
+#
+# This is part 1 of a multipart archive                                    
+# do not concatenate these parts, unpack them in order with /bin/sh        
+#
+# This shar contains:
+# length  mode       name
+# ------ ---------- ------------------------------------------
+# 182334 -rw-r--r-- patches
+#   6468 -rw-r--r-- zsh2.00/README
+#   1108 -rw-r--r-- zsh2.00/src/funcs.h
+#  15255 -rw-r--r-- zsh2.00/src/lex.c
+#    281 -rw-r--r-- zsh2.00/src/lex.pro
+#   5001 -rw-r--r-- zsh2.00/src/mem.c
+#    510 -rw-r--r-- zsh2.00/src/mem.pro
+#    619 -rw-r--r-- zsh2.00/src/subst.pro
+#    889 -rw-r--r-- zsh2.00/src/table.pro
+#   2865 -rw-r--r-- zsh2.00/src/utils.pro
+#   1565 -rw-r--r-- zsh2.00/src/y.tab.h
+#    624 -rw-r--r-- zsh2.00/src/zle_main.pro
+#  18859 -rw-r--r-- zsh2.00/src/zle_tricky.c
+#   1282 -rw-r--r-- zsh2.00/src/zle_tricky.pro
+#   1137 -rw-r--r-- zsh2.00/scripts/ctoz
+#   1429 -rw-r--r-- zsh2.00/src/signals.h.sample
+#
+if test -r _shar_seq_.tmp; then
+	echo 'Must unpack archives in sequence!'
+	echo Please unpack part `cat _shar_seq_.tmp` next
+	exit 1
+fi
+# ============= patches ==============
+echo 'x - extracting patches (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'patches' &&
+*** src/zsh0/zsh2.00/man/man1/zsh.1	Wed Apr 24 00:17:46 1991
+--- zsh2.00/man/man1/zsh.1	Fri May 10 07:40:43 1991
+***************
+*** 1,5 ****
+X  .\"
+! .TH ZSH 1 "1991 April 23"
+X  .SH NAME
+X  zsh \- the Z shell
+X  .SH SYNOPSIS
+--- 1,5 ----
+X  .\"
+! .TH ZSH 1 "1991 May 5"
+X  .SH NAME
+X  zsh \- the Z shell
+X  .SH SYNOPSIS
+***************
+*** 23,28 ****
+--- 23,30 ----
+X  If preceded by \fBnoglob\fP, filename generation is not performed
+X  on any of the words.  If preceded by a \-, the command
+X  is executed with a \- prepended to its \fBargv[0]\fP string.
++ If preceded by \fBnocorrect\fP, spelling correction is not
++ done on any of the words.
+X  .PP
+X  A \fIpipeline\fP is a sequence of one or more commands
+X  separated by \fB|\fP or \fB|&\fP.  \fB|&\fP is shorthand
+***************
+*** 190,202 ****
+X  See \fBConditional Expressions\fP below for a description
+X  of \fIexp\fP.
+X  .SH "RESERVED WORDS"
+! The following words are recognized as the first word of a command
+X  unless quoted or removed using the \fBunalias\fP builtin:
+X  .RS
+X  .PP
+X  \fBdo done esac then elif else fi for case
+X  if while function repeat time until exec command
+! select coproc noglob \-\fP
+X  .RE
+X  .SH COMMENTS
+X  In noninteractive shells, or in interactive shells with the
+--- 192,205 ----
+X  See \fBConditional Expressions\fP below for a description
+X  of \fIexp\fP.
+X  .SH "RESERVED WORDS"
+! The following words are recognized as reserved words when used 
+! as the first word of a command
+X  unless quoted or removed using the \fBunalias\fP builtin:
+X  .RS
+X  .PP
+X  \fBdo done esac then elif else fi for case
+X  if while function repeat time until exec command
+! select coproc noglob \- nocorrect\fP
+X  .RE
+X  .SH COMMENTS
+X  In noninteractive shells, or in interactive shells with the
+***************
+*** 227,233 ****
+X  to stand for itself) by preceding it with a \e\|.
+X  \e followed by a newline is ignored.
+X  All characters enclosed between a pair of single quotes ('')
+! are ignored.
+X  A single quote cannot appear within single quotes.
+X  Inside double quotes (""), parameter and command substitution
+X  occurs, and \e quotes the characters \e\|, `, ", and $.
+--- 230,236 ----
+X  to stand for itself) by preceding it with a \e\|.
+X  \e followed by a newline is ignored.
+X  All characters enclosed between a pair of single quotes ('')
+! are quoted.
+X  A single quote cannot appear within single quotes.
+X  Inside double quotes (""), parameter and command substitution
+X  occurs, and \e quotes the characters \e\|, `, ", and $.
+***************
+*** 453,462 ****
+X  may be nested.  Malformed brace expansion expressions,
+X  including expressions without a comma, are left unchanged
+X  by the shell.
+X  .SS Filename Generation
+X  If a word contains an unquoted instance of one of the characters
+! #, ^, *, |, <, [, or ?, or the string "..../", it is regarded
+X  as a pattern for filename generation, unless the \fBNOGLOB\fP option is set.
+X  The word is replaced with a list of sorted filenames that match
+X  the pattern.  If no matching pattern is found, the shell gives
+X  an error message, unless the \fBNULLGLOB\fP option is set,
+--- 456,474 ----
+X  may be nested.  Malformed brace expansion expressions,
+X  including expressions without a comma, are left unchanged
+X  by the shell.
++ .PP
++ An expression of the form
++ \fB{\fIx\fB\-\fIy\fB}\fR,
++ where \fIx\fP and \fIy\fP are single characters,
++ is expanded to every character between
++ \fIx\fP and \fIy\fP, inclusive.
+X  .SS Filename Generation
+X  If a word contains an unquoted instance of one of the characters
+! *, |, <, [, or ?, or the string "..../", it is regarded
+X  as a pattern for filename generation, unless the \fBNOGLOB\fP option is set.
++ If the \fBEXTENDED_GLOB\fP option is set, the
++ ^ and # characters also denote a pattern; otherwise
++ they are not treated specially by the shell.
+X  The word is replaced with a list of sorted filenames that match
+X  the pattern.  If no matching pattern is found, the shell gives
+X  an error message, unless the \fBNULLGLOB\fP option is set,
+***************
+*** 498,507 ****
+X  matches either x or y.
+X  .TP
+X  \fBx#\fP
+! matches zero or more occurences of the pattern x.
+X  .TP
+X  \fBx##\fP
+! matches one or more occurences of the pattern x.
+X  .RE
+X  .PD
+X  .PP
+--- 510,519 ----
+X  matches either x or y.
+X  .TP
+X  \fBx#\fP
+! matches zero or more occurrences of the pattern x.
+X  .TP
+X  \fBx##\fP
+! matches one or more occurrences of the pattern x.
+X  .RE
+X  .PD
+X  .PP
+***************
+*** 575,581 ****
+X  readable files (0400)
+X  .TP
+X  .B w
+! writeable files (0200)
+X  .TP
+X  .B x
+X  executable files (0100, same as *)
+--- 587,593 ----
+X  readable files (0400)
+X  .TP
+X  .B w
+! writable files (0200)
+X  .TP
+X  .B x
+X  executable files (0100, same as *)
+***************
+*** 584,590 ****
+X  world-readable files (0004)
+X  .TP
+X  .B W
+! world-writeable files (0002)
+X  .TP
+X  .B X
+X  world-executable files (0001)
+--- 596,602 ----
+X  world-readable files (0004)
+X  .TP
+X  .B W
+! world-writable files (0002)
+X  .TP
+X  .B X
+X  world-executable files (0001)
+***************
+*** 626,632 ****
+X  *(%W)
+X  .RE
+X  .PP
+! lists all world-writeable device files in the current directory,
+X  and
+X  .RS
+X  .PP
+--- 638,644 ----
+X  *(%W)
+X  .RE
+X  .PP
+! lists all world-writable device files in the current directory,
+X  and
+X  .RS
+X  .PP
+***************
+*** 694,700 ****
+X  .B NOCLOBBER
+X  is set.
+X  .TP
+! \fB<<\fP [\-]\fIword\fP
+X  The shell input is read up to a line that is the same as
+X  .IR word ,
+X  or to an end-of-file.
+--- 706,712 ----
+X  .B NOCLOBBER
+X  is set.
+X  .TP
+! \fB<<\fP[\-] \fIword\fP
+X  The shell input is read up to a line that is the same as
+X  .IR word ,
+X  or to an end-of-file.
+***************
+*** 714,720 ****
+X  occurs, \e followed by a newline is removed,
+X  and \e must be used to quote the characters
+X  \e, $, `, and the first character of \fIword\fP.
+! If \- is prepended to \fIword\fP, then all leading
+X  tabs are stripped from \fIword\fP and from the document.
+X  .TP
+X  .BI <<< word
+--- 726,732 ----
+X  occurs, \e followed by a newline is removed,
+X  and \e must be used to quote the characters
+X  \e, $, `, and the first character of \fIword\fP.
+! If <<\- is used, then all leading
+X  tabs are stripped from \fIword\fP and from the document.
+X  .TP
+X  .BI <<< word
+***************
+*** 886,899 ****
+X  is executed after the function completes in the environment
+X  of the caller.
+X  .PP
+! The builtin
+X  .B return
+! is used to return
+X  from function calls.
+X  .PP
+X  Function identifiers
+X  can be listed with the
+! .B function
+X  builtin.
+X  Functions can be undefined with the
+X  .B unfunction
+--- 898,911 ----
+X  is executed after the function completes in the environment
+X  of the caller.
+X  .PP
+! The
+X  .B return
+! builtin is used to return
+X  from function calls.
+X  .PP
+X  Function identifiers
+X  can be listed with the
+! .B functions
+X  builtin.
+X  Functions can be undefined with the
+X  .B unfunction
+***************
+*** 1036,1042 ****
+X  inherited by the shell from its parent
+X  (but see the \fBTRAPxxx\fP special function above).
+X  .SH "ZSH LINE EDITOR"
+! If the \fBUSE_ZLE\fP option is set (it is by default)
+X  and the shell input is attached to the terminal, the user
+X  is allowed to edit command lines.
+X  .PP
+--- 1048,1054 ----
+X  inherited by the shell from its parent
+X  (but see the \fBTRAPxxx\fP special function above).
+X  .SH "ZSH LINE EDITOR"
+! If the \fBZLE\fP option is set (it is by default)
+X  and the shell input is attached to the terminal, the user
+X  is allowed to edit command lines.
+X  .PP
+***************
+*** 1050,1059 ****
+X  .SS Bindings
+X  Command bindings may be set using the \fBbindkey\fP builtin.
+X  There are two keymaps\-the main keymap and the alternate keymap.
+- The main keymap is bound to emacs mode by default.
+X  The alternate keymap is bound to vi command mode.
+X  To bind the main keymap to vi insert mode, use 
+! \fBbindkey \-v\fP.
+X  .PP
+X  The following is a list of all the key commands
+X  and their default bindings in emacs and vi command mode.
+--- 1062,1072 ----
+X  .SS Bindings
+X  Command bindings may be set using the \fBbindkey\fP builtin.
+X  There are two keymaps\-the main keymap and the alternate keymap.
+X  The alternate keymap is bound to vi command mode.
++ The main keymap is bound to emacs mode by default.
+X  To bind the main keymap to vi insert mode, use 
+! \fBbindkey \-v\fP, or set one of the \fBVISUAL\fP or \fBEDITOR\fP
+! environment variables to a string containing \fBvi\fP.
+X  .PP
+X  The following is a list of all the key commands
+X  and their default bindings in emacs and vi command mode.
+***************
+*** 1117,1122 ****
+--- 1130,1139 ----
+X  Move to the beginning of the buffer, or if already there,
+X  move to the first event in the history list.
+X  .TP
++ \fBbeginning-of-line-hist\fP
++ Move to the beginning of the line.  If already at the
++ beginning of the buffer, move to the previous history line.
++ .TP
+X  \fBbeginning-of-history\fP
+X  Move to the first event in the history list.
+X  .TP
+***************
+*** 1130,1135 ****
+--- 1147,1156 ----
+X  Move to the end of the buffer, or if already there,
+X  move to the last event in the history list.
+X  .TP
++ \fBend-of-line-hist\fP
++ Move to the end of the line.  If already at the end of
++ the buffer, move to the next history line.
++ .TP
+X  \fBend-of-history\fP
+X  Move to the last event in the history list.
+X  .TP
+***************
+*** 1146,1152 ****
+X  The string may begin with `^' to anchor the search to the
+X  beginning of the line.
+X  .TP
+! \fBhistory-search-backward\fP (M-P M-p)
+X  Search backward in the history for a line beginning with the first
+X  word in the buffer.
+X  .TP
+--- 1167,1173 ----
+X  The string may begin with `^' to anchor the search to the
+X  beginning of the line.
+X  .TP
+! \fBhistory-search-backward\fP (M-P M-p) (K)
+X  Search backward in the history for a line beginning with the first
+X  word in the buffer.
+X  .TP
+***************
+*** 1155,1161 ****
+X  The string may begin with `^' to anchor the search to the
+X  beginning of the line.
+X  .TP
+! \fBhistory-search-forward\fP (M-N M-n)
+X  Search forward in the history for a line beginning with the first
+X  word in the buffer.
+X  .TP
+--- 1176,1182 ----
+X  The string may begin with `^' to anchor the search to the
+X  beginning of the line.
+X  .TP
+! \fBhistory-search-forward\fP (M-N M-n) (J)
+X  Search forward in the history for a line beginning with the first
+X  word in the buffer.
+X  .TP
+***************
+*** 1168,1174 ****
+X  Search in the history list for a line matching the current one and
+X  fetch the event following it.
+X  .TP
+! \fBinsert-last-word\fP (M-_)
+X  Insert the last word from the previous history event at the
+X  cursor position.
+X  .TP
+--- 1189,1195 ----
+X  Search in the history list for a line matching the current one and
+X  fetch the event following it.
+X  .TP
+! \fBinsert-last-word\fP (M-_ M-.)
+X  Insert the last word from the previous history event at the
+X  cursor position.
+X  .TP
+***************
+*** 1281,1287 ****
+X  Read a movement command from the keyboard, and swap
+X  the case of all characters
+X  from the cursor position to the endpoint of the movement.
+! If the command is \fBvi-oper-swap-case\fP,
+X  swap the case of all characters on the current line.
+X  .TP
+X  \fBoverwrite-mode\fP (^X^O)
+--- 1302,1308 ----
+X  Read a movement command from the keyboard, and swap
+X  the case of all characters
+X  from the cursor position to the endpoint of the movement.
+! If the movement command is \fBvi-oper-swap-case\fP,
+X  swap the case of all characters on the current line.
+X  .TP
+X  \fBoverwrite-mode\fP (^X^O)
+***************
+*** 1356,1361 ****
+--- 1377,1386 ----
+X  Multiply the argument of the next command by 4.
+X  .SS Completion
+X  .TP
++ \fBaccept-or-menu-complete\fP
++ In a menu completion, insert the current completion into the buffer,
++ and advance to the next possible completion.
++ .TP
+X  \fBcomplete-word\fP (unbound) (\|\e\|)
+X  Attempt completion on the current word.
+X  .TP
+***************
+*** 1364,1370 ****
+X  is at the end of the line, list possible completions for the
+X  current word.
+X  .TP
+! \fBexpand-or-complete\fP (TAB) (^X)
+X  Attempt shell expansion on the current word.
+X  If that fails,
+X  attempt completion.
+--- 1389,1401 ----
+X  is at the end of the line, list possible completions for the
+X  current word.
+X  .TP
+! \fBexecute-named-cmd\fP (M-x)
+! Read the name of a editor command and execute it.
+! .TP
+! \fBexecute-last-named-cmd\fP (M-z)
+! Redo the last function executed with \fBexecute-named-cmd\fP.
+! .TP
+! \fBexpand-or-complete\fP (TAB) (TAB ^X)
+X  Attempt shell expansion on the current word.
+X  If that fails,
+X  attempt completion.
+***************
+*** 2070,2076 ****
+X  Individual elements of an array may be selected using a 
+X  subscript.  A subscript of the form \fB[\fIexp\fB]\fR
+X  selects the single element \fIexp\fP, where \fIexp\fP is
+! an arithmetic expression.
+X  A subscript of the form \fB[*]\fP evaluates to all
+X  elements of an array.
+X  A subscript of the form \fB[\fIexp1\fP,\fIexp2\fB]\fR
+--- 2101,2108 ----
+X  Individual elements of an array may be selected using a 
+X  subscript.  A subscript of the form \fB[\fIexp\fB]\fR
+X  selects the single element \fIexp\fP, where \fIexp\fP is
+! an arithmetic expression.  The elements are numbered
+! beginning with 1.
+X  A subscript of the form \fB[*]\fP evaluates to all
+X  elements of an array.
+X  A subscript of the form \fB[\fIexp1\fP,\fIexp2\fB]\fR
+***************
+*** 2088,2096 ****
+X  by the \fBset\fP builtin, or by direct assignment.
+X  The parameter \fIn\fP, where \fIn\fP is a number,
+X  is the \fIn\fPth positional parameter.
+! The parameters \fB*\fP, \fB@\fP, and \fBargc\fP are
+X  arrays containing all the positional parameters;
+! thus \fBargc\fP[\fIn\fP], etc. is equivalent to simply \fIn\fP.
+X  .SS Special Parameters
+X  The following parameters are automatically set by the shell:
+X  .PP
+--- 2120,2128 ----
+X  by the \fBset\fP builtin, or by direct assignment.
+X  The parameter \fIn\fP, where \fIn\fP is a number,
+X  is the \fIn\fPth positional parameter.
+! The parameters \fB*\fP, \fB@\fP, and \fBargv\fP are
+X  arrays containing all the positional parameters;
+! thus \fBargv\fP[\fIn\fP], etc. is equivalent to simply \fIn\fP.
+X  .SS Special Parameters
+X  The following parameters are automatically set by the shell:
+X  .PP
+***************
+*** 2125,2134 ****
+X  .B ?
+X  The exit value returned by the last command.
+X  .TP
+X  .B _
+! Initially, the absolute pathname of the shell or script
+! being executed as passed in the environment.
+! Subsequently, the last argument of the previous command.
+X  .TP
+X  .B ERRNO
+X  The value of errno as set by the most recently failed system call.
+--- 2157,2169 ----
+X  .B ?
+X  The exit value returned by the last command.
+X  .TP
++ .B status
++ Same as \fB?\fP.
++ .TP
+X  .B _
+! The last argument of the previous command.
+! Also, this parameter is set in the environment of every command
+! executed to the full pathname of the command.
+X  .TP
+X  .B ERRNO
+X  The value of errno as set by the most recently failed system call.
+***************
+*** 2229,2234 ****
+--- 2264,2272 ----
+X  stack gets larger than this, it will be truncated automatically.
+X  This is useful with the \fBAUTO_PUSHD\fP option.
+X  .TP
++ .B FCEDIT
++ The default editor for the \fBfc\fP builtin.
++ .TP
+X  .B fignore (FIGNORE)
+X  An array (colon separated list)
+X  containing the suffixes of files to be ignored
+***************
+*** 2375,2380 ****
+--- 2413,2423 ----
+X  .TP
+X  .B %#
+X  A '#' if the shell is running as root, a '%' if not.
++ .TP
++ \fB%{\fP...\fB%}\fP
++ Include a string as a literal escape sequence.
++ The string within the braces should not change the cursor
++ position.
+X  .RE
+X  .PD
+X  .PP
+***************
+*** 2419,2424 ****
+--- 2462,2472 ----
+X  .B SAVEHIST
+X  The maximum number of history events to save in the history file.
+X  .TP
++ .B STTY
++ If this parameter is set in a command's environment, the shell
++ runs the \fBstty\fP command with the value of this parameter as arguments
++ in order to set up the terminal before executing the command.
++ .TP
+X  .B TIMEFMT
+X  The format of process time reports with the \fBtime\fP keyword.
+X  The default is "%E real  %U user  %S system  %P".
+***************
+*** 2570,2770 ****
+X  .RS
+X  .PD 0
+X  .TP
+! \-\fBa\fP (\fBALLEXPORT\fP)
+X  All parameters subsequently defined are automatically exported.
+X  .TP
+! \-\fBe\fP (\fBERREXIT\fP)
+X  If a command has a non-zero exit status, execute the \fBERR\fP
+X  trap, if set, and exit.
+X  .TP
+! \-\fBf\fP (\fBNO_RCS\fP)
+! Do not source the .zshrc, .zlogin, or .zlogout files.
+X  .TP
+! \-\fBg\fP (\fBHIST_IGNORE_SPACE\fP)
+! Do not enter command lines into the history list
+! if they begin with a blank.
+X  .TP
+! \-\fBh\fP (\fBHIST_IGNORE_DUPS\fP)
+X  Do not enter command lines into the history list
+X  if they are duplicates of the previous event.
+X  .TP
+! \-\fBi\fP (\fBINTERACTIVE\fP)
+! This is an interactive shell.
+X  .TP
+! \-\fBj\fP (\fBHISTLIT\fP)
+X  Use literal (unparsed) versions of the history lines
+X  in the editor.
+X  .TP
+! \-\fBk\fP (\fBINTERACTIVE_COMMENTS\fP)
+X  Allow comments even in interactive shells.
+X  .TP
+! \-\fBl\fP (\fBLOGIN\fP)
+X  This is a login shell.
+X  .TP
+! \-\fBm\fP (\fBMONITOR\fP)
+! Allow job control.  Set by default in interactive shells.
+X  .TP
+! \-\fBn\fP (\fBNOEXEC\fP)
+! Read commands and check them for syntax errors, but do not execute them.
+X  .TP
+! \-\fBs\fP (\fBSHINSTDIN\fP)
+! Read commands from the standard input.
+X  .TP
+! \-\fBu\fP (\fBNOUNSET\fP)
+! Treat unset parameters as an error when substituting.
+X  .TP
+! \-\fBv\fP (\fBVERBOSE\fP)
+! Print shell input lines as they are read.
+X  .TP
+! \-\fBw\fP (\fBCHASELINKS\fP)
+! Resolve symbolic links to their true values.
+X  .TP
+! \-\fBx\fP (\fBXTRACE\fP)
+! Print commands and their arguments as they are executed.
+X  .TP
+! \-\fBy\fP (\fBSH_WORD_SPLIT\fP)
+! See \fIParameter Expansion\fP.
+X  .TP
+! \-\fB1\fP (\fBNO_CLOBBER\fP)
+X  Prevents \fB>\fP redirection from truncating existing files.
+X  \fB>!\fP may be used to truncate a file instead.
+X  Also prevents \fB>>\fP from creating files.
+X  \fB>>!\fP may be used instead.
+X  .TP
+! \-\fB2\fP (\fBNO_BAD_PATTERN\fP)
+! If a pattern for filename generation is badly formed,
+! leave it unchanged in the argument list instead of
+! printing an error.
+X  .TP
+! \-\fB3\fP (\fBNO_NOMATCH\fP)
+X  If a pattern for filename generation has no matches,
+X  leave it unchanged in the argument list instead of
+X  printing an error.
+X  .TP
+! \-\fB4\fP (\fBGLOB_DOTS\fP)
+! Do not require a leading . in a filename to be matched explicitly.
+X  .TP
+! \-\fB5\fP (\fBNOTIFY\fP)
+X  Report the status of background jobs immediately, rather than
+X  waiting until just before printing a prompt.
+X  .TP
+! \-\fB6\fP (\fBBGNICE\fP)
+! Run all background jobs at a lower priority.  This option
+! is set by default.
+X  .TP
+! \-\fB7\fP (\fBIGNOREEOF\fP)
+! Do not exit on end-of-file.  Require the use
+! of \fBexit\fP or \fBlogout\fP instead.
+X  .TP
+! \-\fB8\fP (\fBMARKDIRS\fP)
+! Append a trailing / to all directory
+! names resulting from filename generation.
+X  .TP
+! \-\fB9\fP (\fBAUTOLIST\fP)
+! Automatically list choices on an ambiguous completion.
+! .TP
+! \-\fB0\fP (\fBCORRECT\fP)
+! Try to correct the spelling of commands.
+! .TP
+! \-\fBB\fP (\fBNOBEEP\fP)
+! Do not beep.
+! .TP
+! \-\fBC\fP (\fBPRINT_EXIT_VALUE\fP)
+X  Print the exit value of programs with non-zero exit status.
+X  .TP
+! \-\fBD\fP (\fBPUSHD_TO_HOME\fP)
+! Have \fBpushd\fP with no arguments act like
+! \fBpushd\fP $HOME.
+! .TP
+! \-\fBE\fP (\fBPUSHD_SILENT\fP)
+X  Do not print the directory stack after \fBpushd\fP
+X  or \fBpopd\fP.
+X  .TP
+! \-\fBF\fP (\fBNOGLOB\fP)
+! Disable filename generation.
+X  .TP
+! \-\fBG\fP (\fBNULLGLOB\fP)
+! If a pattern for filename generation has no matches,
+! delete the pattern from the argument list instead
+! of reporting an error.  Overrides \fBNONOMATCH\fP.
+X  .TP
+! \-\fBH\fP (\fBRMSTARSILENT\fP)
+X  Do not query the user before executing "rm *".
+X  .TP
+! \-\fBI\fP (\fBIGNORE_BRACES\fP)
+! Do not perform brace expansion.
+X  .TP
+! \-\fBJ\fP (\fBAUTO_CD\fP)
+! If a command is not in the hash table, and there exists an
+! executable directory by that name, perform the \fBcd\fP
+! command to that directory.
+X  .TP
+! \-\fBK\fP (\fBNO_BANG_HIST\fP)
+! Do not perform textual history substitution.  Do not
+! treat the ! character specially.
+X  .TP
+! \-\fBL\fP (\fBSUN_KEYBOARD_HACK\fP)
+X  If a line ends with a backquote, and there are an odd number
+X  of backquotes on the line, ignore the trailing backquote.
+X  This is useful on some keyboards where the return key is
+X  too small, and the backquote key lies annoyingly close to it.
+X  .TP
+! \-\fBM\fP (\fBSINGLE_LINE_ZLE\fP)
+! Use single-line command line editing instead of multi-line.
+X  .TP
+! \-\fBN\fP (\fBAUTO_PUSHD\fP)
+! Make \fBcd\fP act like \fBpushd\fP.
+X  .TP
+! \-\fBO\fP (\fBCORRECT_ALL\fP)
+! Try to correct the spelling of all arguments in a line.
+! .TP
+! \-\fBP\fP (\fBRC_EXPAND_PARAM\fP)
+! See \fIParameter Expansion\fP.
+! .TP
+! \-\fBQ\fP (\fBPATH_DIRS\fP)
+! Perform a path search even on command names with slahses in them.
+! Thus if "/usr/local/bin" is in the user's path, and he types
+! "X11/xinit", the command "/usr/local/bin/X11/xinit" will be executed
+! (assuming it exists).
+! .TP
+! \-\fBR\fP (\fBLONG_LIST_JOBS\fP)
+! List jobs in the long format by default.
+! .TP
+! \-\fBS\fP (\fBRECEXACT\fP)
+! In completion, recognize exact matches even
+! if they are ambiguous.
+! .TP
+! \-\fBT\fP (\fBCDABLEVARS\fP)
+! If the argument to a \fBcd\fP command is not a directory,
+! but a parameter exists by the same name whose value
+! begins with a /, try to change to the directory
+! specified by the parameter's value.
+! .TP
+! \-\fBU\fP (\fBMAIL_WARNING\fP)
+! Print a warning message if a mail file has been
+! accessed since the shell last checked.
+! .TP
+! \-\fBV\fP (\fBNO_PROMPT_CLOBBER\fP)
+! Don't print a carriage return just before printing
+! a prompt in the line editor.
+! .TP
+! \-\fBW\fP (\fBAUTO_RESUME\fP)
+! Treat single word simple commands without redirection
+! as candidates for resumption of an existing job.
+! .TP
+! \-\fBX\fP (\fBLIST_TYPES\fP)
+! When listing files possible completions, show the
+! type of each file with a trailing identifying mark.
+! .TP
+! \-\fBY\fP (\fBMENU_COMPLETE\fP)
+! On an ambiguous completion, instead of listing possibilities,
+! insert the first match.  Then when completion is requested
+! again, remove the first match and insert the second match, etc.
+! When there are no more matches, go back to the first one again.
+! \fBreverse-menu-complete\fP may be used to loop through the list
+! in the other direction.
+! .TP
+! \-\fBZ\fP (\fBUSE_ZLE\fP)
+X  Use the zsh line editor.
+X  .RE
+X  .PD
+--- 2618,2835 ----
+X  .RS
+X  .PD 0
+X  .TP
+! \fBALLEXPORT\fP (\-\fBa\fP)
+X  All parameters subsequently defined are automatically exported.
+X  .TP
+! \fBAUTO_CD\fP (\-\fBJ\fP)
+! If a command is not in the hash table, and there exists an
+! executable directory by that name, perform the \fBcd\fP
+! command to that directory.
+! .TP
+! \fBAUTOLIST\fP (\-\fB9\fP)
+! Automatically list choices on an ambiguous completion.
+! .TP
+! \fBAUTO_PUSHD\fP (\-\fBN\fP)
+! Make \fBcd\fP act like \fBpushd\fP.
+! .TP
+! \fBAUTO_RESUME\fP (\-\fBW\fP)
+! Treat single word simple commands without redirection
+! as candidates for resumption of an existing job.
+! .TP
+! \fBBGNICE\fP (\-\fB6\fP)
+! Run all background jobs at a lower priority.  This option
+! is set by default.
+! .TP
+! \fBCDABLEVARS\fP (\-\fBT\fP)
+! If the argument to a \fBcd\fP command is not a directory,
+! but a parameter exists by the same name whose value
+! begins with a /, try to change to the directory
+! specified by the parameter's value.
+! .TP
+! \fBCHASELINKS\fP (\-\fBw\fP)
+! Resolve symbolic links to their true values.
+! .TP
+! \fBCORRECT\fP (\-\fB0\fP)
+! Try to correct the spelling of commands.
+! .TP
+! \fBCORRECT_ALL\fP (\-\fBO\fP)
+! Try to correct the spelling of all arguments in a line.
+! .TP
+! \fBERREXIT\fP (\-\fBe\fP)
+X  If a command has a non-zero exit status, execute the \fBERR\fP
+X  trap, if set, and exit.
+X  .TP
+! \fBEXTENDED_GLOB\fP
+! Treat the # and ^ characters as part of patterns for filename
+! generation, etc.
+X  .TP
+! \fBGLOB_COMPLETE\fP
+! Like \fBMENU_COMPLETE\fP, except that the current word
+! is expanded using normal shell expansion instead of completion.
+! If no matches are found, a * is added to the end of the word, and expansion
+! is attempted again.
+X  .TP
+! \fBGLOB_DOTS\fP (\-\fB4\fP)
+! Do not require a leading . in a filename to be matched explicitly.
+! .TP
+! \fBHIST_IGNORE_DUPS\fP (\-\fBh\fP)
+X  Do not enter command lines into the history list
+X  if they are duplicates of the previous event.
+X  .TP
+! \fBHIST_IGNORE_SPACE\fP (\-\fBg\fP)
+! Do not enter command lines into the history list
+! if they begin with a blank.
+X  .TP
+! \fBHISTLIT\fP (\-\fBj\fP)
+X  Use literal (unparsed) versions of the history lines
+X  in the editor.
+X  .TP
+! \fBHIST_NO_STORE\fP
+! Remove the \fBhistory\fP (\fBfc\fP \-\fBl\fP) command from
+! the history when invoked.
+! .TP
+! \fBIGNORE_BRACES\fP (\-\fBI\fP)
+! Do not perform brace expansion.
+! .TP
+! \fBIGNOREEOF\fP (\-\fB7\fP)
+! Do not exit on end-of-file.  Require the use
+! of \fBexit\fP or \fBlogout\fP instead.
+! .TP
+! \fBINTERACTIVE\fP (\-\fBi\fP)
+! This is an interactive shell.
+! .TP
+! \fBINTERACTIVE_COMMENTS\fP (\-\fBk\fP)
+X  Allow comments even in interactive shells.
+X  .TP
+! \fBLIST_TYPES\fP (\-\fBX\fP)
+! When listing files possible completions, show the
+! type of each file with a trailing identifying mark.
+! .TP
+! \fBLOGIN\fP (\-\fBl\fP)
+X  This is a login shell.
+X  .TP
+! \fBLONG_LIST_JOBS\fP (\-\fBR\fP)
+! List jobs in the long format by default.
+X  .TP
+! \fBMAIL_WARNING\fP (\-\fBU\fP)
+! Print a warning message if a mail file has been
+! accessed since the shell last checked.
+X  .TP
+! \fBMARKDIRS\fP (\-\fB8\fP)
+! Append a trailing / to all directory
+! names resulting from filename generation.
+X  .TP
+! \fBMENU_COMPLETE\fP (\-\fBY\fP)
+! On an ambiguous completion, instead of listing possibilities,
+! insert the first match.  Then when completion is requested
+! again, remove the first match and insert the second match, etc.
+! When there are no more matches, go back to the first one again.
+! \fBreverse-menu-complete\fP may be used to loop through the list
+! in the other direction.
+X  .TP
+! \fBMENU_COMPLETE_BEEP\fP
+! Beep on an ambiguous menu completion.
+X  .TP
+! \fBMONITOR\fP (\-\fBm\fP)
+! Allow job control.  Set by default in interactive shells.
+X  .TP
+! \fBNO_BAD_PATTERN\fP (\-\fB2\fP)
+! If a pattern for filename generation is badly formed,
+! leave it unchanged in the argument list instead of
+! printing an error.
+X  .TP
+! \fBNO_BANG_HIST\fP (\-\fBK\fP)
+! Do not perform textual history substitution.  Do not
+! treat the ! character specially.
+X  .TP
+! \fBNOBEEP\fP (\-\fBB\fP)
+! Do not beep.
+! .TP
+! \fBNO_CLOBBER\fP (\-\fB1\fP)
+X  Prevents \fB>\fP redirection from truncating existing files.
+X  \fB>!\fP may be used to truncate a file instead.
+X  Also prevents \fB>>\fP from creating files.
+X  \fB>>!\fP may be used instead.
+X  .TP
+! \fBNOEXEC\fP (\-\fBn\fP)
+! Read commands and check them for syntax errors, but do not execute them.
+X  .TP
+! \fBNOGLOB\fP (\-\fBF\fP)
+! Disable filename generation.
+! .TP
+! \fBNO_NOMATCH\fP (\-\fB3\fP)
+X  If a pattern for filename generation has no matches,
+X  leave it unchanged in the argument list instead of
+X  printing an error.
+X  .TP
+! \fBNO_PROMPT_CLOBBER\fP (\-\fBV\fP)
+! Don't print a carriage return just before printing
+! a prompt in the line editor.
+X  .TP
+! \fBNO_RCS\fP (\-\fBf\fP)
+! Do not source the .zshenv, .zshrc, .zlogin, or .zlogout files.
+! .TP
+! \fBNOTIFY\fP (\-\fB5\fP)
+X  Report the status of background jobs immediately, rather than
+X  waiting until just before printing a prompt.
+X  .TP
+! \fBNOUNSET\fP (\-\fBu\fP)
+! Treat unset parameters as an error when substituting.
+X  .TP
+! \fBNULLGLOB\fP (\-\fBG\fP)
+! If a pattern for filename generation has no matches,
+! delete the pattern from the argument list instead
+! of reporting an error.  Overrides \fBNONOMATCH\fP.
+X  .TP
+! \fBPATH_DIRS\fP (\-\fBQ\fP)
+! Perform a path search even on command names with slashes in them.
+! Thus if "/usr/local/bin" is in the user's path, and he types
+! "X11/xinit", the command "/usr/local/bin/X11/xinit" will be executed
+! (assuming it exists).
+X  .TP
+! \fBPRINT_EXIT_VALUE\fP (\-\fBC\fP)
+X  Print the exit value of programs with non-zero exit status.
+X  .TP
+! \fBPUSHD_SILENT\fP (\-\fBE\fP)
+X  Do not print the directory stack after \fBpushd\fP
+X  or \fBpopd\fP.
+X  .TP
+! \fBPUSHD_TO_HOME\fP (\-\fBD\fP)
+! Have \fBpushd\fP with no arguments act like
+! \fBpushd\fP $HOME.
+X  .TP
+! \fBRC_EXPAND_PARAM\fP (\-\fBP\fP)
+! See \fIParameter Expansion\fP.
+X  .TP
+! \fBRECEXACT\fP (\-\fBS\fP)
+! In completion, recognize exact matches even
+! if they are ambiguous.
+! .TP
+! \fBRMSTARSILENT\fP (\-\fBH\fP)
+X  Do not query the user before executing "rm *".
+X  .TP
+! \fBSHINSTDIN\fP (\-\fBs\fP)
+! Read commands from the standard input.
+X  .TP
+! \fBSH_WORD_SPLIT\fP (\-\fBy\fP)
+! See \fIParameter Expansion\fP.
+X  .TP
+! \fBSINGLE_LINE_ZLE\fP (\-\fBM\fP)
+! Use single-line command line editing instead of multi-line.
+X  .TP
+! \fBSUN_KEYBOARD_HACK\fP (\-\fBL\fP)
+X  If a line ends with a backquote, and there are an odd number
+X  of backquotes on the line, ignore the trailing backquote.
+X  This is useful on some keyboards where the return key is
+X  too small, and the backquote key lies annoyingly close to it.
+X  .TP
+! \fBVERBOSE\fP (\-\fBv\fP)
+! Print shell input lines as they are read.
+X  .TP
+! \fBXTRACE\fP (\-\fBx\fP)
+! Print commands and their arguments as they are executed.
+X  .TP
+! \fBZLE\fP (\-\fBZ\fP)
+X  Use the zsh line editor.
+X  .RE
+X  .PD
+***************
+*** 2813,2819 ****
+X  or the current job if none is specified.
+X  .TP
+X  .PD 0
+! \fBbindkey\fP \-\fBevd
+X  .TP
+X  \fBbindkey\fP \-\fBr\fP \fIin-string\fP ...
+X  .TP
+--- 2878,2884 ----
+X  or the current job if none is specified.
+X  .TP
+X  .PD 0
+! \fBbindkey\fP \-\fBmevd
+X  .TP
+X  \fBbindkey\fP \-\fBr\fP \fIin-string\fP ...
+X  .TP
+***************
+*** 2823,2829 ****
+X  .PD
+X  If one of the \-\fBe\fP, \-\fBv\fP, or \-\fBd\fP options is given,
+X  reset the keymaps for emacs mode, vi mode, or the default mode,
+! respectively.
+X  If the \-\fBr\fP option is given, remove any binding for each \fIin-string\fP.
+X  If the \-\fBs\fP option is not specified, bind each \fIin-string\fP
+X  to a specified \fIcommand\fP.  If no \fIcommand\fP is specified,
+--- 2888,2895 ----
+X  .PD
+X  If one of the \-\fBe\fP, \-\fBv\fP, or \-\fBd\fP options is given,
+X  reset the keymaps for emacs mode, vi mode, or the default mode,
+! respectively; if the \-\fBm\fP option is also given,
+! allow the use of a meta key.
+X  If the \-\fBr\fP option is given, remove any binding for each \fIin-string\fP.
+X  If the \-\fBs\fP option is not specified, bind each \fIin-string\fP
+X  to a specified \fIcommand\fP.  If no \fIcommand\fP is specified,
+***************
+*** 2885,2890 ****
+--- 2951,2959 ----
+X  \fBuntil\fP, \fBselect\fP, or \fBrepeat\fP loop.  If \fIn\fP
+X  is specified, then break \fIn\fP levels instead of just one.
+X  .TP
++ \fBbuiltin\fP \fIname\fP [ \fIargs\fP ] ...
++ Executes the builtin \fIname\fP, with the given \fIargs\fP.
++ .TP
+X  \fBbye\fP
+X  Same as \fBexit\fP.
+X  .TP
+***************
+*** 2961,2966 ****
+--- 3030,3038 ----
+X  .B \ec
+X  don't print an ending newline
+X  .TP
++ .B \ee
++ escape
++ .TP
+X  .B \ef
+X  form feed
+X  .TP
+***************
+*** 3009,3015 ****
+--- 3081,3091 ----
+X  \fBfalse\fP
+X  Do nothing and return an exit code of 1.
+X  .TP
++ .PD 0
+X  \fBfc\fP [ \-\fBe\fP \fIename\fP ] [ \-\fBnlr\fP ] [ \fIold\fP=\fInew\fP ... ] [ \fIfirst\fP [ \fIlast\fP ] ]
++ .TP
++ \fBfc\fP \-\fBRW\fP [ \fIfilename\fP ]
++ .PD
+X  Select a range of commands from \fIfirst\fP to \fIlast\fP from the
+X  history list.
+X  The arguments \fIfirst\fP and \fIlast\fP may be specified as a
+***************
+*** 3032,3037 ****
+--- 3108,3118 ----
+X  or to \-1 if the \-\fBl\fP flag is given.
+X  The flag \-\fBr\fP reverses the order of the commands and the
+X  flag \-\fBn\fP suppresses command numbers when listing.
++ .RS
++ .PP
++ \fBfc\fP \-\fBR\fP reads the history from the given file,
++ and \fBfc\fP \-\fBW\fP writes the history out to the given file.
++ .RE
+X  .TP
+X  .PD 0
+X  \fBfg\fP [ \fIjob\fP ... ]
+***************
+*** 3038,3044 ****
+X  .TP
+X  \fIjob\fP ...
+X  .PD
+! Bring the specfied \fIjob\fPs to the foreground.
+X  If no \fIjob\fP is specified, use the current job.
+X  .TP
+X  \fBfunctions\fP [ \(+-\fBtu\fP ] [ \fIname\fP ... ]
+--- 3119,3125 ----
+X  .TP
+X  \fIjob\fP ...
+X  .PD
+! Bring the specified \fIjob\fPs to the foreground.
+X  If no \fIjob\fP is specified, use the current job.
+X  .TP
+X  \fBfunctions\fP [ \(+-\fBtu\fP ] [ \fIname\fP ... ]
+***************
+*** 3493,3499 ****
+X  Same as \fBwhence\fP.
+X  .RE
+X  .SH INVOCATION
+! If the shell is interactive and
+X  the \fBNO_RCS\fP option is unset, commands are read
+X  from /etc/zshrc and ~/.zshrc, in that order, if either file
+X  exists.
+--- 3574,3582 ----
+X  Same as \fBwhence\fP.
+X  .RE
+X  .SH INVOCATION
+! If the \fBNO_RCS\fP option is unset, commands are read
+! from ~/.zshenv first.
+! Then, if the shell is interactive and
+X  the \fBNO_RCS\fP option is unset, commands are read
+X  from /etc/zshrc and ~/.zshrc, in that order, if either file
+X  exists.
+***************
+*** 3528,3533 ****
+--- 3611,3618 ----
+X  ksh(1),
+X  clam(1).
+X  .SH FILES
++ ~/.zshenv
++ .br
+X  ~/.zshrc
+X  .br
+X  ~/.zlogin
+***************
+*** 3544,3551 ****
+X  .SH "UNDOCUMENTED FEATURES"
+X  None known, but many suspected.
+X  Please mail the author if you find any.
+- .SH CAVEATS
+- \fBzsh\fP is available for use by CS undergraduate
+- concentrators between the hours of 8:00am and 5:00pm, and by
+- faculty, staff, graduate students, and special guests
+- of the Princeton University Department of Computer Science.
+--- 3629,3631 ----
+*** src/zsh0/zsh2.00/src/buildzsh	Wed Apr 24 18:10:03 1991
+--- zsh2.00/src/buildzsh	Sun May  5 02:27:59 1991
+***************
+*** 20,25 ****
+--- 20,27 ----
+X  fi
+X  echo
+X  echo '/* define this if you have WAITPID */'
++ # this next line should read "sed 's/_^H//g'"
++ # there should be a _(backspace) there
+X  if man 2 wait 2>/dev/null | sed 's/_//g' | grep waitpid >/dev/null
+X  then echo '#define WAITPID'
+X  else echo '/* #define WAITPID */'
+***************
+*** 61,67 ****
+X  /* a string corresponding to the host type */
+X  foo
+X  echo '#define HOSTTYPE "' | tr -d '\012'
+! ( tcsh -c 'echo $HOSTTYPE' || arch || echo unknown ) 2>/dev/null |
+X  	tr -d '\012'
+X  echo '"'
+X  echo
+--- 63,69 ----
+X  /* a string corresponding to the host type */
+X  foo
+X  echo '#define HOSTTYPE "' | tr -d '\012'
+! ( tcsh -fc 'echo $HOSTTYPE' || arch || echo unknown ) 2>/dev/null |
+X  	tr -d '\012'
+X  echo '"'
+X  echo
+***************
+*** 92,100 ****
+X  '
+X  fi
+X  cat <<'foo'
+- /* the path of zsh in the file system */
+- #define MYSELF "/usr/local/bin/zsh"
+- 
+X  /* define if you prefer "suspended" to "stopped" */
+X  #define USE_SUSPENDED
+X  
+--- 94,99 ----
+***************
+*** 113,123 ****
+X  /*#define INTERACTIVE_COMMENTS*/
+X  
+X  #define _BSD_SIGNALS   /* this could be an iris, you never know */
+X  foo
+X  exec 1>&2
+X  echo done
+X  echo 'Building signals.h...' | tr -d '\012'
+! echo `csh -c 'kill -l'` | tr ' ' '\012' >signals.h
+X  lct=`wc -l < signals.h`
+X  cp signals.h signams.h
+X  echo '1,$s/^/SIG/
+--- 112,130 ----
+X  /*#define INTERACTIVE_COMMENTS*/
+X  
+X  #define _BSD_SIGNALS   /* this could be an iris, you never know */
++ 
++ /* if your compiler doesn't like void *, change this to char *
++ 	and ignore all the warnings.
++ */
++ 
++ typedef void *vptr;
++ 
++ #define JOB_CONTROL
+X  foo
+X  exec 1>&2
+X  echo done
+X  echo 'Building signals.h...' | tr -d '\012'
+! echo `csh -fc 'kill -l'` | tr ' ' '\012' >signals.h
+X  lct=`wc -l < signals.h`
+X  cp signals.h signams.h
+X  echo '1,$s/^/SIG/
+***************
+*** 260,267 ****
+X  if test -f /usr/lib/libbsd.a
+X  then
+X  if grep '+' /etc/passwd >/dev/null
+! then echo 'LIBS= -lcurses -lsun -lbsd -lmalloc'
+! else echo 'LIBS= -lcurses -lbsd -lmalloc'
+X  fi
+X  elif test -f /usr/lib/libtermcap.a
+X  then echo 'LIBS= -ltermcap'
+--- 267,274 ----
+X  if test -f /usr/lib/libbsd.a
+X  then
+X  if grep '+' /etc/passwd >/dev/null
+! then echo 'LIBS= -lcurses -lsun -lbsd'
+! else echo 'LIBS= -lcurses -lbsd'
+X  fi
+X  elif test -f /usr/lib/libtermcap.a
+X  then echo 'LIBS= -ltermcap'
+***************
+*** 271,277 ****
+--- 278,287 ----
+X  
+X  ZSHPATH=zsh
+X  
++ .KEEP_STATE:
++ 
+X  # redefine these to work around Sun make bogosity
++ # if they don't work, just remove them
+X  
+X  .c.o:
+X  	$(CC) $(CFLAGS) -c -o $*.o $<
+***************
+*** 289,295 ****
+X  tags: /tmp
+X  	ctags *.[cy]
+X  
+! $(OBJS): config.h zsh.h zle.h
+X  
+X  clean:
+X  	rm -f *.o zsh core 
+--- 299,305 ----
+X  tags: /tmp
+X  	ctags *.[cy]
+X  
+! $(OBJS): config.h zsh.h zle.h signals.h ztype.h funcs.h
+X  
+X  clean:
+X  	rm -f *.o zsh core 
+*** src/zsh0/zsh2.00/src/builtin.c	Tue Apr 23 11:45:00 1991
+--- zsh2.00/src/builtin.c	Mon May  6 06:15:10 1991
+***************
+*** 31,37 ****
+X  */
+X  
+X  #include "zsh.h"
+- #include "funcs.h"
+X  #include <sys/errno.h>
+X  #include <sys/times.h>
+X  
+--- 31,36 ----
+***************
+*** 47,59 ****
+X  
+X  /* builtin funcs */
+X  
+! enum xbins {
+! 	BIN_TYPESET,BIN_BG,BIN_FG,BIN_JOBS,
+! 	BIN_WAIT,BIN_DISOWN,BIN_BREAK,BIN_CONTINUE,BIN_EXIT,
+! 	BIN_RETURN,BIN_SHIFT,BIN_CD,BIN_POPD,BIN_PUSHD,BIN_PRINT,
+! 	BIN_EVAL,BIN_SCHED,
+! 	BIN_FC,BIN_PUSHLINE,BIN_LOGOUT,BIN_BUILTIN
+! 	};
+X  
+X  struct bincmd {
+X  	char *name;
+--- 46,72 ----
+X  
+X  /* builtin funcs */
+X  
+! #define BIN_TYPESET 0
+! #define BIN_BG 1
+! #define BIN_FG 2
+! #define BIN_JOBS 3
+! #define BIN_WAIT 4
+! #define BIN_DISOWN 5
+! #define BIN_BREAK 6
+! #define BIN_CONTINUE 7
+! #define BIN_EXIT 8
+! #define BIN_RETURN 9
+! #define BIN_SHIFT 10
+! #define BIN_CD 11
+! #define BIN_POPD 12
+! #define BIN_PUSHD 13
+! #define BIN_PRINT 14
+! #define BIN_EVAL 15
+! #define BIN_SCHED 16
+! #define BIN_FC 17
+! #define BIN_PUSHLINE 18
+! #define BIN_LOGOUT 19
+! #define BIN_BUILTIN 20
+X  
+X  struct bincmd {
+X  	char *name;
+***************
+*** 83,89 ****
+X  	"alias",bin_alias,0,-1,0,0,"ga",NULL,
+X  	"autoload",bin_typeset,0,-1,BINF_TYPEOPTS,0,"tx","fu",
+X  	"bg",bin_fg,0,-1,0,BIN_BG,NULL,NULL,
+! 	"bindkey",bin_bindkey,0,-1,0,0,"asvedrl",NULL,
+X  	"break",bin_break,0,1,0,BIN_BREAK,NULL,NULL,
+X  	"builtin",NULL,0,0,0,BIN_BUILTIN,NULL,NULL,
+X  	"bye",bin_break,0,1,0,BIN_EXIT,NULL,NULL,
+--- 96,102 ----
+X  	"alias",bin_alias,0,-1,0,0,"ga",NULL,
+X  	"autoload",bin_typeset,0,-1,BINF_TYPEOPTS,0,"tx","fu",
+X  	"bg",bin_fg,0,-1,0,BIN_BG,NULL,NULL,
+! 	"bindkey",bin_bindkey,0,-1,0,0,"asvemdrl",NULL,
+X  	"break",bin_break,0,1,0,BIN_BREAK,NULL,NULL,
+X  	"builtin",NULL,0,0,0,BIN_BUILTIN,NULL,NULL,
+X  	"bye",bin_break,0,1,0,BIN_EXIT,NULL,NULL,
+***************
+*** 101,107 ****
+X  	"exit",bin_break,0,1,0,BIN_EXIT,NULL,NULL,
+X  	"export",bin_typeset,0,-1,BINF_TYPEOPTS,0,"LRZfilrtu","x",
+X  	"false",bin_let,0,0,0,0,NULL,NULL,
+! 	"fc",bin_fc,0,-1,BINF_FCOPTS,BIN_FC,"nlre",NULL,
+X  	"fg",bin_fg,0,-1,0,BIN_FG,NULL,NULL,
+X  	"functions",bin_typeset,0,-1,BINF_TYPEOPTS,0,"tu","f",
+X  	"getln",bin_read,0,-1,0,0,NULL,"zr",
+--- 114,120 ----
+X  	"exit",bin_break,0,1,0,BIN_EXIT,NULL,NULL,
+X  	"export",bin_typeset,0,-1,BINF_TYPEOPTS,0,"LRZfilrtu","x",
+X  	"false",bin_let,0,0,0,0,NULL,NULL,
+! 	"fc",bin_fc,0,-1,BINF_FCOPTS,BIN_FC,"nlreRW",NULL,
+X  	"fg",bin_fg,0,-1,0,BIN_FG,NULL,NULL,
+X  	"functions",bin_typeset,0,-1,BINF_TYPEOPTS,0,"tu","f",
+X  	"getln",bin_read,0,-1,0,0,NULL,"zr",
+***************
+*** 127,134 ****
+X  	"rehash",bin_rehash,0,0,0,0,NULL,NULL,
+X  	"return",bin_break,0,1,0,BIN_RETURN,NULL,NULL,
+X  	"sched",bin_sched,0,-1,0,0,NULL,NULL,
+! 	"set",bin_set,0,-1,BINF_SETOPTS|BINF_PLUSOPTS,0,"0123456789ABCDEFGHIJKLMNOPQRSTUWXYZaefghijklmnsuvxy",NULL,
+! 	"setopt",bin_setopt,0,-1,0,0,"0123456789BCDEFGHIJKLMNOPQRSTUWXYZaefghijklmnsuvxy",NULL,
+X  	"shift",bin_break,0,1,0,BIN_SHIFT,NULL,NULL,
+X  	"source",bin_dot,1,-1,0,0,NULL,NULL,
+X  	"suspend",bin_suspend,0,0,0,0,"f",NULL,
+--- 140,147 ----
+X  	"rehash",bin_rehash,0,0,0,0,NULL,NULL,
+X  	"return",bin_break,0,1,0,BIN_RETURN,NULL,NULL,
+X  	"sched",bin_sched,0,-1,0,0,NULL,NULL,
+! 	"set",bin_set,0,-1,BINF_SETOPTS|BINF_PLUSOPTS,0,"0123456789ABCDEFGHIJKLMNOPQRSTUWXYZaefghijklmnosuvwxy",NULL,
+! 	"setopt",bin_setopt,0,-1,BINF_PLUSOPTS,0,"0123456789BCDEFGHIJKLMNOPQRSTUWXYZaefghijklmnosuvwxy",NULL,
+X  	"shift",bin_break,0,1,0,BIN_SHIFT,NULL,NULL,
+X  	"source",bin_dot,1,-1,0,0,NULL,NULL,
+X  	"suspend",bin_suspend,0,0,0,0,"f",NULL,
+***************
+*** 144,150 ****
+X  	"unhash",bin_unhash,1,-1,0,0,NULL,NULL,
+X  	"unlimit",bin_unlimit,0,-1,0,0,"h",NULL,
+X  	"unset",bin_unset,1,-1,0,0,NULL,NULL,
+! 	"unsetopt",bin_setopt,0,-1,0,1,"0123456789BCDEFGHIJKLMNOPQRSTUWXYZaefghijklmnsuvxy",NULL,
+X  	"vared",bin_vared,1,1,0,0,NULL,NULL,
+X  	"wait",bin_fg,0,-1,0,BIN_WAIT,NULL,NULL,
+X  	"whence",bin_whence,0,-1,0,0,"pv",NULL,
+--- 157,163 ----
+X  	"unhash",bin_unhash,1,-1,0,0,NULL,NULL,
+X  	"unlimit",bin_unlimit,0,-1,0,0,"h",NULL,
+X  	"unset",bin_unset,1,-1,0,0,NULL,NULL,
+! 	"unsetopt",bin_setopt,0,-1,BINF_PLUSOPTS,1,"0123456789BCDEFGHIJKLMNOPQRSTUWXYZaefghijklmnosuvwxy",NULL,
+X  	"vared",bin_vared,1,1,0,0,NULL,NULL,
+X  	"wait",bin_fg,0,-1,0,BIN_WAIT,NULL,NULL,
+X  	"whence",bin_whence,0,-1,0,0,"pv",NULL,
+***************
+*** 162,168 ****
+X  
+X  	for (t0 = 0, b = builtins; b->name; b++,t0++)
+X  		{
+! 		c = zcalloc(sizeof *c);
+X  		c->type = BUILTIN;
+X  		c->u.binnum = t0;
+X  		addhperm(b->name,c,cmdnamtab,freecmdnam);
+--- 175,181 ----
+X  
+X  	for (t0 = 0, b = builtins; b->name; b++,t0++)
+X  		{
+! 		c = (Cmdnam) zcalloc(sizeof *c);
+X  		c->type = BUILTIN;
+X  		c->u.binnum = t0;
+X  		addhperm(b->name,c,cmdnamtab,freecmdnam);
+***************
+*** 190,196 ****
+X  			}
+X  		else
+X  			{
+! 			c = zcalloc(sizeof *c);
+X  			c->type = BUILTIN;
+X  			c->u.binnum = t0;
+X  			addhperm(b->name,c,cmdnamtab,freecmdnam);
+--- 203,209 ----
+X  			}
+X  		else
+X  			{
+! 			c = (Cmdnam) zcalloc(sizeof *c);
+X  			c->type = BUILTIN;
+X  			c->u.binnum = t0;
+X  			addhperm(b->name,c,cmdnamtab,freecmdnam);
+***************
+*** 273,278 ****
+--- 286,297 ----
+X  		zerrnam(name,"no job control in this shell.",NULL,0);
+X  		return 1;
+X  		}
++ 	if (!(jobtab[curjob].stat & STAT_INUSE))
++ 		{
++ 		curjob = prevjob; setprevjob();
++ 		if (!(jobtab[curjob].stat & STAT_INUSE))
++ 			curjob = prevjob; setprevjob();
++ 		}
+X  	if (func == BIN_JOBS)
+X  		stopmsg = 2;
+X  	if (!*argv)
+***************
+*** 348,353 ****
+--- 367,373 ----
+X  						printdir(jobtab[job].cwd);
+X  						printf(")\n");
+X  						}
++ 					fflush(stdout);
+X  					settyinfo(&jobtab[job].ttyinfo);
+X  					attachtty(jobtab[job].gleader);
+X  					}
+***************
+*** 419,425 ****
+X  			}
+X  		else
+X  			killrunjobs();
+! 	savehistfile();
+X  	if (islogin && unset(NORCS))
+X  		sourcehome(".zlogout");
+X  	if (sigtrapped[SIGEXIT])
+--- 439,445 ----
+X  			}
+X  		else
+X  			killrunjobs();
+! 	savehistfile(getsparam("HISTFILE"),0);
+X  	if (islogin && unset(NORCS))
+X  		sourcehome(".zlogout");
+X  	if (sigtrapped[SIGEXIT])
+***************
+*** 441,447 ****
+X  			chuck(t);
+X  		else
+X  			{
+! 			*t = tolower(*t);
+X  			t++;
+X  			}
+X  	for (o = optns; o->name; o++)
+--- 461,467 ----
+X  			chuck(t);
+X  		else
+X  			{
+! 			*t = tulower(*t);
+X  			t++;
+X  			}
+X  	for (o = optns; o->name; o++)
+***************
+*** 524,530 ****
+X  		printf("%s ()\n",s);
+X  		return;
+X  		}
+! 	t = gettext((void *) (cc->u.list),1);
+X  	printf("%s () {\n\t%s\n}\n",s,t);
+X  	free(t);
+X  }
+--- 544,550 ----
+X  		printf("%s ()\n",s);
+X  		return;
+X  		}
+! 	t = gettext((vptr) (cc->u.list),1);
+X  	printf("%s () {\n\t%s\n}\n",s,t);
+X  	free(t);
+X  }
+***************
+*** 640,646 ****
+X  
+X  	for (; *argv; argv++)
+X  		{
+! 		if (!ops['p'] && (a = gethnode(*argv,aliastab)) && a->cmd)
+X  			{
+X  			if (a->cmd < 0)
+X  				printf((v) ? "%s is a reserved word\n" : "%s\n",*argv);
+--- 660,666 ----
+X  
+X  	for (; *argv; argv++)
+X  		{
+! 		if (!ops['p'] && (a = (Alias) gethnode(*argv,aliastab)) && a->cmd)
+X  			{
+X  			if (a->cmd < 0)
+X  				printf((v) ? "%s is a reserved word\n" : "%s\n",*argv);
+***************
+*** 652,658 ****
+X  				printf("%s is a global alias for %s\n",*argv,a->text);
+X  			retval = 0;
+X  			}
+! 		else if (!ops['p'] && (chn = gethnode(*argv,cmdnamtab)) &&
+X  				(chn->type == SHFUNC || chn->type == BUILTIN))
+X  			{
+X  			if (chn->type == SHFUNC)
+--- 672,678 ----
+X  				printf("%s is a global alias for %s\n",*argv,a->text);
+X  			retval = 0;
+X  			}
+! 		else if (!ops['p'] && (chn = (Cmdnam) gethnode(*argv,cmdnamtab)) &&
+X  				(chn->type == SHFUNC || chn->type == BUILTIN))
+X  			{
+X  			if (chn->type == SHFUNC)
+***************
+*** 838,844 ****
+X  {
+X  struct cmdnam *chn;
+X  
+! 	chn = zcalloc(sizeof *chn);
+X  	chn->type = EXCMD_PREDOT;
+X  	chn->u.nam = ztrdup(argv[1]);
+X  	addhnode(ztrdup(argv[0]),chn,cmdnamtab,freecmdnam);
+--- 858,864 ----
+X  {
+X  struct cmdnam *chn;
+X  
+! 	chn = (Cmdnam) zcalloc(sizeof *chn);
+X  	chn->type = EXCMD_PREDOT;
+X  	chn->u.nam = ztrdup(argv[1]);
+X  	addhnode(ztrdup(argv[0]),chn,cmdnamtab,freecmdnam);
+***************
+*** 920,926 ****
+X  
+X  	for (t0 = MAXJOB-1; t0 >= 0; t0--)
+X  		if (jobtab[t0].stat && jobtab[t0].procs && t0 != thisjob && 
+! 				prefix(s,jobtab[t0].procs->text))
+X  			return t0;
+X  	return -1;
+X  }
+--- 940,946 ----
+X  
+X  	for (t0 = MAXJOB-1; t0 >= 0; t0--)
+X  		if (jobtab[t0].stat && jobtab[t0].procs && t0 != thisjob && 
+! 				jobtab[t0].procs->text && prefix(s,jobtab[t0].procs->text))
+X  			return t0;
+X  	return -1;
+X  }
+***************
+*** 969,978 ****
+X  				zerrnam("kill","kill failed: %e",NULL,errno);
+X  				return 1;
+X  				}
+! 			if (jobtab[p].stat & STAT_STOPPED && sig == SIGCONT)
+! 				jobtab[p].stat &= ~STAT_STOPPED;
+! 			if (sig != SIGKILL && sig != SIGCONT)
+! 				killpg(jobtab[p].gleader,SIGCONT);
+X  			}
+X  		else
+X  			if (kill(atoi(*argv),sig) == -1)
+--- 989,1002 ----
+X  				zerrnam("kill","kill failed: %e",NULL,errno);
+X  				return 1;
+X  				}
+! 			if (jobtab[p].stat & STAT_STOPPED)
+! 				{
+! 				if (sig == SIGCONT)
+! 					jobtab[p].stat &= ~STAT_STOPPED;
+! 				if (sig != SIGKILL && sig != SIGCONT && sig != SIGTSTP
+! 						&& sig != SIGTTOU && sig != SIGTTIN && sig != SIGSTOP)
+! 					killjb(jobtab+p,SIGCONT);
+! 				}
+X  			}
+X  		else
+X  			if (kill(atoi(*argv),sig) == -1)
+***************
+*** 1397,1409 ****
+X  
+X  	if (!interact)
+X  		{
+! 		zerrnam("fc","not interactive shell",NULL,0);
+X  		return 1;
+X  		}
+! 	remhist();
+X  	while (*argv && equalsplit(*argv,&s))
+X  		{
+! 		struct asgment *a = alloc(sizeof *a);
+X  
+X  		if (!asgf)
+X  			asgf = asgl = a;
+--- 1421,1444 ----
+X  
+X  	if (!interact)
+X  		{
+! 		zerrnam(nam,"not interactive shell",NULL,0);
+X  		return 1;
+X  		}
+! 	if (!(ops['l'] && unset(HISTNOSTORE)))
+! 		remhist();
+! 	if (ops['R'])
+! 		{
+! 		readhistfile(*argv ? *argv : getsparam("HISTFILE"),1);
+! 		return 0;
+! 		}
+! 	if (ops['W'])
+! 		{
+! 		savehistfile(*argv ? *argv : getsparam("HISTFILE"),1);
+! 		return 0;
+! 		}
+X  	while (*argv && equalsplit(*argv,&s))
+X  		{
+! 		struct asgment *a = (struct asgment *) alloc(sizeof *a);
+X  
+X  		if (!asgf)
+X  			asgf = asgl = a;
+***************
+*** 1460,1466 ****
+X  			{
+X  			retval = 1;
+X  			if (!fclist(out,0,ops['r'],first,last,asgf))
+! 				if (fcedit(auxdata ? auxdata : DEFFCEDIT,fil))
+X  					if (stuff(fil))
+X  						zerrnam("fc","%e: %s",s,errno);
+X  					else
+--- 1495,1501 ----
+X  			{
+X  			retval = 1;
+X  			if (!fclist(out,0,ops['r'],first,last,asgf))
+! 				if (fcedit(auxdata ? auxdata : fceditparam,fil))
+X  					if (stuff(fil))
+X  						zerrnam("fc","%e: %s",s,errno);
+X  					else
+***************
+*** 1502,1508 ****
+X  		if (asg->value)
+X  			addhnode(ztrdup(asg->name),mkanode(ztrdup(asg->value),incm),
+X  				aliastab,freeanode);
+! 		else if (an = gethnode(asg->name,aliastab))
+X  			printalias(asg->name,an);
+X  		else
+X  			ret = 1;
+--- 1537,1543 ----
+X  		if (asg->value)
+X  			addhnode(ztrdup(asg->name),mkanode(ztrdup(asg->value),incm),
+X  				aliastab,freeanode);
+! 		else if (an = (Alias) gethnode(asg->name,aliastab))
+X  			printalias(asg->name,an);
+X  		else
+X  			ret = 1;
+***************
+*** 1615,1621 ****
+X  			{
+X  			Cmdnam cc;
+X  
+! 			if ((cc = gethnode(*argv,cmdnamtab)) && cc->type == SHFUNC)
+X  				if (on)
+X  					cc->flags |= on;
+X  				else
+--- 1650,1656 ----
+X  			{
+X  			Cmdnam cc;
+X  
+! 			if ((cc = (Cmdnam) gethnode(*argv,cmdnamtab)) && cc->type == SHFUNC)
+X  				if (on)
+X  					cc->flags |= on;
+X  				else
+***************
+*** 1622,1628 ****
+X  					pshfunc(*argv,cc);
+X  			else if (on & PMFLAG_u)
+X  				{
+! 				cc = zcalloc(sizeof *cc);
+X  				cc->type = SHFUNC;
+X  				cc->flags = on;
+X  				addhnode(ztrdup(*argv),cc,cmdnamtab,freecmdnam);
+--- 1657,1663 ----
+X  					pshfunc(*argv,cc);
+SHAR_EOF
+true || echo 'restore of patches failed'
+echo 'End of  part 1'
+echo 'File patches is continued in part 2'
+echo 2 > _shar_seq_.tmp
+exit 0
+              Paul Falstad  pfalstad@phoenix.princeton.edu
+         And on the roads, too, vicious gangs of KEEP LEFT signs!
+     If Princeton knew my opinions, they'd have expelled me long ago.
+
+exit 0 # Just in case...
+-- 
+Kent Landfield                   INTERNET: kent@sparky.IMD.Sterling.COM
+Sterling Software, IMD           UUCP:     uunet!sparky!kent
+Phone:    (402) 291-8300         FAX:      (402) 291-4362
+Please send comp.sources.misc-related mail to kent@uunet.uu.net.
